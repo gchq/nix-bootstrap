@@ -1,0 +1,99 @@
+# © Crown Copyright GCHQ
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+name: nix-bootstrap
+version: 1.2.9.1
+author: gchquser
+maintainer: 48051938+sd234678@users.noreply.github.com
+copyright: Crown Copyright
+license: Apache-2.0
+default-extensions:
+  - BlockArguments
+  - DerivingStrategies
+  - GADTs
+  - LambdaCase
+  - NamedFieldPuns
+  - OverloadedStrings
+  - RecordWildCards
+  - StrictData
+dependencies:
+  - name: base
+    version: "== 4.15.1.0"
+    mixin:
+      - hiding (Prelude)
+  - relude == 1.0.0.1
+flags:
+  prod:
+    default: false
+    description: Enable production defaults
+    manual: true
+ghc-options:
+  - "-Wall"
+  - "-Wcpp-undef"
+  - "-Widentities"
+  - "-Wincomplete-patterns"
+  - "-Wincomplete-record-updates"
+  - "-Wincomplete-uni-patterns"
+  - "-Wmissing-deriving-strategies"
+  - "-Wmissing-export-lists"
+  - "-Wmissing-import-lists"
+  - "-Wmissing-signatures"
+  - "-Wpartial-fields"
+  - "-Wredundant-constraints"
+when:
+  - condition: flag(prod)
+    ghc-options:
+      - "-O2"
+      - "-Werror"
+library:
+  source-dirs: src
+  dependencies:
+    - aeson == 2.0.3.0
+    - aeson-pretty == 0.8.9
+    - directory == 1.3.6.2
+    - exceptions == 0.10.4
+    - extra == 1.7.10
+    - filepath == 1.4.2.1
+    - megaparsec == 9.2.1
+    - mtl == 2.2.2
+    - parser-combinators == 1.3.0
+    - process == 1.6.13.2
+    - regex-compat == 0.95.2.1
+    - silently == 1.2.5.2
+    - template-haskell == 2.17.0.0
+    - terminal == 0.2.0.0
+    - tomland == 1.3.3.1
+    - yaml == 0.11.8.0
+executables:
+  app:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - "-O2"
+      - "-threaded"
+      - "-rtsopts"
+      - "-with-rtsopts=-N"
+    dependencies:
+      - nix-bootstrap
+tests:
+  nix-bootstrap-test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - hspec == 2.8.5
+      - hspec-expectations-pretty-diff == 0.7.2.6
+      - nix-bootstrap
+      - QuickCheck == 2.14.2
+      - tomland == 1.3.3.1
+    build-tools:
+      - hspec-discover == 2.8.5

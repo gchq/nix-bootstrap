@@ -1,0 +1,7 @@
+packages: 
+  .
+source-repository-package
+    type: git
+    location: https://github.com/nmattia/niv.git 
+    tag: 5830a4dd348d77e39a0f3c4c762ff2663b602d4c
+    post-checkout-command: hpack && exit 1

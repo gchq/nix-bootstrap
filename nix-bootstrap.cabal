@@ -1,0 +1,198 @@
+cabal-version: 2.0
+
+-- This file has been generated from package.yaml by hpack version 0.34.6.
+--
+-- see: https://github.com/sol/hpack
+
+name:           nix-bootstrap
+version:        1.2.9.1
+author:         gchquser
+maintainer:     48051938+sd234678@users.noreply.github.com
+copyright:      Crown Copyright
+license:        Apache-2.0
+license-file:   LICENSE
+build-type:     Simple
+
+flag prod
+  description: Enable production defaults
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Bootstrap
+      Bootstrap.Cli
+      Bootstrap.Data.Bootstrappable
+      Bootstrap.Data.Bootstrappable.BootstrapState
+      Bootstrap.Data.Bootstrappable.DefaultNix
+      Bootstrap.Data.Bootstrappable.DevContainer
+      Bootstrap.Data.Bootstrappable.Envrc
+      Bootstrap.Data.Bootstrappable.FlakeNix
+      Bootstrap.Data.Bootstrappable.Gitignore
+      Bootstrap.Data.Bootstrappable.GitlabCIConfig
+      Bootstrap.Data.Bootstrappable.GitPodYml
+      Bootstrap.Data.Bootstrappable.Go.Modfile
+      Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
+      Bootstrap.Data.Bootstrappable.NixShell
+      Bootstrap.Data.Bootstrappable.Python.Requirements
+      Bootstrap.Data.Bootstrappable.Readme
+      Bootstrap.Data.Bootstrappable.VSCodeSettings
+      Bootstrap.Data.BuildPlan
+      Bootstrap.Data.ContinuousIntegration
+      Bootstrap.Data.DevContainer
+      Bootstrap.Data.HList
+      Bootstrap.Data.PreCommitHook
+      Bootstrap.Data.ProjectName
+      Bootstrap.Data.ProjectType
+      Bootstrap.Data.Version
+      Bootstrap.Error
+      Bootstrap.GitPod
+      Bootstrap.Monad
+      Bootstrap.Niv
+      Bootstrap.Nix.Command
+      Bootstrap.Nix.Evaluate
+      Bootstrap.Nix.Expr
+      Bootstrap.Nix.Expr.BuildInputs
+      Bootstrap.Nix.Expr.MkShell
+      Bootstrap.Nix.Expr.Nixpkgs
+      Bootstrap.Nix.Expr.PreCommitHooks
+      Bootstrap.Nix.Expr.Python
+      Bootstrap.Nix.Expr.ReproducibleBuild.Go
+      Bootstrap.Nix.Expr.ReproducibleBuild.Java
+      Bootstrap.Nix.Flake
+      Bootstrap.State
+      Bootstrap.Terminal
+      Bootstrap.Terminal.Icon
+      Bootstrap.Unix
+      Prelude
+  other-modules:
+      Paths_nix_bootstrap
+  autogen-modules:
+      Paths_nix_bootstrap
+  hs-source-dirs:
+      src
+  default-extensions:
+      BlockArguments
+      DerivingStrategies
+      GADTs
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+      RecordWildCards
+      StrictData
+  ghc-options: -Wall -Wcpp-undef -Widentities -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-import-lists -Wmissing-signatures -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      aeson ==2.0.3.0
+    , aeson-pretty ==0.8.9
+    , base ==4.15.1.0
+    , directory ==1.3.6.2
+    , exceptions ==0.10.4
+    , extra ==1.7.10
+    , filepath ==1.4.2.1
+    , megaparsec ==9.2.1
+    , mtl ==2.2.2
+    , parser-combinators ==1.3.0
+    , process ==1.6.13.2
+    , regex-compat ==0.95.2.1
+    , relude ==1.0.0.1
+    , silently ==1.2.5.2
+    , template-haskell ==2.17.0.0
+    , terminal ==0.2.0.0
+    , tomland ==1.3.3.1
+    , yaml ==0.11.8.0
+  mixins:
+      base hiding (Prelude)
+  if flag(prod)
+    ghc-options: -O2 -Werror
+  default-language: Haskell2010
+
+executable app
+  main-is: Main.hs
+  other-modules:
+      Paths_nix_bootstrap
+  autogen-modules:
+      Paths_nix_bootstrap
+  hs-source-dirs:
+      app
+  default-extensions:
+      BlockArguments
+      DerivingStrategies
+      GADTs
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+      RecordWildCards
+      StrictData
+  ghc-options: -Wall -Wcpp-undef -Widentities -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-import-lists -Wmissing-signatures -Wpartial-fields -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base ==4.15.1.0
+    , nix-bootstrap
+    , relude ==1.0.0.1
+  mixins:
+      base hiding (Prelude)
+  if flag(prod)
+    ghc-options: -O2 -Werror
+  default-language: Haskell2010
+
+test-suite nix-bootstrap-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Bootstrap.Data.Bootstrappable.BootstrapStateSpec
+      Bootstrap.Data.Bootstrappable.DefaultNixSpec
+      Bootstrap.Data.Bootstrappable.DevContainerSpec
+      Bootstrap.Data.Bootstrappable.EnvrcSpec
+      Bootstrap.Data.Bootstrappable.FlakeNixSpec
+      Bootstrap.Data.Bootstrappable.GitignoreSpec
+      Bootstrap.Data.Bootstrappable.GitlabCIConfigSpec
+      Bootstrap.Data.Bootstrappable.GitPodYmlSpec
+      Bootstrap.Data.Bootstrappable.Go.ModfileSpec
+      Bootstrap.Data.Bootstrappable.NixPreCommitHookConfigSpec
+      Bootstrap.Data.Bootstrappable.NixShellSpec
+      Bootstrap.Data.Bootstrappable.ReadmeSpec
+      Bootstrap.Data.Bootstrappable.VSCodeSettingsSpec
+      Bootstrap.Data.BuildPlanSpec
+      Bootstrap.Data.DevContainerSpec
+      Bootstrap.Data.PreCommitHookSpec
+      Bootstrap.Data.ProjectNameSpec
+      Bootstrap.Data.ProjectTypeSpec
+      Bootstrap.Data.VersionSpec
+      Bootstrap.Nix.CommandSpec
+      Bootstrap.Nix.Expr.NixpkgsSpec
+      Bootstrap.Nix.ExprSpec
+      Bootstrap.Nix.FlakeSpec
+      Bootstrap.StateSpec
+      PreludeSpec
+      Test.Util
+      Test.Util.CanDieOnError
+      Test.Util.RunConfig
+      Paths_nix_bootstrap
+  autogen-modules:
+      Paths_nix_bootstrap
+  hs-source-dirs:
+      test
+  default-extensions:
+      BlockArguments
+      DerivingStrategies
+      GADTs
+      LambdaCase
+      NamedFieldPuns
+      OverloadedStrings
+      RecordWildCards
+      StrictData
+  ghc-options: -Wall -Wcpp-undef -Widentities -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-import-lists -Wmissing-signatures -Wpartial-fields -Wredundant-constraints
+  build-tool-depends:
+      hspec-discover:hspec-discover ==2.8.5
+  build-depends:
+      QuickCheck ==2.14.2
+    , base ==4.15.1.0
+    , hspec ==2.8.5
+    , hspec-expectations-pretty-diff ==0.7.2.6
+    , nix-bootstrap
+    , relude ==1.0.0.1
+    , tomland ==1.3.3.1
+  mixins:
+      base hiding (Prelude)
+  if flag(prod)
+    ghc-options: -O2 -Werror
+  default-language: Haskell2010

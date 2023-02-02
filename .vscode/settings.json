@@ -1,0 +1,11 @@
+{
+  "nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix",
+  "nix.enableLanguageServer": true,
+  "nix.formatterPath": "alejandra",
+  "haskell.manageHLS": "PATH",
+  "haskell.serverExecutablePath": "haskell-language-server-wrapper",
+  "search.exclude": {
+    "**/.yarn": true,
+    "**/.pnp.*": true
+  }
+}

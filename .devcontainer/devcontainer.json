@@ -1,0 +1,13 @@
+{
+  "name": "nix-bootstrap DevContainer",
+  "dockerComposeFile": "docker-compose.yaml",
+  "extensions": [
+    "arrterian.nix-env-selector",
+    "haskell.haskell",
+    "jnoortheen.nix-ide"
+  ],
+  "postCreateCommand": "git config --global core.editor 'code --wait' && git config --global --add safe.directory /workspaces/nix-bootstrap && direnv allow && nix-shell --run setUpHaskellLanguageServer",
+  "postStartCommand": "nix-shell --run \"echo 'Setup complete!'\"",
+  "service": "nix-bootstrap-dev-container",
+  "workspaceFolder": "/workspaces/nix-bootstrap"
+}
