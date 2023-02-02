@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "haskell.haskell",
+    "arrterian.nix-env-selector",
+    "jnoortheen.nix-ide",
+    "arcanis.vscode-zipfs"
+  ]
+}
