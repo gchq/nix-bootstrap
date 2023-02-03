@@ -13,12 +13,4 @@ spec = describe "go.mod rendering" do
   it "renders correctly given a dummy version" do
     let projectName = Unsafe.fromJust $ mkProjectName "test-project"
     bootstrapContent (GoModfile projectName "dummy-version")
-      >>= ( `shouldBe`
-              Right
-                ( unlines
-                    [ "module test-project",
-                      "",
-                      "go dummy-version"
-                    ]
-                )
-          )
+      >>= (`shouldBe` Right "module test-project\n\ngo dummy-version\n")
