@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Nix.FlakeSpec (spec) where
 
@@ -7,6 +9,7 @@ import Bootstrap.Nix.Flake (intermediateFlake)
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
+import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "intermediateFlake" do
@@ -14,13 +17,11 @@ spec = describe "intermediateFlake" do
     e <- writeExprFormatted (intermediateFlake $ Unsafe.fromJust $ mkProjectName "test-project")
     e
       `shouldBe` Right
-        ( unlines
-            [ "{",
-              "  description = \"Development infrastructure for test-project\";",
-              "  inputs = {",
-              "    nixpkgs-src.url = \"github:NixOS/nixpkgs\";",
-              "  };",
-              "  outputs = _: {};",
-              "}"
-            ]
-        )
+        [r|{
+  description = "Development infrastructure for test-project";
+  inputs = {
+    nixpkgs-src.url = "github:NixOS/nixpkgs";
+  };
+  outputs = _: {};
+}
+|]

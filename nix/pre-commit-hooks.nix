@@ -29,7 +29,10 @@
       enable = true;
       entry = nixpkgs.lib.mkOverride 0 "${alejandra}/bin/alejandra";
     };
-    hlint.enable = true;
+    hlint = {
+      enable = true;
+      entry = nixpkgs.lib.mkOverride 0 "${pre-commit-hooks-lib.packages.${system}.hlint}/bin/hlint -XNoCPP";
+    };
     hpack = {
       enable = true;
       entry = nixpkgs.lib.mkOverride 0 "${
