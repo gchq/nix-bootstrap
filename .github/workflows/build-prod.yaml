@@ -40,8 +40,10 @@ jobs:
         run: nix build '.#runChecks'
       - name: Build nix-bootstrap
         run: nix build
+      - name: Check for vulnerabilities
+        run: nix run .\#ciPackages.vulnix -- -w nix-bootstrap/vulnerability-whitelist.toml result
       - name: Build release artefact
-        run: nix run .\#buildBinaryCache
+        run: nix run .\#ciPackages.buildBinaryCache
       - uses: actions/upload-artifact@v3
         with:
           name: "release-${{ env.version_number }}"
