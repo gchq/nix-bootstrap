@@ -167,15 +167,16 @@ installOrRecommendDirenv() {
 installNixBootstrap() {
   # shellcheck disable=SC2016
   # We don't want expressions to expand here
-  installNixBootstrapCmd="$(printf '%s && %s && %s && %s && %s && %s && %s' \
-    'rm -rf /tmp/nix-bootstrap-binary-cache /tmp/nix-bootstrap-binary-cache-download' \
-    'mkdir -p /tmp/nix-bootstrap-binary-cache-download' \
-    'gh release download -R gchq/nix-bootstrap -D /tmp/nix-bootstrap-binary-cache-download -p '"'"'*-nix-bootstrap-*'"'"'' \
-    'releaseFilename="$(command ls /tmp/nix-bootstrap-binary-cache-download)"' \
-    'NIX_BOOTSTRAP_STORE_PATH="$(tar xf "/tmp/$releaseFilename" -C /tmp && echo "/nix/store/${releaseFilename/\.tgz/}")"' \
+  installNixBootstrapCmd="$(printf '%s && %s && %s && %s && %s && %s && %s && %s' \
+    'rm -rf /tmp/nix-bootstrap-binary-cache' \
+    'NIX_BOOTSTRAP_RELEASE_ID="$(curl -L https://api.github.com/repos/gchq/nix-bootstrap/releases/latest | jq ".id")"' \
+    'NIX_BOOTSTRAP_RELEASE_INFO="$(curl -L "https://api.github.com/repos/gchq/nix-bootstrap/releases/$NIX_BOOTSTRAP_RELEASE_ID/assets" | jq ".[0]")"' \
+    'curl -L "$(printf "%s" "$NIX_BOOTSTRAP_RELEASE_INFO" | jq -r ".browser_download_url")"  | tar xz -C /tmp' \
+    'releaseFilename="$(printf "%s" "$NIX_BOOTSTRAP_RELEASE_INFO" | jq -r ".name")"' \
+    'NIX_BOOTSTRAP_STORE_PATH="$(echo "/nix/store/${releaseFilename/\.tgz/}")"' \
     'sudo su -c "$(printf '"'"'%s --import < /tmp/nix-bootstrap-binary-cache'"'"' "$(which nix-store)")"' \
     '$NIX_BOOTSTRAP_STORE_PATH/bin/nix-bootstrap --allow-dirty')"
-  nix-shell -p bash curl gh gnutar jq --command "$installNixBootstrapCmd $*"
+  nix-shell -p bash curl gnutar jq --command "$installNixBootstrapCmd $*"
 }
 
 #########################################################################
