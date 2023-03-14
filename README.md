@@ -18,7 +18,7 @@ Existing features and toolchains supported have been decided
 based on the needs of the internal developer community within GCHQ.
 
 That said, if there's a toolchain/feature set you'd like that we don't
-support, feel free to [contribute it](../CONTRIBUTING.md)!
+support, feel free to [contribute it](./CONTRIBUTING.md)!
 
 ### Key
 
