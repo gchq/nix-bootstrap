@@ -8,7 +8,7 @@ import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 
 spec :: Spec
-spec = describe ".vscode/settings rendering" do
+spec = describe ".vscode/settings.json rendering" do
   it "renders the json correctly" do
     bootstrapContent (vsCodeSettingsFor (DevContainerConfig True))
       >>= ( `shouldBe`
