@@ -55,6 +55,7 @@ import Bootstrap.Data.Bootstrappable.Readme
         readmeUseFlakes
       ),
   )
+import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.Bootstrappable.VSCodeSettings (vsCodeSettingsFor)
 import Bootstrap.Data.BuildPlan
   ( BuildPlan (BuildPlan),
@@ -451,6 +452,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: devContainerDockerComposeFor mbpDevContainerConfig mbpProjectName
               ~: devContainerDockerfileFor mbpDevContainerConfig
               ~: devContainerJsonFor mbpDevContainerConfig mbpProjectName mbpProjectType
+              ~: vsCodeExtensionsFileFor mbpProjectType
               ~: vsCodeSettingsFor mbpDevContainerConfig
               ~: goModfile
               ~: pythonRequirementsFile

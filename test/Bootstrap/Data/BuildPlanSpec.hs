@@ -16,6 +16,7 @@ import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
 import Bootstrap.Data.Bootstrappable.Readme (Readme (Readme))
+import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.Bootstrappable.VSCodeSettings (vsCodeSettingsFor)
 import Bootstrap.Data.BuildPlan
   ( BuildPlan (BuildPlan),
@@ -60,6 +61,7 @@ spec = describe "toReasonTree" do
                 ~: devContainerDockerComposeFor devContainerConfig projectName
                 ~: devContainerDockerfileFor devContainerConfig
                 ~: devContainerJsonFor devContainerConfig projectName projectType
+                ~: vsCodeExtensionsFileFor projectType
                 ~: vsCodeSettingsFor devContainerConfig
                 ~: GitPodYml
                 ~: HNil
@@ -81,7 +83,8 @@ spec = describe "toReasonTree" do
           Node ".nix-bootstrap.toml - This holds nix-bootstrap's configuration to ensure upgrades are reliable." [],
           Node
             ".vscode"
-            [ Node "settings.json - This configures the extensions provided by the VSCode DevContainer." []
+            [ Node "extensions.json - This configures the extensions we recommend for VSCode." [],
+              Node "settings.json - This configures the settings for the extensions we recommend for VSCode." []
             ],
           Node
             "nix"

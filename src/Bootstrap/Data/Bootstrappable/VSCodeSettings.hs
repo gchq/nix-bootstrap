@@ -15,7 +15,7 @@ data VSCodeSettings = VSCodeSettings
 
 instance Bootstrappable VSCodeSettings where
   bootstrapName = const ".vscode/settings.json"
-  bootstrapReason = const "This configures the extensions provided by the VSCode DevContainer."
+  bootstrapReason = const "This configures the settings for the extensions we recommend for VSCode."
   bootstrapContent = bootstrapContentPrettyJson []
 
 instance ToJSON VSCodeSettings where

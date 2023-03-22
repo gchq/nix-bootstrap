@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.DevContainer
   ( DevContainerDockerfile,
@@ -12,10 +10,14 @@ module Bootstrap.Data.Bootstrappable.DevContainer
 where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason), bootstrapContentPrettyJson, bootstrapContentYaml)
+import Bootstrap.Data.Bootstrappable.VSCodeExtensions
+  ( VSCodeExtension,
+    extensionsFor,
+  )
 import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
 import qualified Bootstrap.Data.ProjectName as ProjectName
-import Bootstrap.Data.ProjectType (InstallLombok (unInstallLombok), ProjectType (Go, Java, Minimal, Node, Python))
+import Bootstrap.Data.ProjectType (ProjectType)
 import Data.Aeson (KeyValue ((.=)), ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
 import Data.Char (isSpace)
@@ -146,10 +148,6 @@ instance ToJSON DevContainerJson where
         "workspaceFolder" .= Aeson.String workspaceFolderName
       ]
 
-newtype VSCodeExtension = VSCodeExtension Text deriving stock (Generic)
-
-instance ToJSON VSCodeExtension
-
 devContainerJsonFor :: DevContainerConfig -> ProjectName -> ProjectType -> Maybe DevContainerJson
 devContainerJsonFor (DevContainerConfig False) _ _ = Nothing
 devContainerJsonFor (DevContainerConfig True) projectName projectType =
@@ -158,16 +156,6 @@ devContainerJsonFor (DevContainerConfig True) projectName projectType =
       { projectName = projectName,
         extensions = extensionsFor projectType
       }
-  where
-    extensionsFor =
-      (VSCodeExtension <$>) . (["arrterian.nix-env-selector", "jnoortheen.nix-ide"] <>) . \case
-        Minimal -> []
-        Node _ -> []
-        Go _ -> ["golang.Go"]
-        Java _ installLombok _ ->
-          ["vscjava.vscode-java-pack"]
-            <> ["gabrielbb.vscode-lombok" | unInstallLombok installLombok]
-        Python _ -> ["ms-python.python"]
 
 newtype DevContainerDockerCompose = DevContainerDockerCompose
   {devContainerDockerComposeProjectName :: ProjectName}
