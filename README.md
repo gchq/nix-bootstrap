@@ -179,12 +179,12 @@ src/
 
 ##### Adding support for a new toolchain
 
-1. Add a new `ProjectSuperType` and corresponding `ProjectType` to the [`Bootstrap.Data.ProjectType`](../src/Bootstrap/Data/ProjectType.hs) module
+1. Add a new `ProjectSuperType` and corresponding `ProjectType` to the [`Bootstrap.Data.ProjectType`](./src/Bootstrap/Data/ProjectType.hs) module
 2. Run `cabal build -O0`, handling incomplete case statements until all of the warnings are fixed
 
 ##### Adding a new file to the list of files to be bootstrapped
 
-1. Add a new module for the file under [`Bootstrap.Data.Bootstrappable`](../src/Bootstrap/Data/Bootstrappable)
+1. Add a new module for the file under [`Bootstrap.Data.Bootstrappable`](./src/Bootstrap/Data/Bootstrappable)
 2. In the new module:
 
    1. Create a datatype for the file
@@ -192,9 +192,9 @@ src/
    3. Add a function which will return `Maybe a` where `a` is your datatype, depending on whether
       it is necessary to bootstrap the file under the given circumstances
    4. Name the function in `2.3` using a suffix of "for" according to the conventions - see
-      [`Bootstrap.Data.Bootstrappable.VSCodeSettings`](../src/Bootstrap/Data/Bootstrappable/VSCodeSettings.hs) `vsCodeSettingsFor` for an example.
+      [`Bootstrap.Data.Bootstrappable.VSCodeSettings`](./src/Bootstrap/Data/Bootstrappable/VSCodeSettings.hs) `vsCodeSettingsFor` for an example.
 
-3. Call the function in `2.3` in the `mkInitialBuildPlanMap` function in the [`Bootstrap`](../src/Bootstrap.hs) module
+3. Call the function in `2.3` in the `mkInitialBuildPlanMap` function in the [`Bootstrap`](./src/Bootstrap.hs) module
 
 </p>
 </details>
