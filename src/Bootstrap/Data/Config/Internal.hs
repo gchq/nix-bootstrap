@@ -224,7 +224,7 @@ loadConfig' nextToTry = do
 --
 -- ### Throws
 --
--- * `IOException` if the file cant' be loaded
+-- * `IOException` if the file can't be loaded
 -- * `SomeException` if the config can't be loaded or parsed.
 loadConfigAtVersion :: MonadBootstrap m => SConfigVersion version -> m (Maybe Config)
 loadConfigAtVersion v = do
