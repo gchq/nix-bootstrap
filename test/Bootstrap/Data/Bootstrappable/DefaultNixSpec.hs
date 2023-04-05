@@ -6,7 +6,15 @@ module Bootstrap.Data.Bootstrappable.DefaultNixSpec (spec) where
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
 import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
 import Bootstrap.Data.ProjectName (mkProjectName)
-import Bootstrap.Data.ProjectType (ArtefactId (ArtefactId), InstallLombok (InstallLombok), InstallMinishift (InstallMinishift), ProjectType (Go, Java), SetUpGoBuild (SetUpGoBuild), SetUpJavaBuild (SetUpJavaBuild))
+import Bootstrap.Data.ProjectType
+  ( ArtefactId (ArtefactId),
+    InstallLombok (InstallLombok),
+    InstallMinishift (InstallMinishift),
+    JavaOptions (JavaOptions),
+    ProjectType (Go, Java),
+    SetUpGoBuild (SetUpGoBuild),
+    SetUpJavaBuild (SetUpJavaBuild),
+  )
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
@@ -42,10 +50,11 @@ in
     let projectName = Unsafe.fromJust (mkProjectName "test-project")
     case defaultNixFor
       projectName
-      ( Java
-          (InstallMinishift True)
-          (InstallLombok True)
-          (SetUpJavaBuild $ ArtefactId "testId")
+      ( Java $
+          JavaOptions
+            (InstallMinishift True)
+            (InstallLombok True)
+            (SetUpJavaBuild $ ArtefactId "testId")
       ) of
       Just defaultNix ->
         bootstrapContent defaultNix

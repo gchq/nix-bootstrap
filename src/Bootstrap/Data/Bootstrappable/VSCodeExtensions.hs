@@ -17,6 +17,7 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.ProjectType
   ( InstallLombok (unInstallLombok),
+    JavaOptions (JavaOptions),
     ProjectType (Go, Java, Minimal, Node, Python),
   )
 import Data.Aeson (KeyValue ((.=)), ToJSON (toJSON))
@@ -50,7 +51,7 @@ extensionsFor =
     Minimal -> []
     Node _ -> []
     Go _ -> ["golang.Go"]
-    Java _ installLombok _ ->
+    Java (JavaOptions _ installLombok _) ->
       ["vscjava.vscode-java-pack"]
         <> ["gabrielbb.vscode-lombok" | unInstallLombok installLombok]
     Python _ -> ["ms-python.python"]

@@ -18,7 +18,8 @@ import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
   )
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (unPreCommitHooksConfig))
 import Bootstrap.Data.ProjectType
-  ( NodePackageManager (NPM, PNPm, Yarn),
+  ( JavaOptions (JavaOptions),
+    NodePackageManager (NPM, PNPm, Yarn),
     ProjectType (Go, Java, Minimal, Node, Python),
     unInstallMinishift,
   )
@@ -78,7 +79,7 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
             PNPm -> [[nix|nodePackages.pnpm|]]
             Yarn -> [[nix|yarn|]]
         Go _ -> [[nix|go|]]
-        Java installMinishift _ _ ->
+        Java (JavaOptions installMinishift _ _) ->
           [[nix|maven|], [nix|google-java-format|], [nix|jdk|]]
             <> [[nix|minishift|] | unInstallMinishift installMinishift]
         Python _ -> []

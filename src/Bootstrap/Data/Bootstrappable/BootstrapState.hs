@@ -1,5 +1,6 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.BootstrapState
+  {-# DEPRECATED "Use Bootstrap.Data.Config instead." #-}
   ( BootstrapState
       ( stateVersion,
         stateProjectName,

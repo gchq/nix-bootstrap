@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig (..),
@@ -5,10 +7,12 @@ module Bootstrap.Data.ContinuousIntegration
   )
 where
 
+import Dhall (FromDhall, ToDhall)
 import Toml (TomlCodec)
 import qualified Toml
 
 newtype ContinuousIntegrationConfig = ContinuousIntegrationConfig {unContinuousIntegrationConfig :: Bool}
+  deriving newtype (FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
 continuousIntegrationConfigCodec :: TomlCodec ContinuousIntegrationConfig
