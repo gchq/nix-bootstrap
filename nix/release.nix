@@ -35,8 +35,10 @@ in {
       glibc
       gmp
       libffi
+      ncurses
       niv
       which
+      zlib
     ];
     installPhase = ''
       mkdir -p $out/bin
