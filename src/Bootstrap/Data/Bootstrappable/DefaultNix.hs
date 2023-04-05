@@ -13,7 +13,7 @@ import Bootstrap.Data.Bootstrappable
     bootstrapContentNix,
   )
 import Bootstrap.Data.ProjectName (ProjectName)
-import Bootstrap.Data.ProjectType (ProjectType (Go, Java), SetUpGoBuild (SetUpGoBuild), SetUpJavaBuild (SetUpJavaBuild))
+import Bootstrap.Data.ProjectType (JavaOptions (JavaOptions), ProjectType (Go, Java), SetUpGoBuild (SetUpGoBuild), SetUpJavaBuild (SetUpJavaBuild))
 import Bootstrap.Nix.Expr
   ( Expr (ELetIn),
     IsNixExpr (toNixExpr),
@@ -38,5 +38,5 @@ instance IsNixExpr DefaultNix where
 defaultNixFor :: ProjectName -> ProjectType -> Maybe DefaultNix
 defaultNixFor projectName = \case
   Go (SetUpGoBuild True) -> Just . DefaultNix $ reproducibleGoBuild projectName
-  Java _ _ (SetUpJavaBuild artefactId) -> Just . DefaultNix $ reproducibleJavaBuild projectName artefactId
+  Java (JavaOptions _ _ (SetUpJavaBuild artefactId)) -> Just . DefaultNix $ reproducibleJavaBuild projectName artefactId
   _ -> Nothing

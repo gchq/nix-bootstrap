@@ -15,21 +15,6 @@ import Bootstrap.Cli
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapName),
   )
-import Bootstrap.Data.Bootstrappable.BootstrapState
-  ( BootstrapState
-      ( stateContinuousIntegrationConfig,
-        stateDevContainerConfig,
-        statePreCommitHooksConfig,
-        stateProjectName,
-        stateProjectType,
-        stateUseFlakes,
-        stateVersion
-      ),
-    BootstrapVersion (unBootstrapVersion),
-    bootstrapStateCodec,
-    bootstrapStateFileName,
-    bootstrapStateFor,
-  )
 import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
@@ -65,6 +50,21 @@ import Bootstrap.Data.BuildPlan
     toBuildPlanFile,
     toBuildPlanFiles,
   )
+import Bootstrap.Data.Config
+  ( LoadConfigResult
+      ( LoadConfigResultError,
+        LoadConfigResultFound,
+        LoadConfigResultNotFound
+      ),
+    configFor,
+    configProjectName,
+    configProjectType,
+    configSetUpContinuousIntegration,
+    configSetUpPreCommitHooks,
+    configSetUpVSCodeDevContainer,
+    configUseNixFlakes,
+    loadConfig,
+  )
 import Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig (ContinuousIntegrationConfig),
   )
@@ -76,6 +76,7 @@ import Bootstrap.Data.ProjectType
   ( ArtefactId (ArtefactId),
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
+    JavaOptions (JavaOptions),
     ProjectSuperType (PSTGo, PSTJava, PSTMinimal, PSTNode, PSTPython),
     ProjectType (Go, Java, Minimal, Node, Python),
     PythonVersion (Python39),
@@ -84,7 +85,7 @@ import Bootstrap.Data.ProjectType
     nodePackageManagerName,
     projectSuperTypeName,
   )
-import Bootstrap.Data.Version (MajorVersion (MajorVersion), displayMajorVersion, parseMajorVersion, toMajorVersion)
+import Bootstrap.Data.Version (MajorVersion (MajorVersion), displayMajorVersion)
 import Bootstrap.Error (CanDieOnError (dieOnError', dieOnErrorWithPrefix))
 import Bootstrap.GitPod (resetPermissionsInGitPod)
 import Bootstrap.Monad (MonadBootstrap)
@@ -103,6 +104,8 @@ import Bootstrap.Terminal
   )
 import Bootstrap.Terminal.Icon (icon)
 import Bootstrap.Unix (git)
+import Control.Lens ((^.))
+import Control.Monad.Catch (catchAll)
 import Data.Char (isSpace)
 import qualified Data.Text as T
 import Data.Version (showVersion)
@@ -110,7 +113,7 @@ import Paths_nix_bootstrap (version)
 import Relude.Extra.Map (alter, toPairs)
 import qualified Relude.Extra.Map as M
 import qualified Relude.Unsafe as Unsafe
-import System.Directory (doesFileExist, doesPathExist, getCurrentDirectory)
+import System.Directory (doesFileExist, doesPathExist, getCurrentDirectory, removeFile)
 import System.FilePath (takeFileName)
 import System.Terminal
   ( MonadColorPrinter (blue, foreground, green, yellow),
@@ -119,7 +122,6 @@ import System.Terminal
     runTerminalT,
     withTerminal,
   )
-import Toml (decodeFileEither, prettyTomlDecodeErrors)
 
 nixBootstrap :: IO ()
 nixBootstrap = withTerminal $ runTerminalT do
@@ -127,15 +129,22 @@ nixBootstrap = withTerminal $ runTerminalT do
     CommandHelp errs -> showHelp errs
     CommandRun initialRunConfig ->
       do
-        mBootstrapState <- getBootstrapState
+        mConfig <-
+          loadConfig >>= \case
+            LoadConfigResultFound c -> pure $ Just c
+            LoadConfigResultNotFound -> pure Nothing
+            LoadConfigResultError e -> do
+              putErrorLn . toText $ displayException e
+              putErrorLn "Invalid config file found; please delete the file and try again."
+              exitFailure
         showWelcomeMessage
         resetPermissionsInGitPod
-        useFlakes <- case mBootstrapState of
-          Just bootstrapState ->
+        useFlakes <- case mConfig of
+          Just cfg ->
             if rcFromScratch initialRunConfig
               then pure $ rcUseFlakes initialRunConfig
               else
-                if rcUseFlakes initialRunConfig && not (stateUseFlakes bootstrapState)
+                if rcUseFlakes initialRunConfig && not (cfg ^. configUseNixFlakes)
                   then do
                     putErrorLn $
                       "This project has been not configured to use nix flakes; re-run with --"
@@ -144,11 +153,9 @@ nixBootstrap = withTerminal $ runTerminalT do
                         <> useFlakesFlagName
                         <> " to re-configure the project to use nix flakes"
                     exitFailure
-                  else pure $ stateUseFlakes bootstrapState
+                  else pure $ cfg ^. configUseNixFlakes
           Nothing -> pure $ rcUseFlakes initialRunConfig
-        let nonInteractive = case mBootstrapState of
-              Just _ -> rcNonInteractive initialRunConfig
-              Nothing -> False
+        let nonInteractive = maybe False (const $ rcNonInteractive initialRunConfig) mConfig
             runConfig =
               initialRunConfig
                 { rcNonInteractive = nonInteractive,
@@ -158,30 +165,31 @@ nixBootstrap = withTerminal $ runTerminalT do
         buildPlan <-
           if rcFromScratch runConfig
             then promptBuildConfig nixBinaryPaths runConfig
-            else case mBootstrapState of
-              Just bootstrapState -> do
+            else case mConfig of
+              Just cfg -> do
                 withAttributes [bold, foreground yellow] . putTextLn $
                   "Using configuration from state file; re-run with --"
                     <> fromScratchFlagName
                     <> " to ignore the old configuration and bootstrap from scratch."
-                let mbpPreCommitHooksConfig = statePreCommitHooksConfig bootstrapState
+                let mbpPreCommitHooksConfig = cfg ^. configSetUpPreCommitHooks
                 if useFlakes
-                  then generateIntermediateFlake nixBinaryPaths runConfig (stateProjectName bootstrapState)
+                  then generateIntermediateFlake nixBinaryPaths runConfig (cfg ^. configProjectName)
                   else initialiseNiv runConfig mbpPreCommitHooksConfig
                 makeBuildPlan
                   MakeBuildPlanArgs
                     { mbpNixBinaryPaths = nixBinaryPaths,
-                      mbpProjectName = stateProjectName bootstrapState,
-                      mbpProjectType = stateProjectType bootstrapState,
+                      mbpProjectName = cfg ^. configProjectName,
+                      mbpProjectType = cfg ^. configProjectType,
                       mbpPreCommitHooksConfig,
-                      mbpContinuousIntegrationConfig = stateContinuousIntegrationConfig bootstrapState,
-                      mbpDevContainerConfig = stateDevContainerConfig bootstrapState,
+                      mbpContinuousIntegrationConfig = cfg ^. configSetUpContinuousIntegration,
+                      mbpDevContainerConfig = cfg ^. configSetUpVSCodeDevContainer,
                       mbpRunConfig = runConfig
                     }
               Nothing -> promptBuildConfig nixBinaryPaths runConfig
         confirmBuildPlan buildPlan >>= \case
           Just confirmedBuildPlan -> do
             bootstrap confirmedBuildPlan
+            liftIO (removeFile ".nix-bootstrap.toml" `catchAll` const pass)
             resetPermissionsInGitPod
             showCompletionMessage
             trackAllFilesInGit
@@ -291,41 +299,6 @@ promptProjectName =
         )
       . mkProjectName
 
-getBootstrapState :: forall m. MonadBootstrap m => m (Maybe BootstrapState)
-getBootstrapState = do
-  stateFileExists <- liftIO $ doesFileExist bootstrapStateFileName
-  if stateFileExists
-    then do
-      decodedState <- decodeFileEither bootstrapStateCodec bootstrapStateFileName
-      case decodedState of
-        Left e -> do
-          putErrorLn $ "Error reading state file: " <> prettyTomlDecodeErrors e
-          abort
-        Right bootstrapState -> do
-          case parseMajorVersion . unBootstrapVersion $ stateVersion bootstrapState of
-            Nothing -> do
-              putErrorLn "Failed to parse the state file's version number"
-              abort
-            Just stateMajorVersion -> do
-              case toMajorVersion version of
-                Just bootstrapVersion -> do
-                  if bootstrapVersion == stateMajorVersion
-                    then pure $ Just bootstrapState
-                    else do
-                      withAttributes [bold, foreground yellow] $ putTextLn "WARNING: Cannot use existing state file as it has a different major version number"
-                      promptYesNo "Would you like to upgrade?" >>= \case
-                        True -> pure Nothing
-                        False -> exitFailure
-                Nothing -> do
-                  putErrorLn "Failed to parse state file's version number"
-                  abort
-    else pure Nothing
-  where
-    abort :: m a
-    abort = do
-      putErrorLn "To bootstrap from scratch, delete .nix-bootstrap.toml and run nix-bootstrap again."
-      exitFailure
-
 promptBuildConfig :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> m BuildPlan
 promptBuildConfig mbpNixBinaryPaths mbpRunConfig@RunConfig {rcUseFlakes, rcWithDevContainer} = do
   when rcUseFlakes do
@@ -376,7 +349,7 @@ promptProjectType devContainerConfig = do
           True ->
             SetUpJavaBuild . ArtefactId
               <$> promptNonemptyText "Enter your Maven ArtefactId (e.g. the 'demo' in 'com.example.demo'): "
-      pure $ Java installMinishift installLombok setUpJavaBuild
+      pure . Java $ JavaOptions installMinishift installLombok setUpJavaBuild
     PSTPython -> pure $ Python Python39
   where
     askIfReproducibleBuildRequired :: m Bool
@@ -434,7 +407,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
         _ -> pure Nothing
       fromList
         <$> toBuildPlanFiles
-          ( bootstrapStateFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig mbpContinuousIntegrationConfig mbpDevContainerConfig (rcUseFlakes mbpRunConfig)
+          ( configFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig mbpContinuousIntegrationConfig mbpDevContainerConfig (rcUseFlakes mbpRunConfig)
               ~: Envrc mbpPreCommitHooksConfig (rcUseFlakes mbpRunConfig)
               ~: gitignoreFor mbpRunConfig mbpProjectType mbpPreCommitHooksConfig
               ~: initialReadme

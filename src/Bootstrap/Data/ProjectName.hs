@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.ProjectName
   ( ProjectName (unProjectName),
@@ -9,11 +11,13 @@ where
 
 import qualified Data.Char as C
 import qualified Data.Text as T
+import Dhall (FromDhall, ToDhall)
 import qualified Toml
 
 -- | The name of a project. It can be comprised of characters matching [-_a-zA-Z0-9 ]
 newtype ProjectName = ProjectName {unProjectName :: Text}
   deriving stock (Eq, Show)
+  deriving newtype (FromDhall, ToDhall)
 
 -- | A smart constructor which gives back Nothing if the project name
 -- contains invalid characters or begins with a non-alphabetical character.

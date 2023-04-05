@@ -8,6 +8,7 @@ import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.ProjectType
   ( InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
+    JavaOptions (JavaOptions),
     ProjectType (Java),
     SetUpJavaBuild (NoJavaBuild),
   )
@@ -20,10 +21,11 @@ spec = describe ".vscode/extensions.json rendering" do
   it "renders the json correctly" do
     bootstrapContent
       ( vsCodeExtensionsFileFor
-          ( Java
-              (InstallMinishift True)
-              (InstallLombok True)
-              NoJavaBuild
+          ( Java $
+              JavaOptions
+                (InstallMinishift True)
+                (InstallLombok True)
+                NoJavaBuild
           )
       )
       >>= ( `shouldBe`

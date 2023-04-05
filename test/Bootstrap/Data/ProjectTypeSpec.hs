@@ -5,6 +5,7 @@ module Bootstrap.Data.ProjectTypeSpec (spec) where
 
 import Bootstrap.Data.ProjectType
   ( ArtefactId (ArtefactId),
+    JavaOptions (JavaOptions),
     ProjectType (Go, Java, Minimal, Node, Python),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
     projectTypeCodec,
@@ -28,7 +29,7 @@ instance Arbitrary ProjectType where
       [ pure Minimal,
         Node <$> arbitraryBoundedEnum,
         Go <$> arbitraryBoundedEnum,
-        Java <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary,
+        Java <$> (JavaOptions <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary),
         Python <$> arbitraryBoundedEnum
       ]
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 -- | Copyright : (c) Crown Copyright GCHQ
@@ -9,6 +11,7 @@ module Bootstrap.Data.ProjectType
     NodePackageManager (..),
     nodePackageManagerName,
     SetUpGoBuild (..),
+    JavaOptions (..),
     InstallMinishift (..),
     InstallLombok (..),
     ArtefactId (..),
@@ -20,6 +23,8 @@ module Bootstrap.Data.ProjectType
 where
 
 import Data.Tuple.Extra (uncurry3)
+import Dhall (FromDhall, ToDhall)
+import Dhall.Deriving (AsIs, Codec (Codec), Constructor, Field)
 import Toml (TomlCodec)
 import qualified Toml
 
@@ -52,9 +57,10 @@ data ProjectType
   = Minimal
   | Node NodePackageManager
   | Go SetUpGoBuild
-  | Java InstallMinishift InstallLombok SetUpJavaBuild
+  | Java JavaOptions
   | Python PythonVersion
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectType
 
 instance HasProjectSuperType ProjectType where
   projectSuperType = \case
@@ -64,7 +70,9 @@ instance HasProjectSuperType ProjectType where
     Java {} -> PSTJava
     Python _ -> PSTPython
 
-data NodePackageManager = NPM | PNPm | Yarn deriving stock (Bounded, Enum, Eq, Show)
+data NodePackageManager = NPM | PNPm | Yarn
+  deriving stock (Bounded, Enum, Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) NodePackageManager
 
 nodePackageManagerName :: NodePackageManager -> Text
 nodePackageManagerName = \case
@@ -73,22 +81,32 @@ nodePackageManagerName = \case
   Yarn -> "Yarn 1.x"
 
 newtype SetUpGoBuild = SetUpGoBuild {unSetUpGoBuild :: Bool}
-  deriving newtype (Bounded, Enum)
+  deriving newtype (Bounded, Enum, FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
+data JavaOptions = JavaOptions
+  { installMinishift :: InstallMinishift,
+    installLombok :: InstallLombok,
+    setUpJavaBuild :: SetUpJavaBuild
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Field AsIs) JavaOptions
+
 newtype InstallMinishift = InstallMinishift {unInstallMinishift :: Bool}
-  deriving newtype (Bounded, Enum)
+  deriving newtype (Bounded, Enum, FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
 newtype InstallLombok = InstallLombok {unInstallLombok :: Bool}
-  deriving newtype (Bounded, Enum)
+  deriving newtype (Bounded, Enum, FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
 newtype ArtefactId = ArtefactId {unArtefactId :: Text}
+  deriving newtype (FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
 data SetUpJavaBuild = SetUpJavaBuild ArtefactId | NoJavaBuild
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) SetUpJavaBuild
 
 setUpJavaBuildCodec :: TomlCodec SetUpJavaBuild
 setUpJavaBuildCodec =
@@ -102,7 +120,8 @@ setUpJavaBuildCodec =
     toSetUpJavaBuild = maybe NoJavaBuild SetUpJavaBuild
 
 data PythonVersion = Python39
-  deriving stock (Bounded, Enum, Eq, Show)
+  deriving stock (Bounded, Enum, Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) PythonVersion
 
 pythonVersionName :: PythonVersion -> Text
 pythonVersionName = \case
@@ -121,7 +140,7 @@ projectTypeCodec =
                 <|> Toml.dimatch matchGo Go (Toml.enumBounded "setUpGoBuild")
                 <|> Toml.dimatch
                   matchJava
-                  (uncurry3 Java)
+                  (Java . uncurry3 JavaOptions)
                   ( Toml.triple
                       (Toml.diwrap $ Toml.bool "installMinishift")
                       (Toml.diwrap $ Toml.bool "installLombok")
@@ -140,7 +159,7 @@ projectTypeCodec =
     matchGo _ = Nothing
 
     matchJava :: ProjectType -> Maybe (InstallMinishift, InstallLombok, SetUpJavaBuild)
-    matchJava (Java installMinishift installLombok setUpJavaBuild) =
+    matchJava (Java (JavaOptions installMinishift installLombok setUpJavaBuild)) =
       Just (installMinishift, installLombok, setUpJavaBuild)
     matchJava _ = Nothing
 

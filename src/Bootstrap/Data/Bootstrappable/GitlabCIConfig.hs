@@ -20,7 +20,8 @@ import Bootstrap.Data.PreCommitHook
   ( PreCommitHooksConfig (unPreCommitHooksConfig),
   )
 import Bootstrap.Data.ProjectType
-  ( ProjectType (Go, Java),
+  ( JavaOptions (JavaOptions),
+    ProjectType (Go, Java),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (SetUpJavaBuild),
   )
@@ -70,7 +71,7 @@ instance Bootstrappable GitlabCIConfig where
            )
         <> case gitlabCIConfigProjectType of
           Go (SetUpGoBuild True) -> buildJob
-          Java _ _ (SetUpJavaBuild _) -> buildJob
+          Java (JavaOptions _ _ (SetUpJavaBuild _)) -> buildJob
           _ -> []
     where
       buildJob :: [Text]

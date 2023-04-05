@@ -1,9 +1,6 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.BuildPlanSpec (spec) where
 
-import Bootstrap.Data.Bootstrappable.BootstrapState
-  ( bootstrapStateFor,
-  )
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
     devContainerDockerfileFor,
@@ -23,6 +20,7 @@ import Bootstrap.Data.BuildPlan
     toBuildPlanFiles,
     toReasonTree,
   )
+import Bootstrap.Data.Config (configFor)
 import Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig (ContinuousIntegrationConfig),
   )
@@ -51,7 +49,7 @@ spec = describe "toReasonTree" do
       buildPlan <-
         BuildPlan
           <$> toBuildPlanFiles
-            ( bootstrapStateFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig False
+            ( configFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig False
                 ~: Envrc preCommitHooksConfig False
                 ~: nixShellFor rcDefault projectType preCommitHooksConfig (Just nixPreCommitHookConfig)
                 ~: gitignoreFor rcDefault projectType preCommitHooksConfig
@@ -80,7 +78,7 @@ spec = describe "toReasonTree" do
           Node ".gitignore - This tells git what not to track." [],
           Node ".gitlab-ci.yml - This file sets up GitLab CI." [],
           Node ".gitpod.yml - This overrides GitPod's automated tasks; they are not needed." [],
-          Node ".nix-bootstrap.toml - This holds nix-bootstrap's configuration to ensure upgrades are reliable." [],
+          Node ".nix-bootstrap.dhall - This holds nix-bootstrap's configuration to ensure upgrades are reliable." [],
           Node
             ".vscode"
             [ Node "extensions.json - This configures the extensions we recommend for VSCode." [],

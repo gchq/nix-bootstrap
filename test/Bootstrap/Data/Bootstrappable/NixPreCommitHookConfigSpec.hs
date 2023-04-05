@@ -10,6 +10,7 @@ import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
 import Bootstrap.Data.ProjectType
   ( InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
+    JavaOptions (JavaOptions),
     NodePackageManager (NPM),
     ProjectType (Go, Java, Node),
     SetUpGoBuild (SetUpGoBuild),
@@ -73,7 +74,7 @@ spec = describe "nix/pre-commit-hooks.nix rendering" do
     bootstrapContent
       ( nixPreCommitHookConfigFor
           rcDefault
-          (Java (InstallMinishift False) (InstallLombok False) NoJavaBuild)
+          (Java $ JavaOptions (InstallMinishift False) (InstallLombok False) NoJavaBuild)
       )
       >>= ( `shouldBe`
               Right

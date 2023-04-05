@@ -36,7 +36,7 @@ import Relude.Extra.Map (toPairs)
 import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath (joinPath, splitDirectories, takeDirectory)
 import System.Terminal
-  ( MonadColorPrinter (foreground, green, yellow),
+  ( MonadColorPrinter (foreground, green, red, yellow),
     MonadFormattingPrinter (bold),
     MonadPrinter (putLn, putText),
     putTextLn,
@@ -149,6 +149,14 @@ confirmBuildPlan BuildPlan {..} = do
       pure . Just $ BuildPlan []
     else do
       showSummaries (willOverwrite, willWriteFromNew)
+      oldConfigExists <- liftIO $ doesFileExist ".nix-bootstrap.toml"
+      if oldConfigExists
+        then do
+          withAttribute bold $ putText "I'm also going to "
+          withAttributes [bold, foreground red] $ putText "DELETE"
+          withAttribute bold $ putTextLn " the following files:"
+          putTextLn "  - .nix-bootstrap.toml (it will be replaced by .nix-bootstrap.dhall)"
+        else pass
       promptYesNo "Is that okay?" >>= \case
         True -> pure . Just $ BuildPlan keptInBuildPlan
         False -> pure Nothing
