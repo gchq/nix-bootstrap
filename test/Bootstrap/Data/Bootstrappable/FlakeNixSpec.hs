@@ -4,6 +4,7 @@
 module Bootstrap.Data.Bootstrappable.FlakeNixSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
+import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
 import Bootstrap.Data.Bootstrappable.FlakeNix (flakeNixFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
@@ -24,7 +25,7 @@ spec :: Spec
 spec = describe "flake.nix rendering" do
   let projectName = Unsafe.fromJust $ mkProjectName "test-project"
   it "renders correctly without pre-commit hooks" do
-    bootstrapContent (flakeNixFor rcWithFlakes projectName (Node NPM) (PreCommitHooksConfig False) Nothing)
+    bootstrapContent (flakeNixFor rcWithFlakes projectName (Node NPM) (PreCommitHooksConfig False) Nothing Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -54,7 +55,7 @@ spec = describe "flake.nix rendering" do
 |]
           )
   it "orders build inputs correctly when some use property access" do
-    bootstrapContent (flakeNixFor rcWithFlakes projectName (Node PNPm) (PreCommitHooksConfig False) Nothing)
+    bootstrapContent (flakeNixFor rcWithFlakes projectName (Node PNPm) (PreCommitHooksConfig False) Nothing Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -92,6 +93,7 @@ spec = describe "flake.nix rendering" do
           (Node NPM)
           (PreCommitHooksConfig True)
           (Just . nixPreCommitHookConfigFor rcWithFlakes $ Node NPM)
+          Nothing
       )
       >>= ( `shouldBe`
               Right
@@ -147,6 +149,7 @@ spec = describe "flake.nix rendering" do
           (Go $ SetUpGoBuild True)
           (PreCommitHooksConfig True)
           (Just . nixPreCommitHookConfigFor rcWithFlakes . Go $ SetUpGoBuild True)
+          (buildNixFor rcWithFlakes projectName (Go $ SetUpGoBuild True))
       )
       >>= ( `shouldBe`
               Right
@@ -179,15 +182,8 @@ spec = describe "flake.nix rendering" do
         buildInputs = preCommitHooks.tools ++ (with nixpkgs; [go rnix-lsp]);
       };
       defaultPackage = self.packages.${system}.default;
-      packages.default = nixpkgs.buildGoModule {
-        pname = "test-project";
-        version = "0.1.0";
-        src = ./.;
-        vendorSha256 = null;
-        # Swap out the line above for the one below once you start adding dependencies.
-        # After your dependencies change, builds will fail until you update the hash below.
-        # When the build fails, it will tell you what the expected hash is.
-        # vendorSha256 = "sha256-00000000000000000000000000000000000000000000";
+      packages.default = import nix/build.nix {
+        inherit nixpkgs;
       };
       # runChecks is a hack required to allow checks to run on a single system
       # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
@@ -200,7 +196,7 @@ spec = describe "flake.nix rendering" do
 |]
           )
   it "renders correctly with a Python project" do
-    bootstrapContent (flakeNixFor rcWithFlakes projectName (Python Python39) (PreCommitHooksConfig False) Nothing)
+    bootstrapContent (flakeNixFor rcWithFlakes projectName (Python Python39) (PreCommitHooksConfig False) Nothing Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{

@@ -15,6 +15,7 @@ import Bootstrap.Cli
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapName),
   )
+import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
 import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
@@ -395,6 +396,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
             if unPreCommitHooksConfig mbpPreCommitHooksConfig
               then Just $ nixPreCommitHookConfigFor mbpRunConfig mbpProjectType
               else Nothing
+          buildNix = buildNixFor mbpRunConfig mbpProjectName mbpProjectType
       goModfile <-
         case mbpProjectType of
           Go (SetUpGoBuild True) ->
@@ -411,7 +413,8 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: Envrc mbpPreCommitHooksConfig (rcUseFlakes mbpRunConfig)
               ~: gitignoreFor mbpRunConfig mbpProjectType mbpPreCommitHooksConfig
               ~: initialReadme
-              ~: flakeNixFor mbpRunConfig mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig
+              ~: buildNix
+              ~: flakeNixFor mbpRunConfig mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig buildNix
               ~: ( if rcUseFlakes mbpRunConfig
                      then Nothing
                      else Just $ nixShellFor mbpRunConfig mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig
