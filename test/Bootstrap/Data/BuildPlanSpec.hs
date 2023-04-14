@@ -1,12 +1,15 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.BuildPlanSpec (spec) where
 
+import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
+import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
     devContainerDockerfileFor,
     devContainerJsonFor,
   )
 import Bootstrap.Data.Bootstrappable.Envrc (Envrc (Envrc))
+import Bootstrap.Data.Bootstrappable.FlakeNix (flakeNixFor)
 import Bootstrap.Data.Bootstrappable.GitPodYml (GitPodYml (GitPodYml))
 import Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor)
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
@@ -34,23 +37,27 @@ import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Test.Util.CanDieOnError ()
-import Test.Util.RunConfig (rcDefault)
+import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 
 spec :: Spec
 spec = describe "toReasonTree" do
   it "Creates the expected tree" $ do
     reasonTree <- do
       let projectName = Unsafe.fromJust $ mkProjectName "test-project"
-          projectType = Go $ SetUpGoBuild False
+          projectType = Go $ SetUpGoBuild True
           preCommitHooksConfig = PreCommitHooksConfig True
           ciConfig = ContinuousIntegrationConfig True
           devContainerConfig = DevContainerConfig True
+          buildNix = buildNixFor rcWithFlakes projectName projectType
       let nixPreCommitHookConfig = nixPreCommitHookConfigFor rcDefault projectType
       buildPlan <-
         BuildPlan
           <$> toBuildPlanFiles
             ( configFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig False
                 ~: Envrc preCommitHooksConfig False
+                ~: buildNix
+                ~: flakeNixFor rcWithFlakes projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
+                ~: defaultNixFor projectName projectType
                 ~: nixShellFor rcDefault projectType preCommitHooksConfig (Just nixPreCommitHookConfig)
                 ~: gitignoreFor rcDefault projectType preCommitHooksConfig
                 ~: Readme projectName projectType devContainerConfig Nothing False
@@ -84,9 +91,12 @@ spec = describe "toReasonTree" do
             [ Node "extensions.json - This configures the extensions we recommend for VSCode." [],
               Node "settings.json - This configures the settings for the extensions we recommend for VSCode." []
             ],
+          Node "default.nix - This configures your reproducible project builds." [],
+          Node "flake.nix - This configures what tools are available in your development environment and links in the pre-commit hooks." [],
           Node
             "nix"
-            [ Node "pre-commit-hooks.nix - This configures which pre-commit hooks are used." [],
+            [ Node "build.nix - This configures your reproducible project builds." [],
+              Node "pre-commit-hooks.nix - This configures which pre-commit hooks are used." [],
               Node "sources.json - This contains metadata about your nix dependencies." [],
               Node "sources.nix - This is the interface between nix and the dependencies listed in sources.json." []
             ],

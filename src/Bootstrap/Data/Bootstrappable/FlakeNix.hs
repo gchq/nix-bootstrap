@@ -13,7 +13,7 @@ import Bootstrap.Data.Bootstrappable
       ),
     bootstrapContentNix,
   )
-import Bootstrap.Data.Bootstrappable.DefaultNix (DefaultNix (defaultNixInBlockExpr), defaultNixFor)
+import Bootstrap.Data.Bootstrappable.BuildNix (BuildNix)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (NixPreCommitHookConfig)
 import Bootstrap.Data.Bootstrappable.NixShell (NixShell (NixShell, nixShellBuildInputs, nixShellHooksRequireNixpkgs), nixShellFor)
 import Bootstrap.Data.PreCommitHook
@@ -26,7 +26,7 @@ import Bootstrap.Nix.Expr
     Expr (EGrouping, ELetIn, ELit, ESet),
     FunctionArgs (FASet),
     IsNixExpr (toNixExpr),
-    Literal (LString),
+    Literal (LPath, LString),
     nix,
     nixargs,
     nixbinding,
@@ -53,16 +53,15 @@ data FlakeNix = FlakeNix
     flakeNixProjectName :: ProjectName,
     flakeNixProjectType :: ProjectType,
     flakeNixBuildInputs :: [Expr],
-    flakeNixBuildExpr :: Maybe Expr,
+    flakeNixBuildNix :: Maybe BuildNix,
     -- | Used to determine whether to pass the nixpkgs argument to the pre-commit-hooks config
     flakeNixHooksRequireNixpkgs :: Bool
   }
 
 instance Bootstrappable FlakeNix where
   bootstrapName = const "flake.nix"
-  bootstrapReason FlakeNix {flakeNixPreCommitHooksConfig, flakeNixBuildExpr} =
+  bootstrapReason FlakeNix {flakeNixPreCommitHooksConfig} =
     "This configures what tools are available in your development environment"
-      <> maybe "" (const ", configures reproducible builds,") flakeNixBuildExpr
       <> if unPreCommitHooksConfig flakeNixPreCommitHooksConfig
         then " and links in the pre-commit hooks."
         else "."
@@ -74,18 +73,17 @@ flakeNixFor ::
   ProjectType ->
   PreCommitHooksConfig ->
   Maybe NixPreCommitHookConfig ->
+  Maybe BuildNix ->
   Maybe FlakeNix
 flakeNixFor
   rc@RunConfig {rcUseFlakes}
   flakeNixProjectName
   flakeNixProjectType
   flakeNixPreCommitHooksConfig
-  nixPreCommitHookConfig =
+  nixPreCommitHookConfig
+  flakeNixBuildNix =
     let NixShell {nixShellBuildInputs, nixShellHooksRequireNixpkgs} =
           nixShellFor rc flakeNixProjectType flakeNixPreCommitHooksConfig nixPreCommitHookConfig
-        flakeNixBuildExpr =
-          defaultNixInBlockExpr
-            <$> defaultNixFor flakeNixProjectName flakeNixProjectType
      in if rcUseFlakes
           then
             Just
@@ -158,10 +156,14 @@ instance IsNixExpr FlakeNix where
                                            bisProjectType = flakeNixProjectType
                                          }
                                  ]
-                              <> case flakeNixBuildExpr of
-                                Just buildExpr ->
+                              <> case flakeNixBuildNix of
+                                Just buildNix ->
                                   [ [nixbinding|defaultPackage = self.packages.${system}.default;|],
-                                    [nixproperty|packages.default|] |= buildExpr
+                                    [nixproperty|packages.default|]
+                                      |= ( [nix|import|]
+                                             |* ELit (LPath . toText $ bootstrapName buildNix)
+                                             |* [nix|{ inherit nixpkgs; }|]
+                                         )
                                   ]
                                     <> (if usingHooks then runChecksDerivation else [])
                                 Nothing -> if usingHooks then runChecksDerivation else []
