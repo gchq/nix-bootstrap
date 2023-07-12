@@ -14,7 +14,7 @@ import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentNix,
   )
-import Bootstrap.Data.ProjectType (ProjectType (Go, Java, Minimal, Node, Python))
+import Bootstrap.Data.ProjectType (ProjectType (Elm, Go, Java, Minimal, Node, Python))
 import Bootstrap.Nix.Expr
   ( Binding (BNameValue),
     Expr (EGrouping, EIdent, EList, ELit, ESet, EWith),
@@ -90,6 +90,7 @@ nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
   let nixPreCommitHookConfigHooks =
         alejandra : case projectType of
           Minimal -> []
+          Elm _ -> [elmFormat, elmReview, prettier]
           Node _ -> [prettier]
           Go _ -> [goFmt, goTest]
           Java {} -> [googleJavaFormat]
@@ -193,6 +194,12 @@ defaultPreCommitHook name tool =
 
 alejandra :: PreCommitHook
 alejandra = defaultPreCommitHook "alejandra" $ DefaultPreCommitHookTool "alejandra"
+
+elmFormat :: PreCommitHook
+elmFormat = defaultPreCommitHook "elm-format" $ DefaultPreCommitHookTool "elm-format"
+
+elmReview :: PreCommitHook
+elmReview = defaultPreCommitHook "elm-review" $ DefaultPreCommitHookTool "elm-review"
 
 prettier :: PreCommitHook
 prettier = defaultPreCommitHook "prettier" $ DefaultPreCommitHookTool "prettier"

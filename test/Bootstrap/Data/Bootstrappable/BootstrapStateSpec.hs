@@ -10,7 +10,16 @@ import Bootstrap.Data.ContinuousIntegration (ContinuousIntegrationConfig (Contin
 import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
-import Bootstrap.Data.ProjectType (ProjectType (Node))
+import Bootstrap.Data.ProjectType
+  ( JavaOptions (JavaOptions),
+    ProjectTypeV2
+      ( PTV2Go,
+        PTV2Java,
+        PTV2Minimal,
+        PTV2Node,
+        PTV2Python
+      ),
+  )
 import Bootstrap.Data.ProjectTypeSpec ()
 import Data.Version (showVersion)
 import Paths_nix_bootstrap (version)
@@ -22,6 +31,7 @@ import Test.QuickCheck
   ( Arbitrary (arbitrary),
     arbitraryBoundedEnum,
     generate,
+    oneof,
   )
 import Test.Util (tomlRoundtripTest)
 
@@ -34,6 +44,16 @@ instance Arbitrary BootstrapState where
     ciConfig <- ContinuousIntegrationConfig <$> arbitrary
     bootstrapStateFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig <$> arbitrary
 
+instance Arbitrary ProjectTypeV2 where
+  arbitrary =
+    oneof
+      [ pure PTV2Minimal,
+        PTV2Node <$> arbitraryBoundedEnum,
+        PTV2Go <$> arbitraryBoundedEnum,
+        PTV2Java <$> (JavaOptions <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary),
+        PTV2Python <$> arbitraryBoundedEnum
+      ]
+
 spec :: Spec
 spec = describe ".nix-bootstrap.toml rendering" do
   it "renders correctly" do
@@ -42,7 +62,7 @@ spec = describe ".nix-bootstrap.toml rendering" do
     bootstrapContent
       ( bootstrapStateFor
           projectName
-          (Node nodePackageManager)
+          (PTV2Node nodePackageManager)
           (PreCommitHooksConfig True)
           (ContinuousIntegrationConfig True)
           (DevContainerConfig True)

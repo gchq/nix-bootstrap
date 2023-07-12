@@ -17,7 +17,12 @@ import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent, bootstra
 import Bootstrap.Data.BuildPlan (BuildPlan, toReasonTree)
 import Bootstrap.Data.DevContainer (DevContainerConfig, unDevContainerConfig)
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
-import Bootstrap.Data.ProjectType (ProjectType (Go, Python), SetUpGoBuild (SetUpGoBuild))
+import Bootstrap.Data.ProjectType
+  ( ElmMode (ElmModeBare, ElmModeNode),
+    ElmOptions (ElmOptions, elmOptionElmMode, elmOptionProvideElmReview),
+    ProjectType (Elm, Go, Python),
+    SetUpGoBuild (SetUpGoBuild),
+  )
 import Bootstrap.Nix.Command
   ( NixCommand (NixCommand),
     NixCommandStyle (NCSNew, NCSOld),
@@ -117,6 +122,46 @@ instance Bootstrappable Readme where
                else []
            )
         <> ( case readmeProjectType of
+               Elm ElmOptions {..} ->
+                 [""]
+                   <> ( case elmOptionElmMode of
+                          ElmModeNode _ ->
+                            [ "## Running a Development Server",
+                              "",
+                              "To run a development server, use the `dev` script defined in `package.json`.",
+                              "",
+                              "### Troubleshooting: Unexpected token...",
+                              "",
+                              "Caching issues sometimes cause build failures with unhelpful error messages.",
+                              "Try `rm -rf elm-stuff .parcel-cache` if this occurs.",
+                              ""
+                            ]
+                          _ -> []
+                      )
+                   <> ( if elmOptionProvideElmReview
+                          then
+                            [ "## Linting Your Elm Files",
+                              "",
+                              "To lint your Elm files, run `elm-review --fix`.",
+                              "",
+                              "You may need to run some additional setup commands related to versions when",
+                              "you first do this. The tool will advise on what needs doing.",
+                              ""
+                            ]
+                          else []
+                      )
+                   <> [ "## Building for Production",
+                        ""
+                      ]
+                   <> ( case elmOptionElmMode of
+                          ElmModeBare ->
+                            ["To produce a production build, run `elm make src/Main.elm`. This will produce `index.html`."]
+                          ElmModeNode _ ->
+                            [ "To produce a production build, use the `build` script defined in `package.json`.",
+                              "",
+                              "This will produce a `dist` directory with a built web app."
+                            ]
+                      )
                Go (SetUpGoBuild True) ->
                  [ "",
                    "## Building for Production",

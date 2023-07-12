@@ -22,6 +22,17 @@ import Bootstrap.Data.Bootstrappable.DevContainer
     devContainerDockerfileFor,
     devContainerJsonFor,
   )
+import Bootstrap.Data.Bootstrappable.Elm.ElmJson (elmJsonFor)
+import Bootstrap.Data.Bootstrappable.Elm.IndexHtml (elmIndexHtmlFor)
+import Bootstrap.Data.Bootstrappable.Elm.IndexJs (elmIndexJsFor)
+import Bootstrap.Data.Bootstrappable.Elm.MainElm (mainElmFor)
+import Bootstrap.Data.Bootstrappable.Elm.PackageJson (elmPackageJsonFor)
+import Bootstrap.Data.Bootstrappable.Elm.Review.Config
+  ( elmReviewConfigFor,
+  )
+import Bootstrap.Data.Bootstrappable.Elm.Review.ElmJson
+  ( elmReviewElmJsonFor,
+  )
 import Bootstrap.Data.Bootstrappable.Envrc (Envrc (Envrc))
 import Bootstrap.Data.Bootstrappable.FlakeNix (flakeNixFor)
 import Bootstrap.Data.Bootstrappable.GitPodYml (GitPodYml (GitPodYml))
@@ -75,11 +86,14 @@ import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig,
 import Bootstrap.Data.ProjectName (ProjectName, mkProjectName)
 import Bootstrap.Data.ProjectType
   ( ArtefactId (ArtefactId),
+    ElmMode (ElmModeBare, ElmModeNode),
+    ElmModeSimple (ElmModeSimpleBare, ElmModeSimpleNode),
+    ElmOptions (ElmOptions, elmOptionElmMode, elmOptionProvideElmReview),
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
-    ProjectSuperType (PSTGo, PSTJava, PSTMinimal, PSTNode, PSTPython),
-    ProjectType (Go, Java, Minimal, Node, Python),
+    ProjectSuperType (PSTElm, PSTGo, PSTJava, PSTMinimal, PSTNode, PSTPython),
+    ProjectType (Elm, Go, Java, Minimal, Node, Python),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
@@ -331,6 +345,19 @@ promptProjectType devContainerConfig = do
   superType <- promptChoice "Select a project type:" universe projectSuperTypeName
   case superType of
     PSTMinimal -> pure Minimal
+    PSTElm -> do
+      elmModeSimple <- promptChoice "How would you like to use Elm?" universe \case
+        ElmModeSimpleBare -> "On its own"
+        ElmModeSimpleNode -> "As part of a Node application"
+      elmOptionElmMode <- case elmModeSimple of
+        ElmModeSimpleBare -> pure ElmModeBare
+        ElmModeSimpleNode ->
+          ElmModeNode
+            <$> promptChoice "Select a node package manager:" universe nodePackageManagerName
+      elmOptionProvideElmReview <-
+        promptYesNo
+          "Would you like to set up elm-review with a default configuration for code quality?"
+      pure $ Elm ElmOptions {..}
     PSTNode -> do
       packageManager <- promptChoice "Select a package manager:" universe nodePackageManagerName
       pure $ Node packageManager
@@ -432,6 +459,13 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: vsCodeSettingsFor mbpDevContainerConfig
               ~: goModfile
               ~: pythonRequirementsFile
+              ~: mainElmFor mbpProjectType
+              ~: elmJsonFor mbpProjectType
+              ~: elmReviewElmJsonFor mbpProjectType
+              ~: elmReviewConfigFor mbpProjectType
+              ~: elmPackageJsonFor mbpProjectType
+              ~: elmIndexHtmlFor mbpProjectName mbpProjectType
+              ~: elmIndexJsFor mbpProjectType
               ~: GitPodYml
               ~: HNil
           )

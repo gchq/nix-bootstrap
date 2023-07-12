@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Copyright : (c) Crown Copyright GCHQ
@@ -5,10 +6,11 @@ module Bootstrap.Data.ProjectTypeSpec (spec) where
 
 import Bootstrap.Data.ProjectType
   ( ArtefactId (ArtefactId),
+    ElmMode (ElmModeBare, ElmModeNode),
+    ElmOptions (ElmOptions),
     JavaOptions (JavaOptions),
-    ProjectType (Go, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Java, Minimal, Node, Python),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
-    projectTypeCodec,
   )
 import Data.Char (isAsciiLower, isAsciiUpper)
 import Test.Hspec (Spec, describe)
@@ -21,12 +23,17 @@ import Test.QuickCheck
     suchThat,
     vectorOf,
   )
-import Test.Util (tomlRoundtripTest)
+import Test.Util (dhallRoundtripTest)
 
 instance Arbitrary ProjectType where
   arbitrary =
     oneof
       [ pure Minimal,
+        Elm
+          <$> ( ElmOptions
+                  <$> oneof [pure ElmModeBare, ElmModeNode <$> arbitraryBoundedEnum]
+                  <*> arbitrary
+              ),
         Node <$> arbitraryBoundedEnum,
         Go <$> arbitraryBoundedEnum,
         Java <$> (JavaOptions <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary),
@@ -48,4 +55,4 @@ instance Arbitrary ArtefactId where
 
 spec :: Spec
 spec = describe "ProjectType" do
-  prop "roundtrips to TOML" (tomlRoundtripTest projectTypeCodec)
+  prop "roundtrips to Dhall" (dhallRoundtripTest @ProjectType)

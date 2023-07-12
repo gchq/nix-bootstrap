@@ -18,9 +18,11 @@ import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
   )
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (unPreCommitHooksConfig))
 import Bootstrap.Data.ProjectType
-  ( JavaOptions (JavaOptions),
+  ( ElmMode (ElmModeBare, ElmModeNode),
+    ElmOptions (elmOptionElmMode),
+    JavaOptions (JavaOptions),
     NodePackageManager (NPM, PNPm, Yarn),
-    ProjectType (Go, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Java, Minimal, Node, Python),
     unInstallMinishift,
   )
 import Bootstrap.Nix.Expr
@@ -73,16 +75,26 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
     buildInputsFor =
       sortBy compareBuildInputs . (([nix|rnix-lsp|] : [[nix|niv|] | not rcUseFlakes]) <>) . \case
         Minimal -> []
+        Elm elmOptions ->
+          [ [nix|elmPackages.elm|],
+            [nix|elmPackages.elm-json|],
+            [nix|elmPackages.elm-language-server|]
+          ]
+            <> case elmOptionElmMode elmOptions of
+              ElmModeBare -> []
+              ElmModeNode packageManager -> [nix|nodejs|] : nodePackageManager packageManager
         Node packageManager ->
-          [[nix|awscli2|], [nix|nodejs|]] <> case packageManager of
-            NPM -> []
-            PNPm -> [[nix|nodePackages.pnpm|]]
-            Yarn -> [[nix|yarn|]]
+          [[nix|awscli2|], [nix|nodejs|]] <> nodePackageManager packageManager
         Go _ -> [[nix|go|]]
         Java (JavaOptions installMinishift _ _) ->
           [[nix|maven|], [nix|google-java-format|], [nix|jdk|]]
             <> [[nix|minishift|] | unInstallMinishift installMinishift]
         Python _ -> []
+    nodePackageManager :: NodePackageManager -> [Expr]
+    nodePackageManager = \case
+      NPM -> []
+      PNPm -> [[nix|nodePackages.pnpm|]]
+      Yarn -> [[nix|yarn|]]
     compareBuildInputs :: Expr -> Expr -> Ordering
     compareBuildInputs (EIdent i1) (EIdent i2) = compare i1 i2
     compareBuildInputs (EPropertyAccess (EIdent i1) _) (EIdent i2) = compare i1 i2
