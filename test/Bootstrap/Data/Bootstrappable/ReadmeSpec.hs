@@ -14,8 +14,10 @@ import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType
-  ( NodePackageManager (NPM),
-    ProjectType (Go, Node, Python),
+  ( ElmMode (ElmModeNode),
+    ElmOptions (ElmOptions),
+    NodePackageManager (NPM, PNPm),
+    ProjectType (Elm, Go, Node, Python),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
   )
@@ -28,6 +30,103 @@ import Text.RawString.QQ (r)
 spec :: Spec
 spec = describe "README.md rendering" do
   let projectName = Unsafe.fromJust (mkProjectName "test_name")
+  it "renders an Elm readme correctly" do
+    envrc <- Unsafe.fromJust <$> toBuildPlanFile (Envrc (PreCommitHooksConfig False) False)
+    bootstrapContent
+      ( Readme
+          projectName
+          (Elm $ ElmOptions (ElmModeNode PNPm) True)
+          (DevContainerConfig False)
+          (Just . BuildPlan $ fromList [envrc])
+          False
+      )
+      >>= ( `shouldBe`
+              Right
+                [r|# test_name
+
+[![Made with nix-bootstrap](https://img.shields.io/badge/Made%20with-nix--bootstrap-rgb(58%2C%2095%2C%20168)?style=flat-square&logo=nixos&logoColor=white&link=https://github.com/gchq/nix-bootstrap)](https://github.com/gchq/nix-bootstrap)
+
+## Overview
+
+**__TODO:__** Write an overview of test_name
+
+## Development Environment
+
+You can work on test_name in 2 ways:
+
+  * [In GitPod](#use-in-gitpod)
+  * [In a VM](#set-up-in-a-vm)
+
+### Use In GitPod
+
+To develop with this project in GitPod, follow the instructions below:
+
+1. Open this repository in GitLab
+2. Click the dropdown near the "Clone" button which says "Web IDE". Change it to "GitPod".
+3. Click GitPod button on the same dropdown.
+
+### Set Up In A VM
+
+**Note:** This guide assumes you already have a working VM. If you don't know how to set one up, consider following **Setup via Dev Container** below instead.
+
+1. [Install Nix](https://nixos.org) into your VM by running the following command:
+
+   ```sh
+   sh <(curl -L https://nixos.org/nix/install) --daemon
+   ```
+
+2. [Install direnv, following the instructions for your system](https://direnv.net/docs/installation.html)
+3. [Follow the instructions to hook direnv into your shell](https://direnv.net/docs/hook.html)
+4. Run `direnv allow` in the project root directory
+
+_After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+## Running a Development Server
+
+To run a development server, use the `dev` script defined in `package.json`.
+
+### Troubleshooting: Unexpected token...
+
+Caching issues sometimes cause build failures with unhelpful error messages.
+Try `rm -rf elm-stuff .parcel-cache` if this occurs.
+
+## Linting Your Elm Files
+
+To lint your Elm files, run `elm-review --fix`.
+
+You may need to run some additional setup commands related to versions when
+you first do this. The tool will advise on what needs doing.
+
+## Building for Production
+
+To produce a production build, use the `build` script defined in `package.json`.
+
+This will produce a `dist` directory with a built web app.
+
+## Project Structure
+
+The following diagram explains how nix-bootstrap has laid out your infrastructure.
+Feel free to remove this once you're familiar with how it works, or amend it as you grow your project.
+
+```plaintext
+/
+|
++- .envrc - This tells direnv to load the nix shell.
+|
+`- nix
+   |
+   +- sources.json - This contains metadata about your nix dependencies.
+   |
+   `- sources.nix - This is the interface between nix and the dependencies listed in sources.json.
+```
+
+## nix-bootstrap
+
+This project was bootstrapped by [nix-bootstrap](https://github.com/gchq/nix-bootstrap/).
+
+If you'd like to learn more about how the generated infrastructure works, or have any feedback, please direct it to [our issue tracker](https://github.com/gchq/nix-bootstrap/issues).
+|]
+          )
   it "renders a Node readme with a devcontainer correctly" do
     envrc <- Unsafe.fromJust <$> toBuildPlanFile (Envrc (PreCommitHooksConfig False) False)
     bootstrapContent

@@ -7,7 +7,12 @@ module Bootstrap.Data.Bootstrappable
   )
 where
 
-import Bootstrap.Nix.Expr (Identifier (unIdentifier), IsNixExpr (toNixExpr), isMostlyCorrectlyScoped, writeExprFormatted)
+import Bootstrap.Nix.Expr
+  ( Identifier (unIdentifier),
+    IsNixExpr (toNixExpr),
+    isMostlyCorrectlyScoped,
+    writeExprFormatted,
+  )
 import Data.Aeson (ToJSON)
 import Data.Aeson.Encode.Pretty
   ( Config (confCompare),

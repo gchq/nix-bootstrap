@@ -20,8 +20,11 @@ import Bootstrap.Data.PreCommitHook
   ( PreCommitHooksConfig (unPreCommitHooksConfig),
   )
 import Bootstrap.Data.ProjectType
-  ( JavaOptions (JavaOptions),
-    ProjectType (Go, Java),
+  ( ElmMode (ElmModeBare, ElmModeNode),
+    ElmOptions (ElmOptions, elmOptionElmMode),
+    JavaOptions (JavaOptions),
+    NodePackageManager (NPM, PNPm, Yarn),
+    ProjectType (Elm, Go, Java),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (SetUpJavaBuild),
   )
@@ -48,12 +51,8 @@ instance Bootstrappable GitlabCIConfig where
         "",
         "check-dev-environment:",
         "  stage: build",
-        "  script: \""
-          <> ( if gitlabCIConfigUseFlakes
-                 then "nix develop -c echo ok"
-                 else "nix-shell --run 'echo ok'"
-             )
-          <> "\""
+        "  script:",
+        commandInShell "echo ok"
       ]
         <> ( if unPreCommitHooksConfig gitlabCIConfigPreCommitHooksConfig
                then
@@ -70,6 +69,7 @@ instance Bootstrappable GitlabCIConfig where
                else []
            )
         <> case gitlabCIConfigProjectType of
+          Elm opts -> elmSiteJob opts
           Go (SetUpGoBuild True) -> buildJob
           Java (JavaOptions _ _ (SetUpJavaBuild _)) -> buildJob
           _ -> []
@@ -86,6 +86,38 @@ instance Bootstrappable GitlabCIConfig where
                )
             <> "\""
         ]
+      elmSiteJob :: ElmOptions -> [Text]
+      elmSiteJob ElmOptions {elmOptionElmMode} =
+        [ "",
+          "build-site:",
+          "  stage: build",
+          "  script:"
+        ]
+          <> ( commandInShell <$> case elmOptionElmMode of
+                 ElmModeBare -> ["elm make src/Main.elm"]
+                 ElmModeNode packageManager ->
+                   [ nodePackageManagerInstall packageManager,
+                     runWithPackageManager packageManager <> "build"
+                   ]
+             )
+      commandInShell :: Text -> Text
+      commandInShell =
+        -- Uses single quotes - no escaping or use of single quotes allowed when
+        -- using this helper
+        if gitlabCIConfigUseFlakes
+          then ("    - nix develop -c " <>)
+          else \s -> "    - nix-shell --run '" <> s <> "'"
+      nodePackageManagerInstall :: NodePackageManager -> Text
+      nodePackageManagerInstall = \case
+        NPM -> "npm ci"
+        Yarn -> "yarn --frozen-lockfile"
+        PNPm -> "pnpm --frozen-lockfile"
+      runWithPackageManager :: NodePackageManager -> Text
+      runWithPackageManager =
+        (<> " run ") . \case
+          NPM -> "npm"
+          Yarn -> "yarn"
+          PNPm -> "pnpm"
 
 gitlabCIConfigFor ::
   ContinuousIntegrationConfig ->

@@ -33,26 +33,28 @@ The following symbols are used throughout this page to indicate support status:
 
 ### Toolchain Support
 
-|            Toolchain\\\\Feature            |                        Development Environment                        |                                VSCode DevContainer                                 | Gitignore | Pre-Commit Hooks<sup>[1](#footnote1)</sup> |                                Reproducible Production Builds                                |
-| :----------------------------------------: | :-------------------------------------------------------------------: | :--------------------------------------------------------------------------------: | :-------: | :----------------------------------------: | :------------------------------------------------------------------------------------------: |
-|                   Golang                   |                                  ✅                                   |                ✅ <p>With the official Go extension installed.</p>                 |    ✅     |                     ✅                     |                  🟠 <p>Support is currently considered _experimental_.</p>                   |
-|                    Java                    |  ✅ <p>With maven, google-java-format, and optionally minishift.</p>  | ✅ <p>With the official Java, and optionally the Lombok, extensions installed.</p> |    ✅     |                     ✅                     | 🟠 <p>Only supports Spring applications. Support is currently considered _experimental_.</p> |
-| Minimal (With no project-specific tooling) |                                  ✅                                   |                                         ✅                                         |    ✅     |                     🟠                     |                                              ❌                                              |
-|                   NodeJS                   | ✅ <p>With latest stable node, AWS CLI, and optionally PNPm/Yarn.</p> |                                         ✅                                         |    ✅     |                     ✅                     |                                              ❌                                              |
-|                   Python                   |                   ✅ <p>With Python version 3.9</p>                   |                ✅ <p>With the official Python VSCode extension.</p>                |    ✅     |                     🟠                     |                                              ❌                                              |
+|            Toolchain\\\\Feature            |                            Development Environment                             |                                VSCode DevContainer                                 | Gitignore | Pre-Commit Hooks<sup>[1](#footnote1)</sup> |                                Reproducible Production Builds                                |
+| :----------------------------------------: | :----------------------------------------------------------------------------: | :--------------------------------------------------------------------------------: | :-------: | :----------------------------------------: | :------------------------------------------------------------------------------------------: |
+|                    Elm                     | ✅ <p>Either as a standalone app or as part of a Node project with Parcel.</p> |                      ✅ <br>With the Elm extension installed.                      |    ✅     |                     ✅                     |                                              ❌                                              |
+|                   Golang                   |                                       ✅                                       |                ✅ <p>With the official Go extension installed.</p>                 |    ✅     |                     ✅                     |                  🟠 <p>Support is currently considered _experimental_.</p>                   |
+|                    Java                    |      ✅ <p>With maven, google-java-format, and optionally minishift.</p>       | ✅ <p>With the official Java, and optionally the Lombok, extensions installed.</p> |    ✅     |                     ✅                     | 🟠 <p>Only supports Spring applications. Support is currently considered _experimental_.</p> |
+| Minimal (With no project-specific tooling) |                                       ✅                                       |                                         ✅                                         |    ✅     |                     🟠                     |                                              ❌                                              |
+|                   NodeJS                   |     ✅ <p>With latest stable node, AWS CLI, and optionally PNPm/Yarn.</p>      |                                         ✅                                         |    ✅     |                     ✅                     |                                              ❌                                              |
+|                   Python                   |                       ✅ <p>With Python version 3.9</p>                        |                ✅ <p>With the official Python VSCode extension.</p>                |    ✅     |                     🟠                     |                                              ❌                                              |
 
 <a id="footnote1"><sup>1</sup></a> Marked as fully supported if any non-nix pre-commit hooks are added.
 See the Pre-Commit Hooks table below for details.
 
 ### Pre-Commit Hooks
 
-| Toolchain\\\\Hook Type | Nix Formatting<sup>[2](#footnote2)</sup> |          Formatters          | Linters |      Testing      |
-| :--------------------: | :--------------------------------------: | :--------------------------: | :-----: | :---------------: |
-|         Golang         |                    ✅                    |       ✅ <p>go-fmt</p>       |   ❌    | ✅ <p>go test</p> |
-|          Java          |                    ✅                    | ✅ <p>google-java-format</p> |   ❌    |        ❌         |
-|        Minimal         |                    ✅                    |              ❌              |   ❌    |        ❌         |
-|         NodeJS         |                    ✅                    |      ✅ <p>prettier</p>      |   ❌    |        ❌         |
-|         Python         |                    ✅                    |              ❌              |   ❌    |        ❌         |
+| Toolchain\\\\Hook Type | Nix Formatting<sup>[2](#footnote2)</sup> |          Formatters          |       Linters        |      Testing      |
+| :--------------------: | :--------------------------------------: | :--------------------------: | :------------------: | :---------------: |
+|          Elm           |                    ✅                    |     ✅ <p>elm-format</p>     | ✅ <p>elm-review</p> |        ❌         |
+|         Golang         |                    ✅                    |       ✅ <p>go-fmt</p>       |          ❌          | ✅ <p>go test</p> |
+|          Java          |                    ✅                    | ✅ <p>google-java-format</p> |          ❌          |        ❌         |
+|        Minimal         |                    ✅                    |              ❌              |          ❌          |        ❌         |
+|         NodeJS         |                    ✅                    |      ✅ <p>prettier</p>      |          ❌          |        ❌         |
+|         Python         |                    ✅                    |              ❌              |          ❌          |        ❌         |
 
 <a id="footnote2"><sup>2</sup></a> [`alejandra`](https://github.com/kamadorueda/alejandra) is set up to format nix files.
 
@@ -66,6 +68,8 @@ nix-bootstrap provides configurations for GitLab CI out-of-the-box.
 |                Pre-Commit Hooks Enabled                |              ✅               |          ✅          |          ❌          |
 | Pre-Commit Hooks Disabled, Production Build Configured |              ✅               |          ❌          |          ✅          |
 | Pre-Commit Hooks Enabled, Production Build Configured  |              ✅               |          ✅          |          ✅          |
+
+For Elm projects, it provides an additional CI job to build the Elm site.
 
 </p>
 </details>

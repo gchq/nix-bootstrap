@@ -24,7 +24,7 @@ import Bootstrap.Data.DevContainer (DevContainerConfig, devContainerConfigCodec)
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig, preCommitHooksConfigCodec)
 import Bootstrap.Data.ProjectName (ProjectName)
 import qualified Bootstrap.Data.ProjectName as ProjectName
-import Bootstrap.Data.ProjectType (ProjectType, projectTypeCodec)
+import Bootstrap.Data.ProjectType (ProjectTypeV2, projectTypeCodec)
 import Data.Version (showVersion)
 import Paths_nix_bootstrap (version)
 import Toml (TomlCodec, (.=))
@@ -33,7 +33,7 @@ import qualified Toml
 data BootstrapState = BootstrapState
   { stateVersion :: BootstrapVersion,
     stateProjectName :: ProjectName,
-    stateProjectType :: ProjectType,
+    stateProjectType :: ProjectTypeV2,
     statePreCommitHooksConfig :: PreCommitHooksConfig,
     stateContinuousIntegrationConfig :: ContinuousIntegrationConfig,
     stateDevContainerConfig :: DevContainerConfig,
@@ -74,7 +74,7 @@ newtype BootstrapVersion = BootstrapVersion {unBootstrapVersion :: String}
 
 bootstrapStateFor ::
   ProjectName ->
-  ProjectType ->
+  ProjectTypeV2 ->
   PreCommitHooksConfig ->
   ContinuousIntegrationConfig ->
   DevContainerConfig ->

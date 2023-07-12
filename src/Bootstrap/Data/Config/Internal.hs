@@ -38,7 +38,15 @@ import Bootstrap.Data.ContinuousIntegration
 import Bootstrap.Data.DevContainer (DevContainerConfig)
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig)
 import Bootstrap.Data.ProjectName (ProjectName)
-import Bootstrap.Data.ProjectType (JavaOptions, ProjectType)
+import Bootstrap.Data.ProjectType
+  ( ElmMode,
+    ElmOptions,
+    JavaOptions,
+    NodePackageManager,
+    ProjectType,
+    ProjectTypeV2,
+    migrateProjectTypeToV3,
+  )
 import Bootstrap.Monad (MonadBootstrap)
 import Control.Lens (Iso', iso, makeLenses)
 import Control.Monad.Catch (MonadThrow (throwM), catchAll, handleAll)
@@ -74,24 +82,26 @@ import qualified Toml as TOML
 data ConfigVersion
   = V1
   | V2
+  | V3
 
 -- | Singled `ConfigVersion`
 data SConfigVersion (configVersion :: ConfigVersion) where
   SV1 :: SConfigVersion 'V1
   SV2 :: SConfigVersion 'V2
+  SV3 :: SConfigVersion 'V3
 
 type instance Sing = SConfigVersion
 
 instance SingKind ConfigVersion where
   type Demote ConfigVersion = ConfigVersion
-  fromSing = \case SV1 -> V1; SV2 -> V2
-  toSing = \case V1 -> SomeSing SV1; V2 -> SomeSing SV2
+  fromSing = \case SV1 -> V1; SV2 -> V2; SV3 -> V3
+  toSing = \case V1 -> SomeSing SV1; V2 -> SomeSing SV2; V3 -> SomeSing SV3
 
 -- | The most recent version of the config
-type Current = 'V2
+type Current = 'V3
 
 instance SingI Current where
-  sing = SV2
+  sing = SV3
 
 -- | nix-bootstrap's configuration
 type Config = VersionedConfig Current
@@ -100,6 +110,7 @@ type Config = VersionedConfig Current
 data VersionedConfig version where
   VersionedConfigV1 :: BootstrapState -> VersionedConfig 'V1
   VersionedConfigV2 :: ConfigV2 -> VersionedConfig 'V2
+  VersionedConfigV3 :: ConfigV3 -> VersionedConfig 'V3
 
 deriving stock instance Eq (VersionedConfig version)
 
@@ -120,12 +131,28 @@ instance Bootstrappable Config where
           ]
       extractUnions :: Expr Src Void -> Expr Src Void
       extractUnions e =
-        DCore.Let (DCore.makeBinding "JavaOptions" . declared $ inject @JavaOptions)
+        DCore.Let (DCore.makeBinding "NodePackageManager" . declared $ inject @NodePackageManager)
+          . DCore.Let
+            ( DCore.makeBinding "ElmMode"
+                . runIdentity
+                . DCore.subExpressions replaceFullTypes
+                . declared
+                $ inject @ElmMode
+            )
+          . DCore.Let
+            ( DCore.makeBinding "ElmOptions"
+                . runIdentity
+                . DCore.subExpressions replaceFullTypes
+                . declared
+                $ inject @ElmOptions
+            )
+          . DCore.Let (DCore.makeBinding "JavaOptions" . declared $ inject @JavaOptions)
           . DCore.Let
             ( DCore.makeBinding "ProjectType"
                 . runIdentity
-                . replaceFullTypes
-                $ declared (inject @ProjectType)
+                . DCore.subExpressions replaceFullTypes
+                . declared
+                $ inject @ProjectType
             )
           . runIdentity
           $ DCore.subExpressions replaceFullTypes e
@@ -133,19 +160,23 @@ instance Bootstrappable Config where
       replaceFullTypes =
         \case
           e@(DCore.Record _)
+            | e == declared (inject @ElmOptions) -> Identity $ DCore.Var "ElmOptions"
             | e == declared (inject @JavaOptions) -> Identity $ DCore.Var "JavaOptions"
             | otherwise -> DCore.subExpressions replaceFullTypes e
           e@(DCore.Field u@(DCore.Union _) fieldSelection)
             | u == declared (inject @ProjectType) ->
               Identity $ DCore.Field (DCore.Var "ProjectType") fieldSelection
             | otherwise -> DCore.subExpressions replaceFullTypes e
+          e@(DCore.Union _)
+            | e == declared (inject @ElmMode) -> Identity $ DCore.Var "ElmMode"
+            | e == declared (inject @NodePackageManager) -> Identity $ DCore.Var "NodePackageManager"
           e -> DCore.subExpressions replaceFullTypes e
 
 instance ToDhall Config where
   injectWith inputNormaliser =
     let innerEncoder = injectWith inputNormaliser
      in Encoder
-          { embed = \(VersionedConfigV2 c) -> embed innerEncoder c,
+          { embed = \(VersionedConfigV3 c) -> embed innerEncoder c,
             declared = declared innerEncoder
           }
 
@@ -172,11 +203,12 @@ parseVersionedConfig v s = case v of
       . bimap (SomeException . TomlDecodeException) VersionedConfigV1
       $ TOML.decode bootstrapStateCodec s
   SV2 -> handleAll (pure . Left) . fmap (Right . VersionedConfigV2) . liftIO $ input auto s
+  SV3 -> handleAll (pure . Left) . fmap (Right . VersionedConfigV3) . liftIO $ input auto s
 
 -- | The second version of the config
 data ConfigV2 = ConfigV2
   { _configV2ProjectName :: ProjectName,
-    _configV2ProjectType :: ProjectType,
+    _configV2ProjectType :: ProjectTypeV2,
     _configV2SetUpPreCommitHooks :: PreCommitHooksConfig,
     _configV2SetUpContinuousIntegration :: ContinuousIntegrationConfig,
     _configV2SetUpVSCodeDevContainer :: DevContainerConfig,
@@ -184,6 +216,18 @@ data ConfigV2 = ConfigV2
   }
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV2")) ConfigV2
+
+-- | The third version of the config
+data ConfigV3 = ConfigV3
+  { _configV3ProjectName :: ProjectName,
+    _configV3ProjectType :: ProjectType,
+    _configV3SetUpPreCommitHooks :: PreCommitHooksConfig,
+    _configV3SetUpContinuousIntegration :: ContinuousIntegrationConfig,
+    _configV3SetUpVSCodeDevContainer :: DevContainerConfig,
+    _configV3UseNixFlakes :: Bool
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV3")) ConfigV3
 
 -- | The outcome of trying to load the `Config`
 data LoadConfigResult
@@ -196,11 +240,11 @@ data LoadConfigResult
     LoadConfigResultNotFound
   deriving stock (Show)
 
-makeLenses ''ConfigV2
+makeLenses ''ConfigV3
 
 -- | Isomorphism to the current config version
-_Current :: Iso' Config ConfigV2
-_Current = iso (\(VersionedConfigV2 c) -> c) VersionedConfigV2
+_Current :: Iso' Config ConfigV3
+_Current = iso (\(VersionedConfigV3 c) -> c) VersionedConfigV3
 
 -- | Loads the config from the appropriate file
 loadConfig :: MonadBootstrap m => m LoadConfigResult
@@ -217,6 +261,7 @@ loadConfig' nextToTry = do
   where
     tryPreviousConfigVersion :: SomeException -> SConfigVersion v -> m LoadConfigResult
     tryPreviousConfigVersion e v = case v of
+      SV3 -> loadConfig' SV2
       SV2 -> loadConfig' SV1
       SV1 -> pure $ LoadConfigResultError e
 
@@ -246,13 +291,23 @@ loadConfigAtVersion v = do
 upgradeConfig :: SConfigVersion version -> VersionedConfig version -> Config
 upgradeConfig _ = \case
   VersionedConfigV1 s ->
-    VersionedConfigV2
-      ConfigV2
-        { _configV2ProjectName = stateProjectName s,
-          _configV2ProjectType = stateProjectType s,
-          _configV2SetUpPreCommitHooks = statePreCommitHooksConfig s,
-          _configV2SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
-          _configV2SetUpVSCodeDevContainer = stateDevContainerConfig s,
-          _configV2UseNixFlakes = stateUseFlakes s
+    VersionedConfigV3
+      ConfigV3
+        { _configV3ProjectName = stateProjectName s,
+          _configV3ProjectType = migrateProjectTypeToV3 (stateProjectType s),
+          _configV3SetUpPreCommitHooks = statePreCommitHooksConfig s,
+          _configV3SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
+          _configV3SetUpVSCodeDevContainer = stateDevContainerConfig s,
+          _configV3UseNixFlakes = stateUseFlakes s
         }
-  c@(VersionedConfigV2 _) -> c
+  VersionedConfigV2 ConfigV2 {..} ->
+    VersionedConfigV3
+      ConfigV3
+        { _configV3ProjectName = _configV2ProjectName,
+          _configV3ProjectType = migrateProjectTypeToV3 _configV2ProjectType,
+          _configV3SetUpPreCommitHooks = _configV2SetUpPreCommitHooks,
+          _configV3SetUpContinuousIntegration = _configV2SetUpContinuousIntegration,
+          _configV3SetUpVSCodeDevContainer = _configV2SetUpVSCodeDevContainer,
+          _configV3UseNixFlakes = _configV2UseNixFlakes
+        }
+  c@(VersionedConfigV3 _) -> c

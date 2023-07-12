@@ -5,8 +5,10 @@ import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig, unPreCommitHooksConfig)
 import Bootstrap.Data.ProjectType
-  ( NodePackageManager (NPM, PNPm, Yarn),
-    ProjectType (Go, Java, Minimal, Node, Python),
+  ( ElmMode (ElmModeBare, ElmModeNode),
+    ElmOptions (ElmOptions, elmOptionElmMode),
+    NodePackageManager (NPM, PNPm, Yarn),
+    ProjectType (Elm, Go, Java, Minimal, Node, Python),
   )
 
 newtype Gitignore = Gitignore [GitignoreGroup]
@@ -46,6 +48,20 @@ ggOSSpecific =
 
 ggPreCommitConfig :: GitignoreGroup
 ggPreCommitConfig = GitignoreGroup "Pre-Commit Hooks" [GitignoreLine "/.pre-commit-config.yaml"]
+
+ggElm :: GitignoreGroup
+ggElm = GitignoreGroup "Elm" [GitignoreLine "elm-stuff"]
+
+ggElmGeneratedIndexHtml :: GitignoreGroup
+ggElmGeneratedIndexHtml = GitignoreGroup "Elm-Generated index.html" [GitignoreLine "index.html"]
+
+ggParcel :: GitignoreGroup
+ggParcel =
+  GitignoreGroup
+    "Parcel"
+    [ GitignoreLine "/.parcel-cache",
+      GitignoreLine "/dist"
+    ]
 
 ggNode :: GitignoreGroup
 ggNode = GitignoreGroup "Node" [GitignoreLine "/node_modules"]
@@ -383,11 +399,11 @@ gitignoreFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig =
     projectTypeGroups :: [GitignoreGroup]
     projectTypeGroups = case projectType of
       Minimal -> []
-      Node packageManager ->
-        [ggNode] <> case packageManager of
-          NPM -> []
-          PNPm -> []
-          Yarn -> [ggYarnErrorLog]
+      Elm ElmOptions {..} ->
+        ggElm : case elmOptionElmMode of
+          ElmModeBare -> [ggElmGeneratedIndexHtml]
+          ElmModeNode packageManager -> ggParcel : nodeGitignoreGroups packageManager
+      Node packageManager -> nodeGitignoreGroups packageManager
       Go _ -> [ggGoBinariesPlugins, ggGoTestBinary, ggGoCoverage, ggGoWorkspace]
       Java {} -> [ggJavaCompiledClass, ggJavaLogFile, ggJavaIDEFiles, ggJavaMobileTools, ggJavaPackageFiles, ggJavaVMLogs, ggJavaMavenFiles]
       Python _ ->
@@ -419,3 +435,9 @@ gitignoreFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig =
           ggPythonCython,
           ggPythonPycharm
         ]
+    nodeGitignoreGroups :: NodePackageManager -> [GitignoreGroup]
+    nodeGitignoreGroups =
+      (ggNode :) . \case
+        NPM -> []
+        PNPm -> []
+        Yarn -> [ggYarnErrorLog]
