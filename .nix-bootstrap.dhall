@@ -2,6 +2,12 @@
 -- It should be checked into version control.
 -- It is used to aid migration between nix-bootstrap versions and preserve idempotence.
 
+let NodePackageManager = < NPM | PNPm | Yarn >
+
+let ElmMode = < Bare | Node : NodePackageManager >
+
+let ElmOptions = { elmMode : ElmMode, provideElmReview : Bool }
+
 let JavaOptions =
       { installMinishift : Bool
       , installLombok : Bool
@@ -10,7 +16,8 @@ let JavaOptions =
 
 let ProjectType =
       < Minimal
-      | Node : < NPM | PNPm | Yarn >
+      | Elm : ElmOptions
+      | Node : NodePackageManager
       | Go : Bool
       | Java : JavaOptions
       | Python
