@@ -111,12 +111,16 @@ instance IsNixExpr FlakeNix where
               |= ESet
                 False
                 ( [ [nixbinding|nixpkgs-src.url = "github:NixOS/nixpkgs";|],
+                    [nixbinding|flake-compat = {
+                      flake = false;
+                      url = github:edolstra/flake-compat;
+                    };|],
                     [nixbinding|flake-utils.url = "github:numtide/flake-utils";|]
                   ]
                     <> [ [nixbinding|pre-commit-hooks-lib = {
-                              inputs.flake-utils.follows = "flake-utils";
-                              url = "github:cachix/pre-commit-hooks.nix";
-                            };|]
+                            inputs.flake-utils.follows = "flake-utils";
+                            url = "github:cachix/pre-commit-hooks.nix";
+                          };|]
                          | usingHooks
                        ]
                     <> [machNixFlakeInput | isPython]
@@ -128,6 +132,7 @@ instance IsNixExpr FlakeNix where
                          [[nixident|mach-nix|] | isPython]
                            <> [[nixident|pre-commit-hooks-lib|] | usingHooks]
                            <> [[nixident|self|]]
+                           <> [[nixident|...|]]
                        )
                 )
                 |: [nix|flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux])|]

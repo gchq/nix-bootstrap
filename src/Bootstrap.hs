@@ -41,6 +41,7 @@ import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.Go.Modfile (goModfileFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
+import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
 import Bootstrap.Data.Bootstrappable.Python.Requirements (Requirements (Requirements))
 import Bootstrap.Data.Bootstrappable.Readme
   ( Readme
@@ -450,6 +451,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
                      then Nothing
                      else defaultNixFor mbpProjectName mbpProjectType
                  )
+              ~: nixShellCompatFor mbpRunConfig
               ~: nixPreCommitHookConfig
               ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpRunConfig mbpProjectType mbpPreCommitHooksConfig
               ~: devContainerDockerComposeFor mbpDevContainerConfig mbpProjectName

@@ -452,10 +452,15 @@ newtype Identifier = Identifier {unIdentifier :: Text}
 
 -- | Parses an `Identifier`
 parseIdentifier :: Parser Identifier
-parseIdentifier = label "identifier" do
-  firstChar <- letterChar <|> char '_'
-  rest <- many $ alphaNumChar <|> char '_' <|> char '-'
-  pure . Identifier . toText $ firstChar : rest
+parseIdentifier =
+  label "identifier" . fmap Identifier $
+    choice
+      [ string "...",
+        do
+          firstChar <- letterChar <|> char '_'
+          rest <- many $ alphaNumChar <|> char '_' <|> char '-'
+          pure . toText $ firstChar : rest
+      ]
 
 -- | Parses a list of `Expr`s
 parseList :: Parser [Expr]
@@ -678,7 +683,11 @@ isCorrectlyScoped' scope = \case
     let additionalScope = case args of FAOne i -> [i]; FASet is -> toList is
      in isCorrectlyScoped' (scope <> additionalScope) e
   EGrouping e -> isCorrectlyScoped' scope e
-  EIdent i -> if i `elem` scope || i == Identifier "builtins" then pass else Left (one i)
+  EIdent i
+    | i `elem` scope -> pass
+    | i == Identifier "builtins" -> pass
+    | i == Identifier "fetchTarball" -> pass
+    | otherwise -> Left (one i)
   EImport -> pass
   ELetIn (toList -> bindings) e ->
     mergeScopeResults
