@@ -15,6 +15,7 @@ import Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor)
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
+import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
 import Bootstrap.Data.Bootstrappable.Readme (Readme (Readme))
 import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.Bootstrappable.VSCodeSettings (vsCodeSettingsFor)
@@ -59,6 +60,7 @@ spec = describe "toReasonTree" do
                 ~: flakeNixFor rcWithFlakes projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
                 ~: defaultNixFor projectName projectType
                 ~: nixShellFor rcDefault projectType preCommitHooksConfig (Just nixPreCommitHookConfig)
+                ~: nixShellCompatFor rcWithFlakes
                 ~: gitignoreFor rcDefault projectType preCommitHooksConfig
                 ~: Readme projectName projectType devContainerConfig Nothing False
                 ~: nixPreCommitHookConfig
@@ -101,5 +103,8 @@ spec = describe "toReasonTree" do
               Node "sources.nix - This is the interface between nix and the dependencies listed in sources.json." []
             ],
           Node "README.md - This helpfully explains to you what each file (including itself) does!" [],
-          Node "shell.nix - This configures what tools are available in your development environment and links in the pre-commit hooks." []
+          Node
+            "shell.nix - This configures what tools are available in your development environment and links in the pre-commit hooks."
+            [],
+          Node "shell.nix - This enables you to use your development shell when Nix flakes aren't available." []
         ]

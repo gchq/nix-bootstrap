@@ -32,12 +32,17 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
+    flake-compat = {
+      flake = false;
+      url = github:edolstra/flake-compat;
+    };
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     nixpkgs-src,
     flake-utils,
     self,
+    ...
   }:
     flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
@@ -62,12 +67,17 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
+    flake-compat = {
+      flake = false;
+      url = github:edolstra/flake-compat;
+    };
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     nixpkgs-src,
     flake-utils,
     self,
+    ...
   }:
     flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
@@ -101,6 +111,10 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
+    flake-compat = {
+      flake = false;
+      url = github:edolstra/flake-compat;
+    };
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib = {
       inputs.flake-utils.follows = "flake-utils";
@@ -112,6 +126,7 @@ spec = describe "flake.nix rendering" do
     flake-utils,
     pre-commit-hooks-lib,
     self,
+    ...
   }:
     flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
@@ -157,6 +172,10 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
+    flake-compat = {
+      flake = false;
+      url = github:edolstra/flake-compat;
+    };
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib = {
       inputs.flake-utils.follows = "flake-utils";
@@ -168,6 +187,7 @@ spec = describe "flake.nix rendering" do
     flake-utils,
     pre-commit-hooks-lib,
     self,
+    ...
   }:
     flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
@@ -203,6 +223,10 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
+    flake-compat = {
+      flake = false;
+      url = github:edolstra/flake-compat;
+    };
     flake-utils.url = "github:numtide/flake-utils";
     mach-nix.url = "github:DavHau/mach-nix?ref=3.5.0";
   };
@@ -211,6 +235,7 @@ spec = describe "flake.nix rendering" do
     flake-utils,
     mach-nix,
     self,
+    ...
   }:
     flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};

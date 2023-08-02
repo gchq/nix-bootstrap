@@ -236,6 +236,9 @@ spec = do
       it "(|=) has higher precedece than (|*) and (|.)" do
         [nixproperty|a|] |= [nix|b|] |* [nix|c|] |. [nixproperty|.d|]
           `shouldBe` [nixbinding|a = b c.d;|]
+    describe "Identifier" do
+      it "correctly parses the special \"...\" identifier" do
+        [nixident|...|] `shouldBe` Identifier "..."
     describe "Literal" do
       describe "LMultilineString" do
         it "roundtrips when there are escape sequences in the literal" do
