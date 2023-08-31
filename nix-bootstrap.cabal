@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           nix-bootstrap
-version:        1.3.3.0
+version:        1.3.3.1
 author:         gchquser
 maintainer:     48051938+sd234678@users.noreply.github.com
 copyright:      Crown Copyright
