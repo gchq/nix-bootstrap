@@ -9,7 +9,6 @@ module Bootstrap.State
     handleCharEntry,
     handleBackspacePress,
     ChoiceInputState (..),
-    initialChoiceInputState,
     MultipleChoiceInputState (..),
     initialMultipleChoiceInputState,
     -- internal; exported for testing
@@ -68,9 +67,6 @@ handleBackspacePress s@TextInputState {cursorPos, currentLine} =
         }
 
 newtype ChoiceInputState a = ChoiceInputState {chosenItem :: a}
-
-initialChoiceInputState :: Bounded a => ChoiceInputState a
-initialChoiceInputState = ChoiceInputState minBound
 
 data MultipleChoiceInputState a = MultipleChoiceInputState {chosenItems :: Set a, cursorItem :: a}
 

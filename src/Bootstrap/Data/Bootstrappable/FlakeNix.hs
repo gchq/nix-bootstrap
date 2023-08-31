@@ -15,7 +15,16 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.Bootstrappable.BuildNix (BuildNix)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (NixPreCommitHookConfig)
-import Bootstrap.Data.Bootstrappable.NixShell (NixShell (NixShell, nixShellBuildInputs, nixShellHooksRequireNixpkgs), nixShellFor)
+import Bootstrap.Data.Bootstrappable.NixShell
+  ( NixShell
+      ( NixShell,
+        nixShellExtraBindings,
+        nixShellHooksRequireNixpkgs,
+        nixShellNixpkgsBuildInputs,
+        nixShellOtherBuildInputs
+      ),
+    nixShellFor,
+  )
 import Bootstrap.Data.PreCommitHook
   ( PreCommitHooksConfig (unPreCommitHooksConfig),
   )
@@ -36,6 +45,7 @@ import Bootstrap.Nix.Expr
     (|:),
     (|=),
   )
+import Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (bisOtherPackages))
 import Bootstrap.Nix.Expr.MkShell
   ( BuildInputSpec
       ( BuildInputSpec,
@@ -47,12 +57,20 @@ import Bootstrap.Nix.Expr.MkShell
   )
 import Bootstrap.Nix.Expr.PreCommitHooks (ImportPreCommitHooksArgs (ImportPreCommitHooksArgs, passNixpkgsThrough, passSystemThrough), importPreCommitHooks)
 import Bootstrap.Nix.Expr.Python (machNixFlakeInput, pythonPackagesBinding)
+import Control.Lens
+  ( Field2 (_2),
+    filtered,
+    folded,
+    (^..),
+  )
 
 data FlakeNix = FlakeNix
   { flakeNixPreCommitHooksConfig :: PreCommitHooksConfig,
     flakeNixProjectName :: ProjectName,
     flakeNixProjectType :: ProjectType,
-    flakeNixBuildInputs :: [Expr],
+    flakeNixExtraBindings :: [Binding],
+    flakeNixNixpkgsBuildInputs :: [Expr],
+    flakeNixOtherBuildInputs :: [Expr],
     flakeNixBuildNix :: Maybe BuildNix,
     -- | Used to determine whether to pass the nixpkgs argument to the pre-commit-hooks config
     flakeNixHooksRequireNixpkgs :: Bool
@@ -82,17 +100,27 @@ flakeNixFor
   flakeNixPreCommitHooksConfig
   nixPreCommitHookConfig
   flakeNixBuildNix =
-    let NixShell {nixShellBuildInputs, nixShellHooksRequireNixpkgs} =
-          nixShellFor rc flakeNixProjectType flakeNixPreCommitHooksConfig nixPreCommitHookConfig
+    let NixShell
+          { nixShellExtraBindings,
+            nixShellNixpkgsBuildInputs,
+            nixShellOtherBuildInputs,
+            nixShellHooksRequireNixpkgs
+          } =
+            nixShellFor rc flakeNixProjectType flakeNixPreCommitHooksConfig nixPreCommitHookConfig
      in if rcUseFlakes
           then
             Just
               FlakeNix
-                { flakeNixBuildInputs = nixShellBuildInputs,
+                { flakeNixExtraBindings = (nixShellExtraBindings ^.. folded . filtered fst . _2) <> extraBindings,
+                  flakeNixNixpkgsBuildInputs = nixShellNixpkgsBuildInputs,
+                  flakeNixOtherBuildInputs = nixShellOtherBuildInputs,
                   flakeNixHooksRequireNixpkgs = nixShellHooksRequireNixpkgs,
                   ..
                 }
           else Nothing
+    where
+      extraBindings :: [Binding]
+      extraBindings = [pythonPackagesBinding True | case flakeNixProjectType of Python _ -> True; _ -> False]
 
 instance IsNixExpr FlakeNix where
   toNixExpr FlakeNix {..} =
@@ -148,7 +176,7 @@ instance IsNixExpr FlakeNix where
                                        }
                                  | usingHooks
                                ]
-                            <> [pythonPackagesBinding True | isPython]
+                            <> flakeNixExtraBindings
                         )
                         ( ESet False $
                             [[nixbinding|checks.pre-commit-check = preCommitHooks.hooks;|] | usingHooks]
@@ -156,7 +184,8 @@ instance IsNixExpr FlakeNix where
                                    [nixproperty|devShells.default|]
                                      |= mkShell
                                        BuildInputSpec
-                                         { bisNixpkgsPackages = flakeNixBuildInputs,
+                                         { bisNixpkgsPackages = flakeNixNixpkgsBuildInputs,
+                                           bisOtherPackages = flakeNixOtherBuildInputs,
                                            bisPreCommitHooksConfig = flakeNixPreCommitHooksConfig,
                                            bisProjectType = flakeNixProjectType
                                          }

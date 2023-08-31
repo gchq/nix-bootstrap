@@ -16,9 +16,10 @@ import Bootstrap.Data.Bootstrappable
     bootstrapContentPrettyJson,
   )
 import Bootstrap.Data.ProjectType
-  ( InstallLombok (unInstallLombok),
+  ( HaskellOptions (HaskellOptions),
+    InstallLombok (unInstallLombok),
     JavaOptions (JavaOptions),
-    ProjectType (Elm, Go, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
   )
 import Data.Aeson (KeyValue ((.=)), ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
@@ -50,6 +51,7 @@ extensionsFor =
   (VSCodeExtension <$>) . (["arrterian.nix-env-selector", "jnoortheen.nix-ide"] <>) . \case
     Minimal -> []
     Elm _ -> ["Elmtooling.elm-ls-vscode"]
+    (Haskell (HaskellOptions _ _)) -> ["haskell.haskell"]
     Node _ -> []
     Go _ -> ["golang.Go"]
     Java (JavaOptions _ installLombok _) ->

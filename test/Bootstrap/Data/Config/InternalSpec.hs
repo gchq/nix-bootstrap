@@ -43,6 +43,13 @@ let ElmMode = < Bare | Node : NodePackageManager >
 
 let ElmOptions = { elmMode : ElmMode, provideElmReview : Bool }
 
+let HaskellProjectType = < ReplOnly | Basic >
+
+let HaskellOptions =
+      { ghcVersion : { major : Natural, minor : Natural, patch : Natural }
+      , haskellProjectType : HaskellProjectType
+      }
+
 let JavaOptions =
       { installMinishift : Bool
       , installLombok : Bool
@@ -52,6 +59,7 @@ let JavaOptions =
 let ProjectType =
       < Minimal
       | Elm : ElmOptions
+      | Haskell : HaskellOptions
       | Node : NodePackageManager
       | Go : Bool
       | Java : JavaOptions

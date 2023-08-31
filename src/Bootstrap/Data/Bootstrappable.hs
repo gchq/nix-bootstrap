@@ -1,9 +1,23 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
+
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable
   ( Bootstrappable (..),
+    bootstrapContentHaskell,
     bootstrapContentNix,
     bootstrapContentPrettyJson,
     bootstrapContentYaml,
+
+    -- * Haskell Modules
+    HaskellModule (..),
+    HaskellImport (..),
+    haskellModule,
+    haskellModulePragmas,
+    haskellModuleName,
+    haskellModuleExports,
+    haskellModuleImports,
+    haskellModuleDecs,
   )
 where
 
@@ -13,6 +27,7 @@ import Bootstrap.Nix.Expr
     isMostlyCorrectlyScoped,
     writeExprFormatted,
   )
+import Control.Lens (makeLenses)
 import Data.Aeson (ToJSON)
 import Data.Aeson.Encode.Pretty
   ( Config (confCompare),
@@ -20,7 +35,10 @@ import Data.Aeson.Encode.Pretty
     encodePretty',
     keyOrder,
   )
+import qualified Data.Text as T
 import qualified Data.Yaml.Aeson as Yaml
+import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Syntax as THS
 
 -- | Things which can be written out as files during the bootstrapping
 -- process.
@@ -38,7 +56,7 @@ class Bootstrappable a where
   bootstrapReason :: a -> Text
 
   -- | The contents of the file
-  bootstrapContent :: MonadIO m => a -> m (Either String Text)
+  bootstrapContent :: (MonadIO m, TH.Quote m) => a -> m (Either String Text)
 
 -- | The Maybe instance for Bootstrappable allows handling of files which
 -- may have been bootstrapped, but now shouldn't be due to some condition.
@@ -55,6 +73,68 @@ instance Bootstrappable a => Bootstrappable (Maybe a) where
   bootstrapReason = maybe (error "Called bootstrapReason on Nothing value") bootstrapReason
   bootstrapContent (Just a) = bootstrapContent a
   bootstrapContent Nothing = error "Called bootstrapContent on Nothing value"
+
+-- | Represents a complete haskell module
+data HaskellModule = HaskellModule
+  { _haskellModulePragmas :: Maybe (NonEmpty Text),
+    _haskellModuleName :: THS.ModName,
+    _haskellModuleExports :: NonEmpty Text,
+    _haskellModuleImports :: Maybe (NonEmpty HaskellImport),
+    _haskellModuleDecs :: Maybe (NonEmpty THS.Dec)
+  }
+
+-- | Represents an import in haskell
+data HaskellImport
+  = -- | import ModName
+    HaskellImportAll THS.ModName
+  | -- | import ModName (name1, name2)
+    HaskellImport THS.ModName [TH.Name]
+
+-- | Creates a `HaskellModule` with the minimum required information
+haskellModule ::
+  THS.ModName ->
+  -- | Exports
+  NonEmpty Text ->
+  HaskellModule
+haskellModule modName exports =
+  HaskellModule
+    { _haskellModulePragmas = Nothing,
+      _haskellModuleName = modName,
+      _haskellModuleExports = exports,
+      _haskellModuleImports = Nothing,
+      _haskellModuleDecs = Nothing
+    }
+
+-- | A helper function when the generated file should be haskell code
+bootstrapContentHaskell :: HaskellModule -> Text
+bootstrapContentHaskell HaskellModule {..} =
+  let THS.ModName (toText -> modName) = _haskellModuleName
+   in (<> "\n")
+        . T.intercalate "\n\n"
+        $ catMaybes
+          [ T.intercalate "\n" . toList <$> _haskellModulePragmas,
+            Just $
+              "module " <> modName <> " ("
+                <> T.intercalate ", " (toList _haskellModuleExports)
+                <> ") where",
+            formatImports <$> _haskellModuleImports,
+            formatDecs <$> _haskellModuleDecs
+          ]
+  where
+    formatImports :: NonEmpty HaskellImport -> Text
+    formatImports = T.intercalate "\n" . toList . fmap formatImport
+    formatDecs :: NonEmpty THS.Dec -> Text
+    formatDecs = toText . TH.pprint . toList
+    formatImport :: HaskellImport -> Text
+    formatImport (HaskellImportAll (THS.ModName iModName)) = "import " <> toText iModName
+    formatImport (HaskellImport (THS.ModName iModName) names) =
+      "import "
+        <> toText iModName
+        <> " ("
+        <> formatNames names
+        <> ")"
+    formatNames :: [TH.Name] -> Text
+    formatNames = T.intercalate ", " . fmap (toText . TH.pprint . TH.VarE)
 
 -- | A helper function when the generated file should be nix code
 bootstrapContentNix :: (IsNixExpr a, MonadIO m) => a -> m (Either String Text)
@@ -98,3 +178,5 @@ bootstrapContentPrettyJson keysToPrioritise =
 -- | A helper function when the generated file should be YAML
 bootstrapContentYaml :: ToJSON a => a -> Text
 bootstrapContentYaml = decodeUtf8With lenientDecode . Yaml.encode
+
+makeLenses ''HaskellModule

@@ -21,11 +21,12 @@ import Bootstrap.Nix.Expr
     (|=),
   )
 
-data BuildInputGroup = BIGNixpkgs [Expr] | BIGPreCommitHooks | BIGPythonPackages
+data BuildInputGroup = BIGNixpkgs [Expr] | BIGOther [Expr] | BIGPreCommitHooks | BIGPythonPackages
 
 instance IsNixExpr BuildInputGroup where
   toNixExpr = \case
     BIGNixpkgs buildInputs -> EWith [nix|nixpkgs|] $ EList buildInputs
+    BIGOther otherPackages -> EList otherPackages
     BIGPreCommitHooks -> [nix|preCommitHooks.tools|]
     BIGPythonPackages -> [nix|[pythonPackages]|]
 
@@ -33,11 +34,13 @@ instance IsNixExpr BuildInputGroup where
 requiresGrouping :: BuildInputGroup -> Bool
 requiresGrouping = \case
   BIGNixpkgs _ -> True
+  BIGOther _ -> False
   BIGPreCommitHooks -> False
   BIGPythonPackages -> False
 
 data BuildInputSpec projectType = BuildInputSpec
   { bisNixpkgsPackages :: [Expr],
+    bisOtherPackages :: [Expr],
     bisPreCommitHooksConfig :: PreCommitHooksConfig,
     bisProjectType :: projectType
   }
@@ -60,5 +63,8 @@ buildInputGroupsFor BuildInputSpec {..} =
   BIGNixpkgs bisNixpkgsPackages
     :| catMaybes
       [ if unPreCommitHooksConfig bisPreCommitHooksConfig then Just BIGPreCommitHooks else Nothing,
-        if projectSuperType bisProjectType == PSTPython then Just BIGPythonPackages else Nothing
+        if projectSuperType bisProjectType == PSTPython then Just BIGPythonPackages else Nothing,
+        case bisOtherPackages of
+          [] -> Nothing
+          otherPackages -> Just $ BIGOther otherPackages
       ]

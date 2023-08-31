@@ -6,10 +6,13 @@ module Bootstrap.Data.Bootstrappable.NixShellSpec (spec) where
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
+import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectType
-  ( NodePackageManager (NPM, PNPm),
-    ProjectType (Go, Node, Python),
+  ( HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic),
+    NodePackageManager (NPM, PNPm),
+    ProjectType (Go, Haskell, Node, Python),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
   )
@@ -79,6 +82,36 @@ in
         niv
         rnix-lsp
       ]);
+  }
+|]
+          )
+  it "renders a Haskell project correctly" do
+    bootstrapContent
+      ( nixShellFor
+          rcDefault
+          (Haskell $ HaskellOptions (GHCVersion 9 0 2) HaskellProjectTypeBasic)
+          (PreCommitHooksConfig False)
+          Nothing
+      )
+      >>= ( `shouldBe`
+              Right
+                [r|let
+  sources = import nix/sources.nix;
+  nixpkgs = import sources.nixpkgs {};
+  ghcAttribute = "ghc902";
+  haskellPackages = nixpkgs.haskell.packages.${ghcAttribute}.override {
+    overrides = _: super: {
+      # The line below may be needed to circumvent a bug in nixpkgs.
+      # If the devshell builds successfully without it, feel free to remove it.
+      pretty-simple = super.pretty-simple.overrideAttrs {
+        doCheck = false;
+      };
+    };
+  };
+  haskellEnv = haskellPackages.ghcWithPackages (pkgs: with pkgs; [cabal-install haskell-language-server]);
+in
+  nixpkgs.mkShell {
+    buildInputs = [haskellEnv] ++ (with nixpkgs; [niv rnix-lsp]);
   }
 |]
           )

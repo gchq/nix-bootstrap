@@ -7,8 +7,9 @@ import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig, unPreCommitHooksConfi
 import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
     ElmOptions (ElmOptions, elmOptionElmMode),
+    HaskellOptions (HaskellOptions),
     NodePackageManager (NPM, PNPm, Yarn),
-    ProjectType (Elm, Go, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
   )
 
 newtype Gitignore = Gitignore [GitignoreGroup]
@@ -54,6 +55,35 @@ ggElm = GitignoreGroup "Elm" [GitignoreLine "elm-stuff"]
 
 ggElmGeneratedIndexHtml :: GitignoreGroup
 ggElmGeneratedIndexHtml = GitignoreGroup "Elm-Generated index.html" [GitignoreLine "index.html"]
+
+ggHaskell :: GitignoreGroup
+ggHaskell =
+  GitignoreGroup
+    "Haskell"
+    [ GitignoreLine "dist",
+      GitignoreLine "dist-*",
+      GitignoreLine "cabal-dev",
+      GitignoreLine "*.o",
+      GitignoreLine "*.hi",
+      GitignoreLine "*.hie",
+      GitignoreLine "*.chi",
+      GitignoreLine "*.chs.h",
+      GitignoreLine "*.dyn_o",
+      GitignoreLine "*.dyn_hi",
+      GitignoreLine ".hpc",
+      GitignoreLine ".hsenv",
+      GitignoreLine ".cabal-sandbox",
+      GitignoreLine "cabal.sandbox.config",
+      GitignoreLine "*.prof",
+      GitignoreLine "*.aux",
+      GitignoreLine "*.hp",
+      GitignoreLine "*.eventlog",
+      GitignoreLine ".stack-work/",
+      GitignoreLine "cabal.project.local",
+      GitignoreLine "cabal.project.local~",
+      GitignoreLine ".HTF/",
+      GitignoreLine ".ghc.environment.*"
+    ]
 
 ggParcel :: GitignoreGroup
 ggParcel =
@@ -403,6 +433,7 @@ gitignoreFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig =
         ggElm : case elmOptionElmMode of
           ElmModeBare -> [ggElmGeneratedIndexHtml]
           ElmModeNode packageManager -> ggParcel : nodeGitignoreGroups packageManager
+      Haskell (HaskellOptions _ _) -> [ggHaskell]
       Node packageManager -> nodeGitignoreGroups packageManager
       Go _ -> [ggGoBinariesPlugins, ggGoTestBinary, ggGoCoverage, ggGoWorkspace]
       Java {} -> [ggJavaCompiledClass, ggJavaLogFile, ggJavaIDEFiles, ggJavaMobileTools, ggJavaPackageFiles, ggJavaVMLogs, ggJavaMavenFiles]
