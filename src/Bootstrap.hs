@@ -39,6 +39,10 @@ import Bootstrap.Data.Bootstrappable.GitPodYml (GitPodYml (GitPodYml))
 import Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor)
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.Go.Modfile (goModfileFor)
+import Bootstrap.Data.Bootstrappable.Haskell.LibHs (libHsFor)
+import Bootstrap.Data.Bootstrappable.Haskell.MainHs (mainHsFor)
+import Bootstrap.Data.Bootstrappable.Haskell.PackageYaml (packageYamlFor)
+import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs (preludeHsFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
 import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
@@ -82,6 +86,7 @@ import Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig (ContinuousIntegrationConfig),
   )
 import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig, unDevContainerConfig))
+import Bootstrap.Data.GHCVersion (printGHCVersion)
 import Bootstrap.Data.HList (HList (HNil), (~:))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig, unPreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (ProjectName, mkProjectName)
@@ -90,14 +95,24 @@ import Bootstrap.Data.ProjectType
     ElmMode (ElmModeBare, ElmModeNode),
     ElmModeSimple (ElmModeSimpleBare, ElmModeSimpleNode),
     ElmOptions (ElmOptions, elmOptionElmMode, elmOptionProvideElmReview),
+    HaskellOptions (HaskellOptions),
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
-    ProjectSuperType (PSTElm, PSTGo, PSTJava, PSTMinimal, PSTNode, PSTPython),
-    ProjectType (Elm, Go, Java, Minimal, Node, Python),
+    ProjectSuperType
+      ( PSTElm,
+        PSTGo,
+        PSTHaskell,
+        PSTJava,
+        PSTMinimal,
+        PSTNode,
+        PSTPython
+      ),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
+    haskellProjectTypeName,
     nodePackageManagerName,
     projectSuperTypeName,
   )
@@ -106,7 +121,7 @@ import Bootstrap.Error (CanDieOnError (dieOnError', dieOnErrorWithPrefix))
 import Bootstrap.GitPod (resetPermissionsInGitPod)
 import Bootstrap.Monad (MonadBootstrap)
 import Bootstrap.Niv (initialiseNiv)
-import Bootstrap.Nix.Evaluate (NixBinaryPaths, getNixBinaryPaths, getNixConfig, getNixVersion)
+import Bootstrap.Nix.Evaluate (NixBinaryPaths, getAvailableGHCVersions, getNixBinaryPaths, getNixConfig, getNixVersion)
 import Bootstrap.Nix.Flake (generateIntermediateFlake)
 import Bootstrap.Terminal
   ( promptChoice,
@@ -180,28 +195,38 @@ nixBootstrap = withTerminal $ runTerminalT do
         nixBinaryPaths <- performInitialChecks runConfig
         buildPlan <-
           if rcFromScratch runConfig
-            then promptBuildConfig nixBinaryPaths runConfig
+            then do
+              promptFlakesWarning runConfig
+              projectName <- promptProjectName
+              preCommitHooksConfig <- promptPreCommitHooksConfig
+              if useFlakes
+                then generateIntermediateFlake nixBinaryPaths runConfig projectName
+                else initialiseNiv runConfig preCommitHooksConfig
+              promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig
             else case mConfig of
               Just cfg -> do
                 withAttributes [bold, foreground yellow] . putTextLn $
                   "Using configuration from state file; re-run with --"
                     <> fromScratchFlagName
                     <> " to ignore the old configuration and bootstrap from scratch."
-                let mbpPreCommitHooksConfig = cfg ^. configSetUpPreCommitHooks
-                if useFlakes
-                  then generateIntermediateFlake nixBinaryPaths runConfig (cfg ^. configProjectName)
-                  else initialiseNiv runConfig mbpPreCommitHooksConfig
                 makeBuildPlan
                   MakeBuildPlanArgs
                     { mbpNixBinaryPaths = nixBinaryPaths,
                       mbpProjectName = cfg ^. configProjectName,
                       mbpProjectType = cfg ^. configProjectType,
-                      mbpPreCommitHooksConfig,
+                      mbpPreCommitHooksConfig = cfg ^. configSetUpPreCommitHooks,
                       mbpContinuousIntegrationConfig = cfg ^. configSetUpContinuousIntegration,
                       mbpDevContainerConfig = cfg ^. configSetUpVSCodeDevContainer,
                       mbpRunConfig = runConfig
                     }
-              Nothing -> promptBuildConfig nixBinaryPaths runConfig
+              Nothing -> do
+                promptFlakesWarning runConfig
+                projectName <- promptProjectName
+                preCommitHooksConfig <- promptPreCommitHooksConfig
+                if useFlakes
+                  then generateIntermediateFlake nixBinaryPaths runConfig projectName
+                  else initialiseNiv runConfig preCommitHooksConfig
+                promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig
         confirmBuildPlan buildPlan >>= \case
           Just confirmedBuildPlan -> do
             bootstrap confirmedBuildPlan
@@ -304,6 +329,18 @@ showWelcomeMessage = do
   putTextLn "This program will take you through the process of setting up a new project with nix-based infrastructure."
   putTextLn "It is expected to be run in an empty git repository."
 
+-- | Warns the user that flakes are an experimental feature if they are using them
+promptFlakesWarning :: MonadBootstrap m => RunConfig -> m ()
+promptFlakesWarning RunConfig {rcUseFlakes} = when rcUseFlakes do
+  withAttributes [bold, foreground yellow] do
+    putTextLn "Nix Flakes are an experimental feature of nix and their API is subject to breaking changes without warning."
+    putTextLn "Flakes bootstrapped with nix-bootstrap may stop working following a nix version upgrade or when users on your team have different nix versions."
+  promptYesNo "Please confirm you understand and accept these risks"
+    >>= flip unless do
+      putTextLn "Okay, exiting."
+      exitFailure
+
+-- | Asks the user to enter a project name
 promptProjectName :: MonadBootstrap m => m ProjectName
 promptProjectName =
   promptNonemptyText "Please enter a project name: "
@@ -315,52 +352,63 @@ promptProjectName =
         )
       . mkProjectName
 
-promptBuildConfig :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> m BuildPlan
-promptBuildConfig mbpNixBinaryPaths mbpRunConfig@RunConfig {rcUseFlakes, rcWithDevContainer} = do
-  when rcUseFlakes do
-    withAttributes [bold, foreground yellow] do
-      putTextLn "Nix Flakes are an experimental feature of nix and their API is subject to breaking changes without warning."
-      putTextLn "Flakes bootstrapped with nix-bootstrap may stop working following a nix version upgrade or when users on your team have different nix versions."
-    promptYesNo "Please confirm you understand and accept these risks"
-      >>= flip unless do
-        putTextLn "Okay, exiting."
-        exitFailure
-  mbpProjectName <- promptProjectName
-  mbpDevContainerConfig <-
-    DevContainerConfig
-      <$> promptYesNoWithDefault
-        (unDevContainerConfig <$> rcWithDevContainer)
-        "Would you like to set up a VSCode DevContainer?"
-  mbpProjectType <- promptProjectType mbpDevContainerConfig
-  mbpPreCommitHooksConfig <- PreCommitHooksConfig <$> promptYesNo "Would you like to set up pre-commit hooks?"
-  mbpContinuousIntegrationConfig <-
-    ContinuousIntegrationConfig
-      <$> promptYesNo "Would you like to set up CI with GitLab CI?"
-  if rcUseFlakes
-    then generateIntermediateFlake mbpNixBinaryPaths mbpRunConfig mbpProjectName
-    else initialiseNiv mbpRunConfig mbpPreCommitHooksConfig
-  makeBuildPlan MakeBuildPlanArgs {..}
+-- | Asks the user to decide whether they'd like to have pre-commit hooks set up
+promptPreCommitHooksConfig :: MonadBootstrap m => m PreCommitHooksConfig
+promptPreCommitHooksConfig =
+  PreCommitHooksConfig
+    <$> promptYesNo "Would you like pre-commit hooks to be included in what nix-bootstrap sets up?"
 
-promptProjectType :: forall m. MonadBootstrap m => DevContainerConfig -> m ProjectType
-promptProjectType devContainerConfig = do
-  superType <- promptChoice "Select a project type:" universe projectSuperTypeName
+promptBuildConfig ::
+  MonadBootstrap m =>
+  NixBinaryPaths ->
+  RunConfig ->
+  ProjectName ->
+  PreCommitHooksConfig ->
+  m BuildPlan
+promptBuildConfig
+  mbpNixBinaryPaths
+  mbpRunConfig@RunConfig {rcWithDevContainer}
+  mbpProjectName
+  mbpPreCommitHooksConfig = do
+    mbpDevContainerConfig <-
+      DevContainerConfig
+        <$> promptYesNoWithDefault
+          (unDevContainerConfig <$> rcWithDevContainer)
+          "Would you like to set up a VSCode DevContainer?"
+    mbpProjectType <- promptProjectType mbpNixBinaryPaths mbpRunConfig mbpDevContainerConfig
+    mbpContinuousIntegrationConfig <-
+      ContinuousIntegrationConfig
+        <$> promptYesNo "Would you like to set up CI with GitLab CI?"
+    makeBuildPlan MakeBuildPlanArgs {..}
+
+promptProjectType :: forall m. MonadBootstrap m => NixBinaryPaths -> RunConfig -> DevContainerConfig -> m ProjectType
+promptProjectType nixBinaryPaths runConfig devContainerConfig = do
+  superType <- promptChoice "Select a project type:" universeNonEmpty projectSuperTypeName
   case superType of
     PSTMinimal -> pure Minimal
     PSTElm -> do
-      elmModeSimple <- promptChoice "How would you like to use Elm?" universe \case
+      elmModeSimple <- promptChoice "How would you like to use Elm?" universeNonEmpty \case
         ElmModeSimpleBare -> "On its own"
         ElmModeSimpleNode -> "As part of a Node application"
       elmOptionElmMode <- case elmModeSimple of
         ElmModeSimpleBare -> pure ElmModeBare
         ElmModeSimpleNode ->
           ElmModeNode
-            <$> promptChoice "Select a node package manager:" universe nodePackageManagerName
+            <$> promptChoice "Select a node package manager:" universeNonEmpty nodePackageManagerName
       elmOptionProvideElmReview <-
         promptYesNo
           "Would you like to set up elm-review with a default configuration for code quality?"
       pure $ Elm ElmOptions {..}
+    PSTHaskell -> do
+      availableGHCVersions <- getAvailableGHCVersions nixBinaryPaths runConfig
+      case nonEmpty $ toList availableGHCVersions of
+        Just availableGHCVersions' -> do
+          haskellProjectType <- promptChoice "What kind of Haskell project would you like?" universeNonEmpty haskellProjectTypeName
+          ghcVersion <- promptChoice "Select a version of the Glasgow Haskell Compiler:" availableGHCVersions' printGHCVersion
+          pure . Haskell $ HaskellOptions ghcVersion haskellProjectType
+        Nothing -> putErrorLn "Could not find any versions of GHC in nixpkgs" *> exitFailure
     PSTNode -> do
-      packageManager <- promptChoice "Select a package manager:" universe nodePackageManagerName
+      packageManager <- promptChoice "Select a package manager:" universeNonEmpty nodePackageManagerName
       pure $ Node packageManager
     PSTGo -> do
       setUpGoBuild <- SetUpGoBuild <$> askIfReproducibleBuildRequired
@@ -468,6 +516,10 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: elmPackageJsonFor mbpProjectType
               ~: elmIndexHtmlFor mbpProjectName mbpProjectType
               ~: elmIndexJsFor mbpProjectType
+              ~: packageYamlFor mbpProjectType mbpProjectName
+              ~: preludeHsFor mbpProjectType
+              ~: libHsFor mbpProjectType
+              ~: mainHsFor mbpProjectType
               ~: GitPodYml
               ~: HNil
           )

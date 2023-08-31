@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | Copyright : (c) Crown Copyright GCHQ
@@ -13,6 +15,9 @@ module Bootstrap.Data.ProjectType
     ElmOptions (..),
     ElmModeSimple (..),
     ElmMode (..),
+    HaskellOptions (..),
+    HaskellProjectType (..),
+    haskellProjectTypeName,
     NodePackageManager (..),
     nodePackageManagerName,
     SetUpGoBuild (..),
@@ -25,13 +30,25 @@ module Bootstrap.Data.ProjectType
     pythonVersionName,
     PythonVersion (Python39),
     ProjectTypeV2 (..),
-    migrateProjectTypeToV3,
+    migrateProjectTypeFromV2,
+    ProjectTypeV3 (..),
+    migrateProjectTypeFromV3,
   )
 where
 
+import Bootstrap.Data.GHCVersion (GHCVersion)
 import Data.Tuple.Extra (uncurry3)
 import Dhall (FromDhall, ToDhall)
-import Dhall.Deriving (AsIs, CamelCase, Codec (Codec), Constructor, DropPrefix, Field, type (<<<))
+import Dhall.Deriving
+  ( AsIs,
+    CamelCase,
+    Codec (Codec),
+    Constructor,
+    DropPrefix,
+    Field,
+    TextFunction (textFunction),
+    type (<<<),
+  )
 import Relude.Extra.Tuple (toFst)
 import Toml (TomlCodec)
 import qualified Toml
@@ -39,6 +56,7 @@ import qualified Toml
 data ProjectSuperType
   = PSTMinimal
   | PSTElm
+  | PSTHaskell
   | PSTNode
   | PSTGo
   | PSTJava
@@ -49,6 +67,7 @@ projectSuperTypeName :: ProjectSuperType -> Text
 projectSuperTypeName = \case
   PSTMinimal -> "Minimal (No Language-Specific Tooling)"
   PSTElm -> "Elm"
+  PSTHaskell -> "Haskell"
   PSTNode -> "NodeJS"
   PSTGo -> "Go"
   PSTJava -> "Java"
@@ -63,6 +82,7 @@ instance HasProjectSuperType ProjectSuperType where
 data ProjectType
   = Minimal
   | Elm ElmOptions
+  | Haskell HaskellOptions
   | Node NodePackageManager
   | Go SetUpGoBuild
   | Java JavaOptions
@@ -74,6 +94,7 @@ instance HasProjectSuperType ProjectType where
   projectSuperType = \case
     Minimal -> PSTMinimal
     Elm _ -> PSTElm
+    Haskell _ -> PSTHaskell
     Node _ -> PSTNode
     Go _ -> PSTGo
     Java {} -> PSTJava
@@ -98,6 +119,32 @@ data ElmMode
     ElmModeNode NodePackageManager
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "ElmMode")) ElmMode
+
+-- | Configures how `HaskellOptions` fields should be named in dhall expressions
+data HaskellOptionsDhallFields
+
+instance TextFunction HaskellOptionsDhallFields where
+  textFunction = \case
+    "haskellOptionsGHCVersion" -> "ghcVersion"
+    _anythingElse -> textFunction @(CamelCase <<< DropPrefix "haskellOptions") _anythingElse
+
+data HaskellOptions = HaskellOptions
+  { haskellOptionsGHCVersion :: GHCVersion,
+    haskellOptionsHaskellProjectType :: HaskellProjectType
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Field HaskellOptionsDhallFields) HaskellOptions
+
+data HaskellProjectType
+  = HaskellProjectTypeReplOnly
+  | HaskellProjectTypeBasic
+  deriving stock (Bounded, Enum, Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "HaskellProjectType")) HaskellProjectType
+
+haskellProjectTypeName :: HaskellProjectType -> Text
+haskellProjectTypeName = \case
+  HaskellProjectTypeReplOnly -> "REPL only"
+  HaskellProjectTypeBasic -> "Basic Library + Executable"
 
 data NodePackageManager = NPM | PNPm | Yarn
   deriving stock (Bounded, Enum, Eq, Generic, Show)
@@ -230,10 +277,39 @@ instance HasProjectSuperType ProjectTypeV2 where
     PTV2Java {} -> PSTJava
     PTV2Python _ -> PSTPython
 
-migrateProjectTypeToV3 :: ProjectTypeV2 -> ProjectType
-migrateProjectTypeToV3 = \case
-  PTV2Minimal -> Minimal
-  PTV2Node x -> Node x
-  PTV2Go x -> Go x
-  PTV2Java x -> Java x
-  PTV2Python x -> Python x
+migrateProjectTypeFromV2 :: ProjectTypeV2 -> ProjectType
+migrateProjectTypeFromV2 =
+  migrateProjectTypeFromV3 . \case
+    PTV2Minimal -> PTV3Minimal
+    PTV2Node x -> PTV3Node x
+    PTV2Go x -> PTV3Go x
+    PTV2Java x -> PTV3Java x
+    PTV2Python x -> PTV3Python x
+
+data ProjectTypeV3
+  = PTV3Minimal
+  | PTV3Elm ElmOptions
+  | PTV3Node NodePackageManager
+  | PTV3Go SetUpGoBuild
+  | PTV3Java JavaOptions
+  | PTV3Python PythonVersion
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectTypeV3
+
+instance HasProjectSuperType ProjectTypeV3 where
+  projectSuperType = \case
+    PTV3Minimal -> PSTMinimal
+    PTV3Elm _ -> PSTElm
+    PTV3Node _ -> PSTNode
+    PTV3Go _ -> PSTGo
+    PTV3Java {} -> PSTJava
+    PTV3Python _ -> PSTPython
+
+migrateProjectTypeFromV3 :: ProjectTypeV3 -> ProjectType
+migrateProjectTypeFromV3 = \case
+  PTV3Minimal -> Minimal
+  PTV3Elm x -> Elm x
+  PTV3Node x -> Node x
+  PTV3Go x -> Go x
+  PTV3Java x -> Java x
+  PTV3Python x -> Python x

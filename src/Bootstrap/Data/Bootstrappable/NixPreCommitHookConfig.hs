@@ -14,7 +14,7 @@ import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentNix,
   )
-import Bootstrap.Data.ProjectType (ProjectType (Elm, Go, Java, Minimal, Node, Python))
+import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly), ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python))
 import Bootstrap.Nix.Expr
   ( Binding (BNameValue),
     Expr (EGrouping, EIdent, EList, ELit, ESet, EWith),
@@ -91,12 +91,15 @@ nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
         alejandra : case projectType of
           Minimal -> []
           Elm _ -> [elmFormat, elmReview, prettier]
+          Haskell (HaskellOptions _ HaskellProjectTypeReplOnly) -> []
+          Haskell (HaskellOptions _ HaskellProjectTypeBasic) -> [hlint, hpack, ormolu]
           Node _ -> [prettier]
           Go _ -> [goFmt, goTest]
           Java {} -> [googleJavaFormat]
           Python _ -> []
       nixPreCommitHookConfigRequiresNixpkgs =
         any preCommitHookToolIsFromNixpkgs (tool <$> nixPreCommitHookConfigHooks)
+          || hpack `elem` nixPreCommitHookConfigHooks
    in NixPreCommitHookConfig {nixPreCommitHookConfigUsingFlakeLib = rcUseFlakes, ..}
 
 data PreCommitHook = PreCommitHook
@@ -104,7 +107,7 @@ data PreCommitHook = PreCommitHook
     enable :: Bool,
     entry :: Maybe Text,
     excludes :: Maybe [Text],
-    files :: Maybe Text,
+    files :: Maybe Expr,
     name :: Maybe Text,
     pass_filenames :: Maybe Bool,
     types_or :: Maybe [Text],
@@ -149,7 +152,7 @@ toBinding PreCommitHook {..} =
     then Nothing
     else
       Just
-        if all isNothing [entry, files, name] && all isNothing [excludes, types_or] && isNothing pass_filenames
+        if all isNothing [entry, name] && all isNothing [excludes, types_or] && isNothing files && isNothing pass_filenames
           then (PIdent (Identifier attrName) `PCons` [nixproperty|.enable|]) |= [nix|true|]
           else
             PIdent (Identifier attrName)
@@ -160,7 +163,7 @@ toBinding PreCommitHook {..} =
                       [ ([nixproperty|enable|], Just [nix|true|]),
                         ([nixproperty|entry|], ELit . LString <$> entry),
                         ([nixproperty|excludes|], EList . fmap (ELit . LString) <$> excludes),
-                        ([nixproperty|files|], ELit . LString <$> files),
+                        ([nixproperty|files|], files),
                         ([nixproperty|name|], ELit . LString <$> name),
                         ([nixproperty|pass_filenames|], ELit . LBool <$> pass_filenames),
                         ([nixproperty|types_or|], EList . fmap (ELit . LString) <$> types_or)
@@ -201,6 +204,18 @@ elmFormat = defaultPreCommitHook "elm-format" $ DefaultPreCommitHookTool "elm-fo
 elmReview :: PreCommitHook
 elmReview = defaultPreCommitHook "elm-review" $ DefaultPreCommitHookTool "elm-review"
 
+hlint :: PreCommitHook
+hlint = defaultPreCommitHook "hlint" $ DefaultPreCommitHookTool "hlint"
+
+hpack :: PreCommitHook
+hpack =
+  (defaultPreCommitHook "hpack" $ DefaultPreCommitHookTool "hpack")
+    { files = Just [nix|nixpkgs.lib.mkOverride 0 "(\\.l?hs$)|cabal\\.project|([^/]+\\.cabal$)|(package\\.yaml$)"|]
+    }
+
+ormolu :: PreCommitHook
+ormolu = defaultPreCommitHook "ormolu" $ DefaultPreCommitHookTool "ormolu"
+
 prettier :: PreCommitHook
 prettier = defaultPreCommitHook "prettier" $ DefaultPreCommitHookTool "prettier"
 
@@ -209,7 +224,7 @@ googleJavaFormat =
   let toolAttrName = NixpkgsSubAttrName "google-java-format"
    in (defaultPreCommitHook "google-java-format" $ NixpkgsPreCommitHookTool toolAttrName)
         { entry = Just $ nixpkgsPreCommitHookToolDefaultEntry toolAttrName <> " -i",
-          files = Just "\\\\.java$",
+          files = Just [nix|"\\\\.java$"|],
           pass_filenames = Just True
         }
 
@@ -218,7 +233,7 @@ goFmt =
   let toolAttrName = NixpkgsSubAttrName "go"
    in (defaultPreCommitHook "go-fmt" $ NixpkgsPreCommitHookTool toolAttrName)
         { entry = Just $ nixpkgsPreCommitHookToolDefaultEntry toolAttrName <> " fmt",
-          files = Just "\\\\.go$",
+          files = Just [nix|"\\\\.go$"|],
           pass_filenames = Just False
         }
 
@@ -227,6 +242,6 @@ goTest =
   let toolAttrName = NixpkgsSubAttrName "go"
    in (defaultPreCommitHook "go-test" $ NixpkgsPreCommitHookTool toolAttrName)
         { entry = Just $ nixpkgsPreCommitHookToolDefaultEntry toolAttrName <> " test",
-          files = Just "\\\\.(go|mod)$",
+          files = Just [nix|"\\\\.(go|mod)$"|],
           pass_filenames = Just False
         }

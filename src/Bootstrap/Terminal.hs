@@ -18,14 +18,13 @@ where
 
 import Bootstrap.Monad (MonadBootstrap)
 import Bootstrap.State
-  ( ChoiceInputState (chosenItem),
+  ( ChoiceInputState (ChoiceInputState, chosenItem),
     CursorPos,
     InputLine (unInputLine),
     MultipleChoiceInputState (chosenItems, cursorItem),
     TextInputState (currentLine, cursorPos),
     handleBackspacePress,
     handleCharEntry,
-    initialChoiceInputState,
     initialMultipleChoiceInputState,
     initialTextInputState,
     updateCursorPos,
@@ -55,12 +54,12 @@ import System.Terminal
 
 promptChoice ::
   forall a m.
-  (Bounded a, Enum a, Eq a, MonadBootstrap m) =>
+  (Eq a, MonadBootstrap m) =>
   Text ->
-  [a] ->
+  NonEmpty a ->
   (a -> Text) ->
   m a
-promptChoice promptText options optionToText = go initialChoiceInputState
+promptChoice promptText options optionToText = go (ChoiceInputState $ head options)
   where
     go :: ChoiceInputState a -> m a
     go state = do
@@ -74,8 +73,8 @@ promptChoice promptText options optionToText = go initialChoiceInputState
               getConfirmation "selected" (chosenItem state) optionToText $
                 promptChoice promptText options optionToText
             ArrowKey direction -> case direction of
-              Upwards -> goAgain state {chosenItem = prev (chosenItem state)}
-              Downwards -> goAgain state {chosenItem = next (chosenItem state)}
+              Upwards -> goAgain state {chosenItem = prevOption (chosenItem state)}
+              Downwards -> goAgain state {chosenItem = nextOption (chosenItem state)}
               _ -> goAgain state
             _ -> goAgain state
         _ -> goAgain state
@@ -85,6 +84,14 @@ promptChoice promptText options optionToText = go initialChoiceInputState
           if chosenItem state == option
             then withAttributes [bold, foreground yellow] . putTextLn $ "> " <> optionToText option
             else putTextLn $ "  " <> optionToText option
+        prevOption :: a -> a
+        prevOption a = case drop 1 . dropWhile (/= a) . reverse $ toList options of
+          [] -> a
+          (x : _) -> x
+        nextOption :: a -> a
+        nextOption a = case drop 1 . dropWhile (/= a) $ toList options of
+          [] -> a
+          (x : _) -> x
         goAgain :: ChoiceInputState a -> m a
         goAgain nextState = scrubLines (length options + 1) *> go nextState
 

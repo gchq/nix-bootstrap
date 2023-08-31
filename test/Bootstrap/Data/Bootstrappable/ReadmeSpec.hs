@@ -11,13 +11,16 @@ import Bootstrap.Data.BuildPlan
     toBuildPlanFile,
   )
 import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
+import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeNode),
     ElmOptions (ElmOptions),
+    HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
     NodePackageManager (NPM, PNPm),
-    ProjectType (Elm, Go, Node, Python),
+    ProjectType (Elm, Go, Haskell, Node, Python),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
   )
@@ -119,6 +122,130 @@ Feel free to remove this once you're familiar with how it works, or amend it as 
    |
    `- sources.nix - This is the interface between nix and the dependencies listed in sources.json.
 ```
+
+## nix-bootstrap
+
+This project was bootstrapped by [nix-bootstrap](https://github.com/gchq/nix-bootstrap/).
+
+If you'd like to learn more about how the generated infrastructure works, or have any feedback, please direct it to [our issue tracker](https://github.com/gchq/nix-bootstrap/issues).
+|]
+          )
+  it "renders a Haskell readme with a repl only config correctly" do
+    bootstrapContent
+      ( Readme
+          projectName
+          (Haskell $ HaskellOptions (GHCVersion 9 0 2) HaskellProjectTypeReplOnly)
+          (DevContainerConfig False)
+          Nothing
+          False
+      )
+      >>= ( `shouldBe`
+              Right
+                [r|# test_name
+
+[![Made with nix-bootstrap](https://img.shields.io/badge/Made%20with-nix--bootstrap-rgb(58%2C%2095%2C%20168)?style=flat-square&logo=nixos&logoColor=white&link=https://github.com/gchq/nix-bootstrap)](https://github.com/gchq/nix-bootstrap)
+
+## Overview
+
+**__TODO:__** Write an overview of test_name
+
+## Development Environment
+
+You can work on test_name in 2 ways:
+
+  * [In GitPod](#use-in-gitpod)
+  * [In a VM](#set-up-in-a-vm)
+
+### Use In GitPod
+
+To develop with this project in GitPod, follow the instructions below:
+
+1. Open this repository in GitLab
+2. Click the dropdown near the "Clone" button which says "Web IDE". Change it to "GitPod".
+3. Click GitPod button on the same dropdown.
+
+### Set Up In A VM
+
+**Note:** This guide assumes you already have a working VM. If you don't know how to set one up, consider following **Setup via Dev Container** below instead.
+
+1. [Install Nix](https://nixos.org) into your VM by running the following command:
+
+   ```sh
+   sh <(curl -L https://nixos.org/nix/install) --daemon
+   ```
+
+2. [Install direnv, following the instructions for your system](https://direnv.net/docs/installation.html)
+3. [Follow the instructions to hook direnv into your shell](https://direnv.net/docs/hook.html)
+4. Run `direnv allow` in the project root directory
+
+_After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+## Using the Repl
+
+You can use the provided Haskell repl by running `cabal repl` in the dev shell.
+
+## nix-bootstrap
+
+This project was bootstrapped by [nix-bootstrap](https://github.com/gchq/nix-bootstrap/).
+
+If you'd like to learn more about how the generated infrastructure works, or have any feedback, please direct it to [our issue tracker](https://github.com/gchq/nix-bootstrap/issues).
+|]
+          )
+  it "renders a Haskell readme with a basic project config correctly" do
+    bootstrapContent
+      ( Readme
+          projectName
+          (Haskell $ HaskellOptions (GHCVersion 9 0 2) HaskellProjectTypeBasic)
+          (DevContainerConfig False)
+          Nothing
+          False
+      )
+      >>= ( `shouldBe`
+              Right
+                [r|# test_name
+
+[![Made with nix-bootstrap](https://img.shields.io/badge/Made%20with-nix--bootstrap-rgb(58%2C%2095%2C%20168)?style=flat-square&logo=nixos&logoColor=white&link=https://github.com/gchq/nix-bootstrap)](https://github.com/gchq/nix-bootstrap)
+
+## Overview
+
+**__TODO:__** Write an overview of test_name
+
+## Development Environment
+
+You can work on test_name in 2 ways:
+
+  * [In GitPod](#use-in-gitpod)
+  * [In a VM](#set-up-in-a-vm)
+
+### Use In GitPod
+
+To develop with this project in GitPod, follow the instructions below:
+
+1. Open this repository in GitLab
+2. Click the dropdown near the "Clone" button which says "Web IDE". Change it to "GitPod".
+3. Click GitPod button on the same dropdown.
+
+### Set Up In A VM
+
+**Note:** This guide assumes you already have a working VM. If you don't know how to set one up, consider following **Setup via Dev Container** below instead.
+
+1. [Install Nix](https://nixos.org) into your VM by running the following command:
+
+   ```sh
+   sh <(curl -L https://nixos.org/nix/install) --daemon
+   ```
+
+2. [Install direnv, following the instructions for your system](https://direnv.net/docs/installation.html)
+3. [Follow the instructions to hook direnv into your shell](https://direnv.net/docs/hook.html)
+4. Run `direnv allow` in the project root directory
+
+_After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+## Using your project
+
+1. Generate a cabal file by running `hpack`
+2. `cabal build` will build your application
+3. `cabal run app` will run your application. **Note:** this will initially fail until you replace the body of the `lib` function in `src/Lib.hs`.
 
 ## nix-bootstrap
 

@@ -31,6 +31,7 @@ import Control.Exception (IOException)
 import Control.Monad.Catch (MonadCatch, catchAll, try)
 import Data.Char (toLower)
 import Data.Tree (Tree (Node, rootLabel, subForest))
+import Language.Haskell.TH (Quote)
 import Relude.Extra.Group (groupBy)
 import Relude.Extra.Map (toPairs)
 import System.Directory (createDirectoryIfMissing, doesFileExist)
@@ -70,7 +71,7 @@ getOverwriteStatus path newContents = liftIO do
 -- | Converts a `Bootstrappable` file into a `BuildPlanFile`.
 --
 -- Only returns `Nothing` if the file passed in is `Nothing`.
-toBuildPlanFile :: (Bootstrappable a, CanDieOnError m, MonadIO m) => a -> m (Maybe (FilePath, BuildPlanFile))
+toBuildPlanFile :: (Bootstrappable a, CanDieOnError m, MonadIO m, Quote m) => a -> m (Maybe (FilePath, BuildPlanFile))
 toBuildPlanFile maybeA = case bootstrapWithMaybe maybeA of
   Nothing -> pure Nothing
   Just a -> do
@@ -89,7 +90,7 @@ type family AllBootstrappable (xs :: [Type]) :: Constraint where
 
 -- | Takes a list of Bootstrappable files and converts them into `BuildPlanFile`s.
 toBuildPlanFiles ::
-  (AllBootstrappable xs, CanDieOnError m, MonadIO m) =>
+  (AllBootstrappable xs, CanDieOnError m, MonadIO m, Quote m) =>
   HList xs ->
   m [(FilePath, BuildPlanFile)]
 toBuildPlanFiles HNil = pure []

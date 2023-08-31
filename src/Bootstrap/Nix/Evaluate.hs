@@ -10,13 +10,16 @@ module Bootstrap.Nix.Evaluate
     getNixConfig,
     getNixVersion,
     getVersionOfNixpkgsAttribute,
+    getAvailableGHCVersions,
   )
 where
 
 import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
+import Bootstrap.Data.GHCVersion (GHCVersion, parseGHCVersion)
 import Bootstrap.Data.Version (MajorVersion, parseMajorVersion)
 import Bootstrap.Error
-  ( InProgressDuration (LongRunning),
+  ( CanDieOnError (dieOnError),
+    InProgressDuration (LongRunning),
     runWithProgressMsg,
   )
 import Bootstrap.GitPod (resetPermissionsInGitPod)
@@ -43,6 +46,16 @@ import qualified Relude.Extra.Map as M
 import System.IO.Error (userError)
 import System.IO.Silently (hSilence)
 import System.Process (readProcess)
+import Text.Megaparsec
+  ( Parsec,
+    anySingleBut,
+    between,
+    errorBundlePretty,
+    many,
+    parse,
+    parseMaybe,
+  )
+import Text.Megaparsec.Char (char, space)
 import Text.Regex (matchRegex, mkRegex, subRegex)
 
 data NixBinaryPaths = NixBinaryPaths
@@ -135,3 +148,35 @@ getVersionOfNixpkgsAttribute nixBinaryPath rc@RunConfig {rcUseFlakes} attrName =
           (mkRegex "^\"([0-9]+(\\.[0-9]+)*).*")
           (toString . T.strip $ toText nixVersionValue)
           "\\1"
+
+-- | Gets the available GHC versions in the pinned nixpkgs.
+getAvailableGHCVersions :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> m (Set GHCVersion)
+getAvailableGHCVersions nixBinaryPaths rc@RunConfig {rcUseFlakes} =
+  dieOnError
+    (("Could not get list of available GHC versions: " <>) . toText . displayException)
+    $ ExceptT do
+      resetPermissionsInGitPod
+      runWithProgressMsg LongRunning "Getting available versions of GHC in the pinned version of nixpkgs" . ExceptT $
+        ( let nixpkgsExpr = if rcUseFlakes then nixpkgsFromIntermediateFlake else nixpkgsFromNiv
+           in evaluateNixExpression nixBinaryPaths rc $
+                ELetIn
+                  (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr)
+                  [nix|builtins.attrNames nixpkgs.haskell.packages|]
+        )
+          <&> second (parse parseAttributes "")
+          >>= \case
+            Left e -> pure $ Left e
+            Right (Left e) -> pure . Left . userError $ errorBundlePretty e
+            Right (Right attrs) ->
+              pure
+                . Right
+                . fromList
+                . catMaybes
+                $ parseMaybe parseGHCVersion <$> attrs
+  where
+    parseAttributes :: Parsec Void String [String]
+    parseAttributes = between (char '[') (char ']') $ Text.Megaparsec.many do
+      void space
+      attrName <- between (char '\"') (char '\"') . Text.Megaparsec.many $ anySingleBut '\"'
+      void space
+      pure attrName

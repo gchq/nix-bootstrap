@@ -1,9 +1,16 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.NixShell
-  ( NixShell (NixShell, nixShellBuildInputs, nixShellHooksRequireNixpkgs),
+  ( NixShell
+      ( NixShell,
+        nixShellExtraBindings,
+        nixShellNixpkgsBuildInputs,
+        nixShellOtherBuildInputs,
+        nixShellHooksRequireNixpkgs
+      ),
     nixShellFor,
   )
 where
@@ -16,24 +23,34 @@ import Bootstrap.Data.Bootstrappable
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
   ( NixPreCommitHookConfig (nixPreCommitHookConfigRequiresNixpkgs),
   )
+import Bootstrap.Data.GHCVersion (ghcVersionAttributeName)
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (unPreCommitHooksConfig))
 import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
     ElmOptions (elmOptionElmMode),
+    HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
     JavaOptions (JavaOptions),
     NodePackageManager (NPM, PNPm, Yarn),
-    ProjectType (Elm, Go, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
     unInstallMinishift,
   )
 import Bootstrap.Nix.Expr
   ( Binding,
-    Expr (EIdent, ELetIn, EPropertyAccess),
+    Expr (EApplication, EFunc, EGrouping, EIdent, ELetIn, EList, ELit, EPropertyAccess, EWith),
+    Identifier,
     IsNixExpr (toNixExpr),
+    Literal (LString),
     nix,
+    nixargs,
     nixbinding,
+    nixident,
     nixproperty,
+    (|*),
+    (|.),
     (|=),
   )
+import Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (bisOtherPackages))
 import Bootstrap.Nix.Expr.MkShell
   ( BuildInputSpec
       ( BuildInputSpec,
@@ -52,7 +69,14 @@ import Bootstrap.Nix.Expr.Python (machNixLegacyNixBinding, pythonPackagesBinding
 data NixShell = NixShell
   { nixShellPreCommitHooksConfig :: PreCommitHooksConfig,
     nixShellProjectType :: ProjectType,
-    nixShellBuildInputs :: [Expr],
+    nixShellExtraBindings ::
+      [ ( -- Relevant to flakes?
+          Bool,
+          Binding
+        )
+      ],
+    nixShellNixpkgsBuildInputs :: [Expr],
+    nixShellOtherBuildInputs :: [Expr],
     -- | Used to determine whether to pass the nixpkgs argument to the pre-commit-hooks config
     nixShellHooksRequireNixpkgs :: Bool
   }
@@ -68,11 +92,54 @@ instance Bootstrappable NixShell where
 
 nixShellFor :: RunConfig -> ProjectType -> PreCommitHooksConfig -> Maybe NixPreCommitHookConfig -> NixShell
 nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommitHookConfig =
-  NixShell preCommitHooksConfig projectType (buildInputsFor projectType) $
-    maybe False nixPreCommitHookConfigRequiresNixpkgs nixPreCommitHookConfig
+  NixShell
+    { nixShellPreCommitHooksConfig = preCommitHooksConfig,
+      nixShellProjectType = projectType,
+      nixShellExtraBindings = extraBindingsFor projectType,
+      nixShellNixpkgsBuildInputs = nixpkgsBuildInputsFor projectType,
+      nixShellOtherBuildInputs = otherBuildInputsFor projectType,
+      nixShellHooksRequireNixpkgs = maybe False nixPreCommitHookConfigRequiresNixpkgs nixPreCommitHookConfig
+    }
   where
-    buildInputsFor :: ProjectType -> [Expr]
-    buildInputsFor =
+    extraBindingsFor :: ProjectType -> [(Bool, Binding)]
+    extraBindingsFor = \case
+      Haskell (HaskellOptions ghcVersion haskellProjectType) ->
+        (True,)
+          <$> [ [nixproperty|ghcAttribute|] |= ELit (LString $ ghcVersionAttributeName ghcVersion),
+                [nixproperty|haskellPackages|]
+                  |= applyOverridesFunc haskellProjectType [nix|nixpkgs.haskell.packages.${ghcAttribute}|],
+                [nixproperty|haskellEnv|]
+                  |= ghcWithPackages
+                    ( case haskellProjectType of
+                        HaskellProjectTypeReplOnly -> [[nixident|cabal-install|]]
+                        HaskellProjectTypeBasic -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
+                    )
+              ]
+      Python _ -> (False,) <$> (machNixLegacyNixBinding : one (pythonPackagesBinding False))
+      _ -> []
+      where
+        applyOverridesFunc :: HaskellProjectType -> Expr -> Expr
+        applyOverridesFunc = \case
+          HaskellProjectTypeReplOnly -> id
+          HaskellProjectTypeBasic -> \e ->
+            (e |. [nixproperty|override|])
+              |* [nix|{
+            overrides = _: super: {
+              # The line below may be needed to circumvent a bug in nixpkgs.
+              # If the devshell builds successfully without it, feel free to remove it.
+              pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };
+            };
+          }|]
+        ghcWithPackages :: [Identifier] -> Expr
+        ghcWithPackages =
+          EApplication [nix|haskellPackages.ghcWithPackages|]
+            . EGrouping
+            . EFunc [nixargs|pkgs:|]
+            . EWith [nix|pkgs|]
+            . EList
+            . fmap EIdent
+    nixpkgsBuildInputsFor :: ProjectType -> [Expr]
+    nixpkgsBuildInputsFor =
       sortBy compareBuildInputs . (([nix|rnix-lsp|] : [[nix|niv|] | not rcUseFlakes]) <>) . \case
         Minimal -> []
         Elm elmOptions ->
@@ -83,6 +150,7 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
             <> case elmOptionElmMode elmOptions of
               ElmModeBare -> []
               ElmModeNode packageManager -> [nix|nodejs|] : nodePackageManager packageManager
+        Haskell (HaskellOptions _ _) -> []
         Node packageManager ->
           [[nix|awscli2|], [nix|nodejs|]] <> nodePackageManager packageManager
         Go _ -> [[nix|go|]]
@@ -95,6 +163,11 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
       NPM -> []
       PNPm -> [[nix|nodePackages.pnpm|]]
       Yarn -> [[nix|yarn|]]
+    otherBuildInputsFor :: ProjectType -> [Expr]
+    otherBuildInputsFor =
+      sortBy compareBuildInputs . \case
+        Haskell (HaskellOptions _ _) -> [[nix|haskellEnv|]]
+        _ -> []
     compareBuildInputs :: Expr -> Expr -> Ordering
     compareBuildInputs (EIdent i1) (EIdent i2) = compare i1 i2
     compareBuildInputs (EPropertyAccess (EIdent i1) _) (EIdent i2) = compare i1 i2
@@ -107,7 +180,8 @@ instance IsNixExpr NixShell where
     ELetIn topLevelBindings $
       mkShell
         BuildInputSpec
-          { bisNixpkgsPackages = nixShellBuildInputs,
+          { bisNixpkgsPackages = nixShellNixpkgsBuildInputs,
+            bisOtherPackages = nixShellOtherBuildInputs,
             bisPreCommitHooksConfig = nixShellPreCommitHooksConfig,
             bisProjectType = nixShellProjectType
           }
@@ -128,7 +202,5 @@ instance IsNixExpr NixShell where
                      ]
                    else []
                )
-                 <> case nixShellProjectType of
-                   Python _ -> machNixLegacyNixBinding : one (pythonPackagesBinding False)
-                   _ -> []
+                 <> (snd <$> nixShellExtraBindings)
              )

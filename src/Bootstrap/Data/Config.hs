@@ -26,13 +26,14 @@ where
 
 import Bootstrap.Data.Config.Internal
   ( Config,
-    ConfigV3 (ConfigV3),
+    ConfigV3Plus (ConfigV3Plus),
     LoadConfigResult
       ( LoadConfigResultError,
         LoadConfigResultFound,
         LoadConfigResultNotFound
       ),
-    VersionedConfig (VersionedConfigV3),
+    VersionedConfig (VersionedConfigV4),
+    VersionedProjectType (VPT4),
     configV3ProjectName,
     configV3ProjectType,
     configV3SetUpContinuousIntegration,
@@ -51,7 +52,7 @@ import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig)
 import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType (ProjectType)
 
-makeConfigLenses 'ConfigV3
+makeConfigLenses 'ConfigV3Plus
 
 -- | Initialise a new `Config` from scratch
 configFor ::
@@ -64,5 +65,5 @@ configFor ::
   Bool ->
   Config
 configFor a1 a2 a3 a4 a5 a6 =
-  VersionedConfigV3 $
-    ConfigV3 a1 a2 a3 a4 a5 a6
+  VersionedConfigV4 $
+    ConfigV3Plus a1 (VPT4 a2) a3 a4 a5 a6
