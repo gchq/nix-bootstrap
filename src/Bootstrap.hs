@@ -516,7 +516,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: elmPackageJsonFor mbpProjectType
               ~: elmIndexHtmlFor mbpProjectName mbpProjectType
               ~: elmIndexJsFor mbpProjectType
-              ~: packageYamlFor mbpProjectType mbpProjectName
+              ~: packageYamlFor mbpNixBinaryPaths mbpRunConfig mbpProjectName mbpProjectType
               ~: preludeHsFor mbpProjectType
               ~: libHsFor mbpProjectType
               ~: mainHsFor mbpProjectType

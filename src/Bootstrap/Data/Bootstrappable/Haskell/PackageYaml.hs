@@ -1,3 +1,6 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.Haskell.PackageYaml
   ( PackageYaml,
@@ -5,25 +8,43 @@ module Bootstrap.Data.Bootstrappable.Haskell.PackageYaml
   )
 where
 
+import Bootstrap.Cli (RunConfig)
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentYaml,
   )
+import Bootstrap.Data.HaskellDependency
+  ( HaskellDependency,
+    VersionKnown (VersionKnown),
+    getHaskellDependencyVersions,
+    hdep,
+  )
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
-import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly), ProjectType (Haskell))
+import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions, haskellOptionsHaskellProjectType), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly), ProjectType (Haskell))
+import Bootstrap.Nix.Evaluate (NixBinaryPaths)
 import Data.Aeson (ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
+import Relude.Extra.Bifunctor (firstF)
 
 -- | The haskell project's package.yaml
-newtype PackageYaml = PackageYaml ProjectName
+data PackageYaml = PackageYaml NixBinaryPaths RunConfig ProjectName HaskellOptions
 
 instance Bootstrappable PackageYaml where
   bootstrapName = const "package.yaml"
   bootstrapReason = const "The configuration of your haskell project"
-  bootstrapContent = pure . pure . bootstrapContentYaml
+  bootstrapContent (PackageYaml nbps rc n opts@HaskellOptions {haskellOptionsHaskellProjectType}) = runExceptT do
+    dependencies <- ExceptT
+      . firstF (("Could not get haskell dependency versions: " <>) . displayException)
+      . getHaskellDependencyVersions nbps rc opts
+      $ case haskellOptionsHaskellProjectType of
+        HaskellProjectTypeReplOnly -> []
+        HaskellProjectTypeBasic -> [$(hdep "base"), $(hdep "relude")]
+    pure . bootstrapContentYaml $ PackageYamlWithDependencies n dependencies
 
-instance ToJSON PackageYaml where
-  toJSON (PackageYaml n) =
+data PackageYamlWithDependencies = PackageYamlWithDependencies ProjectName [HaskellDependency 'VersionKnown]
+
+instance ToJSON PackageYamlWithDependencies where
+  toJSON (PackageYamlWithDependencies n deps) =
     Aeson.object
       [ ("name", Aeson.String $ unProjectName n),
         ("version", "0.1.0.0"),
@@ -41,14 +62,7 @@ instance ToJSON PackageYaml where
               ]
         ),
         ( "dependencies",
-          Aeson.Array $
-            fromList
-              [ Aeson.object
-                  [ ("name", "base"),
-                    ("mixin", Aeson.Array $ fromList ["hiding (Prelude)"])
-                  ],
-                "relude"
-              ]
+          Aeson.Array . fromList $ toJSON <$> deps
         ),
         ( "flags",
           Aeson.object
@@ -110,9 +124,9 @@ instance ToJSON PackageYaml where
         )
       ]
 
-packageYamlFor :: ProjectType -> ProjectName -> Maybe PackageYaml
-packageYamlFor = \case
-  Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
-    HaskellProjectTypeReplOnly -> const Nothing
-    HaskellProjectTypeBasic -> Just . PackageYaml
-  _ -> const Nothing
+packageYamlFor :: NixBinaryPaths -> RunConfig -> ProjectName -> ProjectType -> Maybe PackageYaml
+packageYamlFor nbps rc projectName = \case
+  Haskell haskellOptions@(HaskellOptions _ haskellProjectType) -> case haskellProjectType of
+    HaskellProjectTypeReplOnly -> Nothing
+    HaskellProjectTypeBasic -> Just $ PackageYaml nbps rc projectName haskellOptions
+  _ -> Nothing

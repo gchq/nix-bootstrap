@@ -13,11 +13,14 @@ module Bootstrap.Data.GHCVersion
     parseGHCVersion,
 
     -- * Formatting
-    ghcVersionAttributeName,
     printGHCVersion,
+
+    -- * Use in Nix expressions
+    ghcVersionProperty,
   )
 where
 
+import Bootstrap.Nix.Expr (Identifier (Identifier), Property (PIdent))
 import qualified Data.Char as C
 import qualified Data.Text as T
 import Dhall (FromDhall, ToDhall)
@@ -46,11 +49,9 @@ data GHCVersion = GHCVersion
   deriving stock (Eq, Generic, Ord, Show)
   deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "ghcVersion")) GHCVersion
 
--- | Gets the attribute name of the GHC version.
---
--- Result should always succeed when parsed by `parseGHCVersion`.
-ghcVersionAttributeName :: GHCVersion -> Text
-ghcVersionAttributeName = ("ghc" <>) . T.filter (/= '.') . printGHCVersion
+-- | Gets the attribute name of the GHC version, able to be queried in nixpkgs
+ghcVersionProperty :: GHCVersion -> Property
+ghcVersionProperty = PIdent . Identifier . ("ghc" <>) . T.filter (/= '.') . printGHCVersion
 
 -- | Parses a nixpkgs attribute representing a GHC version
 --

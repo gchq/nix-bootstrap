@@ -23,7 +23,6 @@ import Bootstrap.Data.Bootstrappable
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
   ( NixPreCommitHookConfig (nixPreCommitHookConfigRequiresNixpkgs),
   )
-import Bootstrap.Data.GHCVersion (ghcVersionAttributeName)
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (unPreCommitHooksConfig))
 import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
@@ -37,20 +36,18 @@ import Bootstrap.Data.ProjectType
   )
 import Bootstrap.Nix.Expr
   ( Binding,
-    Expr (EApplication, EFunc, EGrouping, EIdent, ELetIn, EList, ELit, EPropertyAccess, EWith),
+    Expr (EApplication, EFunc, EGrouping, EIdent, ELetIn, EList, EPropertyAccess, EWith),
     Identifier,
     IsNixExpr (toNixExpr),
-    Literal (LString),
     nix,
     nixargs,
     nixbinding,
     nixident,
     nixproperty,
-    (|*),
-    (|.),
     (|=),
   )
 import Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (bisOtherPackages))
+import Bootstrap.Nix.Expr.Haskell (haskellPackagesExpr)
 import Bootstrap.Nix.Expr.MkShell
   ( BuildInputSpec
       ( BuildInputSpec,
@@ -103,11 +100,9 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
   where
     extraBindingsFor :: ProjectType -> [(Bool, Binding)]
     extraBindingsFor = \case
-      Haskell (HaskellOptions ghcVersion haskellProjectType) ->
+      Haskell haskellOptions@(HaskellOptions _ haskellProjectType) ->
         (True,)
-          <$> [ [nixproperty|ghcAttribute|] |= ELit (LString $ ghcVersionAttributeName ghcVersion),
-                [nixproperty|haskellPackages|]
-                  |= applyOverridesFunc haskellProjectType [nix|nixpkgs.haskell.packages.${ghcAttribute}|],
+          <$> [ [nixproperty|haskellPackages|] |= haskellPackagesExpr haskellOptions,
                 [nixproperty|haskellEnv|]
                   |= ghcWithPackages
                     ( case haskellProjectType of
@@ -118,18 +113,6 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
       Python _ -> (False,) <$> (machNixLegacyNixBinding : one (pythonPackagesBinding False))
       _ -> []
       where
-        applyOverridesFunc :: HaskellProjectType -> Expr -> Expr
-        applyOverridesFunc = \case
-          HaskellProjectTypeReplOnly -> id
-          HaskellProjectTypeBasic -> \e ->
-            (e |. [nixproperty|override|])
-              |* [nix|{
-            overrides = _: super: {
-              # The line below may be needed to circumvent a bug in nixpkgs.
-              # If the devshell builds successfully without it, feel free to remove it.
-              pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };
-            };
-          }|]
         ghcWithPackages :: [Identifier] -> Expr
         ghcWithPackages =
           EApplication [nix|haskellPackages.ghcWithPackages|]
