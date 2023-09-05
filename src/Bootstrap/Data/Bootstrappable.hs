@@ -22,7 +22,8 @@ module Bootstrap.Data.Bootstrappable
 where
 
 import Bootstrap.Nix.Expr
-  ( Identifier (unIdentifier),
+  ( CommentsPolicy (ShowComments),
+    Identifier (unIdentifier),
     IsNixExpr (toNixExpr),
     isMostlyCorrectlyScoped,
     writeExprFormatted,
@@ -146,7 +147,7 @@ bootstrapContentNix a = do
             ( ("Could not format nix expression: " <>)
                 . displayException
             )
-            <$> writeExprFormatted expr
+            <$> writeExprFormatted ShowComments expr
         Left (i1 :| iRest) ->
           pure . Left $
             "Nix expression is incorrectly scoped; it references the out of scope "

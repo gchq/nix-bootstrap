@@ -16,7 +16,8 @@ import Bootstrap.GitPod (resetPermissionsInGitPod)
 import Bootstrap.Monad (MonadBootstrap)
 import Bootstrap.Nix.Evaluate (NixBinaryPaths, runNix)
 import Bootstrap.Nix.Expr
-  ( Expr (ELit, ESet),
+  ( CommentsPolicy (ShowComments),
+    Expr (ELit, ESet),
     Literal (LString),
     nixbinding,
     nixproperty,
@@ -53,7 +54,7 @@ writeIntermediateFlake projectName =
     . try @_ @IOException
     . writeFileText "flake.nix"
     . (<> "\n")
-    . writeExpr
+    . writeExpr ShowComments
     $ intermediateFlake projectName
 
 intermediateFlake :: ProjectName -> Expr

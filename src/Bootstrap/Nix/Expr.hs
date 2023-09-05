@@ -61,6 +61,7 @@ module Bootstrap.Nix.Expr
     writeExprForTerminal,
     -- | `writeBinding` writes out a `Binding` without formatting it.
     writeBinding,
+    CommentsPolicy (..),
 
     -- * Validation
 
@@ -109,7 +110,6 @@ import Text.Megaparsec
   )
 import Text.Megaparsec.Char (alphaNumChar, char, letterChar, space, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
-import Text.Regex (mkRegex, subRegex)
 
 type Parser = Parsec Void Text
 
@@ -178,31 +178,34 @@ infixl 7 |++
 (|++) :: Expr -> Expr -> Expr
 (|++) e1 = (e1 |* EListConcatOperator |*)
 
+-- | Whether to include comments when formatting
+data CommentsPolicy = ShowComments | HideComments
+
 -- | Writes out an `Expr` as Nix code
-writeExpr :: Expr -> Text
-writeExpr =
+writeExpr :: CommentsPolicy -> Expr -> Text
+writeExpr cp =
   \case
-    EApplication e1 e2 -> writeExpr e1 <> " " <> writeExpr e2
-    EFunc args e -> writeFunctionArgs args <> writeExpr e
-    EGrouping e -> "(" <> writeExpr e <> ")"
+    EApplication e1 e2 -> writeExpr cp e1 <> " " <> writeExpr cp e2
+    EFunc args e -> writeFunctionArgs args <> writeExpr cp e
+    EGrouping e -> "(" <> writeExpr cp e <> ")"
     EIdent (Identifier i) -> i
     EImport -> "import"
-    ELetIn bindings e -> "let " <> sconcat (writeBinding <$> bindings) <> "in " <> writeExpr e
+    ELetIn bindings e -> "let " <> sconcat (writeBinding cp <$> bindings) <> "in " <> writeExpr cp e
     EList exprs ->
       "["
         <> (if length exprs > 2 then "\n" else "")
-        <> T.concat (intersperse " " (writeExpr <$> exprs))
+        <> T.concat (intersperse " " (writeExpr cp <$> exprs))
         <> "]"
     EListConcatOperator -> "++"
     ELit l -> writeLiteral l
-    EPropertyAccess e1 p -> writeExpr e1 <> "." <> writeProperty p
+    EPropertyAccess e1 p -> writeExpr cp e1 <> "." <> writeProperty cp p
     ESet isRec bindings ->
       (if isRec then "rec " else "")
         <> "{"
         <> (if length bindings > 2 then "\n" else " ")
-        <> mconcat (writeBinding <$> bindings)
+        <> mconcat (writeBinding cp <$> bindings)
         <> "}"
-    EWith additionalScope e -> "with " <> writeExpr additionalScope <> "; " <> writeExpr e
+    EWith additionalScope e -> "with " <> writeExpr cp additionalScope <> "; " <> writeExpr cp e
     . mergeNestedLetExprs
 
 -- | Recursively merges nested let expressions into a single let in block
@@ -236,19 +239,15 @@ mergeNestedLetExprs = \case
       PCons p1 p2 -> PCons (mergeNestedLetExprsP p1) (mergeNestedLetExprsP p2)
 
 -- | Writes out an `Expr` as Nix code, formatting it with alejandra
-writeExprFormatted :: MonadIO m => Expr -> m (Either IOException Text)
-writeExprFormatted = runExceptT . (fmap toText <$> alejandra . toString . writeExpr)
+writeExprFormatted :: MonadIO m => CommentsPolicy -> Expr -> m (Either IOException Text)
+writeExprFormatted cp = runExceptT . (fmap toText <$> alejandra . toString . writeExpr cp)
 
 -- | Like writeExpr, but strips out line comments,
 -- replaces whitespace groups with a single space,
 -- and escapes dollar symbols.
 writeExprForTerminal :: Expr -> Text
 writeExprForTerminal e =
-  unwords . words . toText $
-    subRegex
-      (mkRegex "\n#[^\n]*\n")
-      (toString . T.replace "$" "\\$" $ writeExpr e)
-      " "
+  unwords . words . T.replace "$" "\\$" $ writeExpr HideComments e
 
 -- | Runs `parseE`, parsing a Nix expression
 parseExpr :: Text -> Either Text Expr
@@ -386,12 +385,14 @@ infixr 4 |=
 (|=) = BNameValue
 
 -- | Writes out a `Binding` as Nix code
-writeBinding :: Binding -> Text
-writeBinding = \case
+writeBinding :: CommentsPolicy -> Binding -> Text
+writeBinding cp = \case
   BInherit xs -> "inherit " <> writeIdentifiers " " xs <> ";\n"
-  BInheritFrom from xs -> "inherit (" <> writeExpr from <> ") " <> writeIdentifiers " " xs <> ";\n"
-  BLineComment c -> "# " <> c <> "\n"
-  BNameValue p v -> writeProperty p <> " = " <> writeExpr v <> ";\n"
+  BInheritFrom from xs -> "inherit (" <> writeExpr cp from <> ") " <> writeIdentifiers " " xs <> ";\n"
+  BLineComment c -> case cp of
+    ShowComments -> "# " <> c <> "\n"
+    HideComments -> ""
+  BNameValue p v -> writeProperty cp p <> " = " <> writeExpr cp v <> ";\n"
   where
     writeIdentifiers :: Text -> NonEmpty Identifier -> Text
     writeIdentifiers sep = T.concat . intersperse sep . fmap unIdentifier . toList
@@ -605,11 +606,11 @@ parseProperty requireDot = do
         Nothing -> pure p
 
 -- | Writes out a `Property` as Nix code
-writeProperty :: Property -> Text
-writeProperty = \case
+writeProperty :: CommentsPolicy -> Property -> Text
+writeProperty cp = \case
   PIdent (Identifier i) -> i
-  PAntiquote e -> "${" <> writeExpr e <> "}"
-  PCons p1 p2 -> writeProperty p1 <> "." <> writeProperty p2
+  PAntiquote e -> "${" <> writeExpr cp e <> "}"
+  PCons p1 p2 -> writeProperty cp p1 <> "." <> writeProperty cp p2
 
 -- | Parses an `ESet`
 parseSet ::

@@ -9,6 +9,7 @@ module Bootstrap.Nix.ExprSpec (spec) where
 
 import Bootstrap.Nix.Expr
   ( Binding (BInherit, BInheritFrom, BLineComment, BNameValue),
+    CommentsPolicy (ShowComments),
     Expr
       ( EApplication,
         EFunc,
@@ -150,12 +151,12 @@ spec = do
     it "backtracks if an identifier begins with \"import\"" do
       parseExpr "imports" `shouldBe` Right (EIdent $ Identifier "imports")
     it "merges nested let-in expressions" do
-      parseExpr (writeExpr [nix|let x = 5; in let y = 4; in ""|])
+      parseExpr (writeExpr ShowComments [nix|let x = 5; in let y = 4; in ""|])
         `shouldBe` Right [nix|let x = 5; y = 4; in ""|]
     describe "EApplication" do
       it "roundtrips with multiple arguments" do
         let expr = EApplication (EApplication EImport (EIdent $ Identifier "nixpkgs")) (ESet False [])
-        parseExpr (writeExpr expr) `shouldBe` Right expr
+        parseExpr (writeExpr ShowComments expr) `shouldBe` Right expr
     describe "EPropertyAccess" do
       it "correctly parses a property access expression" do
         parseExpr "(let a = \"hello\"; b = \"world\"; in a).b"
@@ -289,7 +290,7 @@ spec = do
 
 -- | An expectation that a Nix expression is the same when written out and parsed again.
 roundtrips :: Expr -> Expectation
-roundtrips e = parseExpr (writeExpr e) `shouldBe` Right e
+roundtrips e = parseExpr (writeExpr ShowComments e) `shouldBe` Right e
 
 -- Arbitrary Helpers
 

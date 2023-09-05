@@ -7,6 +7,7 @@ module Bootstrap.Nix.Expr.ReproducibleBuild.Go (reproducibleGoBuild) where
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
 import Bootstrap.Nix.Expr
   ( Binding (BLineComment),
+    CommentsPolicy (ShowComments),
     Expr (ELit, ESet),
     Literal (LString),
     nix,
@@ -33,5 +34,5 @@ reproducibleGoBuild projectName =
         |],
         [nixbinding|# When the build fails, it will tell you what the expected hash is.
         |],
-        BLineComment (writeBinding [nixbinding|vendorSha256 = "sha256-00000000000000000000000000000000000000000000";|])
+        BLineComment (writeBinding ShowComments [nixbinding|vendorSha256 = "sha256-00000000000000000000000000000000000000000000";|])
       ]
