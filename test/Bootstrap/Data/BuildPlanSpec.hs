@@ -15,9 +15,6 @@ import Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor)
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.Haskell.LibHs (libHsFor)
 import Bootstrap.Data.Bootstrappable.Haskell.MainHs (mainHsFor)
-import Bootstrap.Data.Bootstrappable.Haskell.PackageYaml
-  ( packageYamlFor,
-  )
 import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs
   ( preludeHsFor,
   )
@@ -80,7 +77,6 @@ spec = describe "toReasonTree" do
                 ~: devContainerJsonFor devContainerConfig projectName projectType
                 ~: vsCodeExtensionsFileFor projectType
                 ~: vsCodeSettingsFor devContainerConfig
-                ~: packageYamlFor haskellProjectType projectName
                 ~: preludeHsFor haskellProjectType
                 ~: libHsFor haskellProjectType
                 ~: mainHsFor haskellProjectType
@@ -117,7 +113,6 @@ spec = describe "toReasonTree" do
               Node "sources.json - This contains metadata about your nix dependencies." [],
               Node "sources.nix - This is the interface between nix and the dependencies listed in sources.json." []
             ],
-          Node "package.yaml - The configuration of your haskell project" [],
           Node "README.md - This helpfully explains to you what each file (including itself) does!" [],
           Node "shell.nix - This configures what tools are available in your development environment and links in the pre-commit hooks." [],
           Node "shell.nix - This enables you to use your development shell when Nix flakes aren't available." [],

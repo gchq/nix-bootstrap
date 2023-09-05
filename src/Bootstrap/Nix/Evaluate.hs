@@ -10,6 +10,7 @@ module Bootstrap.Nix.Evaluate
     getNixConfig,
     getNixVersion,
     getVersionOfNixpkgsAttribute,
+    extractNixVersionString,
     getAvailableGHCVersions,
   )
 where
@@ -35,8 +36,7 @@ import Bootstrap.Nix.Expr
     (|=),
   )
 import Bootstrap.Nix.Expr.Nixpkgs
-  ( nixpkgsFromIntermediateFlake,
-    nixpkgsFromNiv,
+  ( nixpkgsExpr,
   )
 import Bootstrap.Unix (runCommand, which)
 import Control.Exception (IOException, ioError, try)
@@ -132,37 +132,44 @@ evaluateNixExpression NixBinaryPaths {..} RunConfig {rcUseFlakes} expr =
 -- >>> getVersionOfNixpkgsAttribute (NixBinaryPaths {..}) (RunConfig {..}) "go"
 -- "1.17.7"
 getVersionOfNixpkgsAttribute :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> Text -> m (Either IOException String)
-getVersionOfNixpkgsAttribute nixBinaryPath rc@RunConfig {rcUseFlakes} attrName = do
+getVersionOfNixpkgsAttribute nixBinaryPaths rc attrName = do
   resetPermissionsInGitPod
   runWithProgressMsg LongRunning ("Getting version of " <> attrName <> " in the pinned version of nixpkgs") . ExceptT $
-    ( let nixpkgsExpr = if rcUseFlakes then nixpkgsFromIntermediateFlake else nixpkgsFromNiv
-       in evaluateNixExpression nixBinaryPath rc $
-            ELetIn
-              (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr)
-              [nix|nixpkgs|]
-              |. PIdent (Identifier attrName)
-              |. [nixproperty|.version|]
-    )
-      <&> fmap \nixVersionValue ->
-        subRegex
-          (mkRegex "^\"([0-9]+(\\.[0-9]+)*).*")
-          (toString . T.strip $ toText nixVersionValue)
-          "\\1"
+    evaluateNixExpression
+      nixBinaryPaths
+      rc
+      ( ELetIn
+          (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr rc)
+          [nix|nixpkgs|]
+          |. PIdent (Identifier attrName)
+          |. [nixproperty|.version|]
+      )
+      <&> fmap extractNixVersionString
+
+-- | Strips quotes and other sundries from a version number retrieved
+-- using nix eval
+extractNixVersionString :: String -> String
+extractNixVersionString nixVersionValue =
+  subRegex
+    (mkRegex "^\"([0-9]+(\\.[0-9]+)*).*")
+    (toString . T.strip $ toText nixVersionValue)
+    "\\1"
 
 -- | Gets the available GHC versions in the pinned nixpkgs.
 getAvailableGHCVersions :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> m (Set GHCVersion)
-getAvailableGHCVersions nixBinaryPaths rc@RunConfig {rcUseFlakes} =
+getAvailableGHCVersions nixBinaryPaths rc =
   dieOnError
     (("Could not get list of available GHC versions: " <>) . toText . displayException)
     $ ExceptT do
       resetPermissionsInGitPod
       runWithProgressMsg LongRunning "Getting available versions of GHC in the pinned version of nixpkgs" . ExceptT $
-        ( let nixpkgsExpr = if rcUseFlakes then nixpkgsFromIntermediateFlake else nixpkgsFromNiv
-           in evaluateNixExpression nixBinaryPaths rc $
-                ELetIn
-                  (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr)
-                  [nix|builtins.attrNames nixpkgs.haskell.packages|]
-        )
+        evaluateNixExpression
+          nixBinaryPaths
+          rc
+          ( ELetIn
+              (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr rc)
+              [nix|builtins.attrNames nixpkgs.haskell.packages|]
+          )
           <&> second (parse parseAttributes "")
           >>= \case
             Left e -> pure $ Left e

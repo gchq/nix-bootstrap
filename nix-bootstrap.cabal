@@ -58,6 +58,7 @@ library
       Bootstrap.Data.ContinuousIntegration
       Bootstrap.Data.DevContainer
       Bootstrap.Data.GHCVersion
+      Bootstrap.Data.HaskellDependency
       Bootstrap.Data.HList
       Bootstrap.Data.PreCommitHook
       Bootstrap.Data.ProjectName
@@ -71,6 +72,7 @@ library
       Bootstrap.Nix.Evaluate
       Bootstrap.Nix.Expr
       Bootstrap.Nix.Expr.BuildInputs
+      Bootstrap.Nix.Expr.Haskell
       Bootstrap.Nix.Expr.MkShell
       Bootstrap.Nix.Expr.Nixpkgs
       Bootstrap.Nix.Expr.PreCommitHooks
@@ -181,7 +183,6 @@ test-suite nix-bootstrap-test
       Bootstrap.Data.Bootstrappable.Go.ModfileSpec
       Bootstrap.Data.Bootstrappable.Haskell.LibHsSpec
       Bootstrap.Data.Bootstrappable.Haskell.MainHsSpec
-      Bootstrap.Data.Bootstrappable.Haskell.PackageYamlSpec
       Bootstrap.Data.Bootstrappable.Haskell.PreludeHsSpec
       Bootstrap.Data.Bootstrappable.NixPreCommitHookConfigSpec
       Bootstrap.Data.Bootstrappable.NixShellCompatSpec

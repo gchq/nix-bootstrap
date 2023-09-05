@@ -98,8 +98,7 @@ in
                 [r|let
   sources = import nix/sources.nix;
   nixpkgs = import sources.nixpkgs {};
-  ghcAttribute = "ghc902";
-  haskellPackages = nixpkgs.haskell.packages.${ghcAttribute}.override {
+  haskellPackages = nixpkgs.haskell.packages.ghc902.override {
     overrides = _: super: {
       # The line below may be needed to circumvent a bug in nixpkgs.
       # If the devshell builds successfully without it, feel free to remove it.
