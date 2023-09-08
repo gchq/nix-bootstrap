@@ -9,7 +9,7 @@ import Bootstrap.Data.ProjectType
     ElmOptions (ElmOptions, elmOptionElmMode),
     HaskellOptions (HaskellOptions),
     NodePackageManager (NPM, PNPm, Yarn),
-    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python, Rust),
   )
 
 newtype Gitignore = Gitignore [GitignoreGroup]
@@ -414,6 +414,16 @@ ggPythonPycharm =
     "PyCharm"
     [GitignoreLine ".idea/"]
 
+ggRust :: GitignoreGroup
+ggRust =
+  GitignoreGroup "Rust" $
+    GitignoreLine
+      <$> [ "debug/",
+            "target/",
+            "**/*.rs.bk",
+            "*.pdb"
+          ]
+
 newtype GitignoreLine = GitignoreLine {unGitignoreLine :: Text} deriving stock (Eq)
 
 gitignoreFor :: RunConfig -> ProjectType -> PreCommitHooksConfig -> Gitignore
@@ -466,6 +476,7 @@ gitignoreFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig =
           ggPythonCython,
           ggPythonPycharm
         ]
+      Rust -> [ggRust]
     nodeGitignoreGroups :: NodePackageManager -> [GitignoreGroup]
     nodeGitignoreGroups =
       (ggNode :) . \case

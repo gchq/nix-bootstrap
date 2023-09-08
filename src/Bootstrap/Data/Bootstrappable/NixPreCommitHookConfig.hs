@@ -14,7 +14,20 @@ import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentNix,
   )
-import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly), ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python))
+import Bootstrap.Data.ProjectType
+  ( HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    ProjectType
+      ( Elm,
+        Go,
+        Haskell,
+        Java,
+        Minimal,
+        Node,
+        Python,
+        Rust
+      ),
+  )
 import Bootstrap.Nix.Expr
   ( Binding (BNameValue),
     Expr (EGrouping, EIdent, EList, ELit, ESet, EWith),
@@ -73,10 +86,11 @@ instance IsNixExpr NixPreCommitHookConfig where
       mkToolsExpr :: Expr -> (PreCommitHookTool -> Bool) -> Expr
       mkToolsExpr parentSet condition =
         EGrouping . EWith parentSet $
-          EList
-            ( EIdent . Identifier . preCommitHookToolSubAttrName
-                <$> sortNub (filter condition (tool <$> nixPreCommitHookConfigHooks))
-            )
+          EList $
+            catMaybes
+              ( fmap (EIdent . Identifier) . preCommitHookToolSubAttrName
+                  <$> sortNub (filter condition (tool <$> nixPreCommitHookConfigHooks))
+              )
       libPackageSet :: Expr
       libPackageSet =
         if nixPreCommitHookConfigUsingFlakeLib
@@ -97,6 +111,7 @@ nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
           Go _ -> [goFmt, goTest]
           Java {} -> [googleJavaFormat]
           Python _ -> []
+          Rust -> [cargoCheck, clippy, rustfmt]
       nixPreCommitHookConfigRequiresNixpkgs =
         any preCommitHookToolIsFromNixpkgs (tool <$> nixPreCommitHookConfigHooks)
           || hpack `elem` nixPreCommitHookConfigHooks
@@ -124,6 +139,9 @@ newtype NixpkgsSubAttrName = NixpkgsSubAttrName Text deriving stock (Eq)
 data PreCommitHookTool
   = DefaultPreCommitHookTool Text
   | NixpkgsPreCommitHookTool NixpkgsSubAttrName
+  | -- | Don't pass a tool from the pre-commit library back up to the shell, use the shell's
+    -- own instead
+    UseShellPreCommitHookTool
   deriving stock (Eq)
 
 instance Ord PreCommitHookTool where
@@ -132,6 +150,7 @@ instance Ord PreCommitHookTool where
       textValueOf = \case
         DefaultPreCommitHookTool t -> t
         NixpkgsPreCommitHookTool (NixpkgsSubAttrName t) -> t
+        UseShellPreCommitHookTool -> ""
 
 preCommitHookToolIsFromHooksLib :: PreCommitHookTool -> Bool
 preCommitHookToolIsFromHooksLib (DefaultPreCommitHookTool _) = True
@@ -142,9 +161,10 @@ preCommitHookToolIsFromNixpkgs (NixpkgsPreCommitHookTool _) = True
 preCommitHookToolIsFromNixpkgs _ = False
 
 -- | Gets the attribute name within its containing set (not including the containing set)
-preCommitHookToolSubAttrName :: PreCommitHookTool -> Text
-preCommitHookToolSubAttrName (DefaultPreCommitHookTool attrName) = attrName
-preCommitHookToolSubAttrName (NixpkgsPreCommitHookTool (NixpkgsSubAttrName attrName)) = attrName
+preCommitHookToolSubAttrName :: PreCommitHookTool -> Maybe Text
+preCommitHookToolSubAttrName (DefaultPreCommitHookTool attrName) = Just attrName
+preCommitHookToolSubAttrName (NixpkgsPreCommitHookTool (NixpkgsSubAttrName attrName)) = Just attrName
+preCommitHookToolSubAttrName UseShellPreCommitHookTool = Nothing
 
 toBinding :: PreCommitHook -> Maybe Binding
 toBinding PreCommitHook {..} =
@@ -198,6 +218,12 @@ defaultPreCommitHook name tool =
 alejandra :: PreCommitHook
 alejandra = defaultPreCommitHook "alejandra" $ DefaultPreCommitHookTool "alejandra"
 
+cargoCheck :: PreCommitHook
+cargoCheck = defaultPreCommitHook "cargo-check" UseShellPreCommitHookTool
+
+clippy :: PreCommitHook
+clippy = defaultPreCommitHook "clippy" $ DefaultPreCommitHookTool "clippy"
+
 elmFormat :: PreCommitHook
 elmFormat = defaultPreCommitHook "elm-format" $ DefaultPreCommitHookTool "elm-format"
 
@@ -218,6 +244,9 @@ ormolu = defaultPreCommitHook "ormolu" $ DefaultPreCommitHookTool "ormolu"
 
 prettier :: PreCommitHook
 prettier = defaultPreCommitHook "prettier" $ DefaultPreCommitHookTool "prettier"
+
+rustfmt :: PreCommitHook
+rustfmt = defaultPreCommitHook "rustfmt" $ DefaultPreCommitHookTool "rustfmt"
 
 googleJavaFormat :: PreCommitHook
 googleJavaFormat =

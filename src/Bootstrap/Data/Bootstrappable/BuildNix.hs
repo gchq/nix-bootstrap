@@ -12,6 +12,7 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.Bootstrappable.DefaultNix
   ( DefaultNix (defaultNixInBlockExpr),
+    SrcDir (SrcDirParent),
     defaultNixFor,
   )
 import Bootstrap.Data.ProjectName (ProjectName)
@@ -37,7 +38,7 @@ buildNixFor :: RunConfig -> ProjectName -> ProjectType -> Maybe BuildNix
 buildNixFor RunConfig {rcUseFlakes} flakeNixProjectName flakeNixProjectType =
   let buildExpr =
         defaultNixInBlockExpr
-          <$> defaultNixFor flakeNixProjectName flakeNixProjectType
+          <$> defaultNixFor SrcDirParent flakeNixProjectName flakeNixProjectType
    in if rcUseFlakes
         then BuildNix <$> buildExpr
         else Nothing

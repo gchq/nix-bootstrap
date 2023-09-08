@@ -12,7 +12,7 @@ import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions),
     HaskellProjectType (HaskellProjectTypeBasic),
     NodePackageManager (NPM, PNPm),
-    ProjectType (Go, Haskell, Node, Python),
+    ProjectType (Go, Haskell, Node, Python, Rust),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
   )
@@ -74,7 +74,6 @@ in
   };
 in
   nixpkgs.mkShell {
-    inherit (preCommitHooks.hooks) shellHook;
     buildInputs =
       preCommitHooks.tools
       ++ (with nixpkgs; [
@@ -82,6 +81,7 @@ in
         niv
         rnix-lsp
       ]);
+    inherit (preCommitHooks.hooks) shellHook;
   }
 |]
           )
@@ -157,8 +157,34 @@ in
   };
 in
   nixpkgs.mkShell {
-    inherit (preCommitHooks.hooks) shellHook;
     buildInputs = preCommitHooks.tools ++ [pythonPackages] ++ (with nixpkgs; [niv rnix-lsp]);
+    inherit (preCommitHooks.hooks) shellHook;
+  }
+|]
+          )
+  it "renders a Rust project correctly" do
+    let t = Rust
+    bootstrapContent (nixShellFor rcDefault t (PreCommitHooksConfig False) (Just $ nixPreCommitHookConfigFor rcDefault t))
+      >>= ( `shouldBe`
+              Right
+                [r|let
+  sources = import nix/sources.nix;
+  nixpkgs = import sources.nixpkgs {};
+in
+  nixpkgs.mkShell {
+    buildInputs = with nixpkgs; [
+      libiconv
+      niv
+      rnix-lsp
+    ];
+    nativeBuildInputs = with nixpkgs; [
+      cargo
+      rust-analyzer
+      rustc
+    ];
+    shellHook = ''
+      export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}
+    '';
   }
 |]
           )

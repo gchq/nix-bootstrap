@@ -64,6 +64,7 @@ let ProjectType =
       | Go : Bool
       | Java : JavaOptions
       | Python
+      | Rust
       >
 
 in  { projectName = "test-project"

@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           nix-bootstrap
-version:        1.4.1.0
+version:        1.5.0.0
 author:         gchquser
 maintainer:     48051938+sd234678@users.noreply.github.com
 copyright:      Crown Copyright
@@ -49,6 +49,9 @@ library
       Bootstrap.Data.Bootstrappable.NixShellCompat
       Bootstrap.Data.Bootstrappable.Python.Requirements
       Bootstrap.Data.Bootstrappable.Readme
+      Bootstrap.Data.Bootstrappable.Rust.CargoLock
+      Bootstrap.Data.Bootstrappable.Rust.CargoToml
+      Bootstrap.Data.Bootstrappable.Rust.MainRs
       Bootstrap.Data.Bootstrappable.VSCodeExtensions
       Bootstrap.Data.Bootstrappable.VSCodeSettings
       Bootstrap.Data.BuildPlan
@@ -79,6 +82,7 @@ library
       Bootstrap.Nix.Expr.Python
       Bootstrap.Nix.Expr.ReproducibleBuild.Go
       Bootstrap.Nix.Expr.ReproducibleBuild.Java
+      Bootstrap.Nix.Expr.ReproducibleBuild.Rust
       Bootstrap.Nix.Flake
       Bootstrap.State
       Bootstrap.Terminal
@@ -188,6 +192,9 @@ test-suite nix-bootstrap-test
       Bootstrap.Data.Bootstrappable.NixShellCompatSpec
       Bootstrap.Data.Bootstrappable.NixShellSpec
       Bootstrap.Data.Bootstrappable.ReadmeSpec
+      Bootstrap.Data.Bootstrappable.Rust.CargoLockSpec
+      Bootstrap.Data.Bootstrappable.Rust.CargoTomlSpec
+      Bootstrap.Data.Bootstrappable.Rust.MainRsSpec
       Bootstrap.Data.Bootstrappable.VSCodeExtensionsSpec
       Bootstrap.Data.Bootstrappable.VSCodeSettingsSpec
       Bootstrap.Data.BuildPlanSpec
@@ -198,6 +205,7 @@ test-suite nix-bootstrap-test
       Bootstrap.Data.ProjectTypeSpec
       Bootstrap.Data.VersionSpec
       Bootstrap.Nix.CommandSpec
+      Bootstrap.Nix.Expr.MkShellSpec
       Bootstrap.Nix.Expr.NixpkgsSpec
       Bootstrap.Nix.ExprSpec
       Bootstrap.Nix.FlakeSpec

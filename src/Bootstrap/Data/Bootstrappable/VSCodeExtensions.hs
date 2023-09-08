@@ -19,7 +19,7 @@ import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions),
     InstallLombok (unInstallLombok),
     JavaOptions (JavaOptions),
-    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python, Rust),
   )
 import Data.Aeson (KeyValue ((.=)), ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
@@ -58,3 +58,4 @@ extensionsFor =
       ["vscjava.vscode-java-pack"]
         <> ["gabrielbb.vscode-lombok" | unInstallLombok installLombok]
     Python _ -> ["ms-python.python"]
+    Rust -> ["rust-lang.rust-analyzer"]
