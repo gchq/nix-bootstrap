@@ -33,30 +33,32 @@ The following symbols are used throughout this page to indicate support status:
 
 ### Toolchain Support
 
-|            Toolchain\\\\Feature            |                           Development Environment                           |                               VSCode DevContainer                               | Gitignore | Pre-Commit Hooks<sup>[1](#footnote1)</sup> |                              Reproducible Production Builds                               |
-| :----------------------------------------: | :-------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: | :-------: | :----------------------------------------: | :---------------------------------------------------------------------------------------: |
-|                    Elm                     | ✅ <br>Either as a standalone app or as part of a Node project with Parcel. |                    ✅ <br>With the Elm extension installed.                     |    ✅     |                     ✅                     |                                            ❌                                             |
-|                   Golang                   |                                     ✅                                      |                ✅ <br>With the official Go extension installed.                 |    ✅     |                     ✅                     |                  🟠 <br>Support is currently considered _experimental_.                   |
-|                  Haskell                   |      ✅ <br>Either as a simple project or just a place to run a repl.       |              ✅ <br>With the haskell.haskell extension installed.               |    ✅     |                     ✅                     |                                            🕓                                             |
-|                    Java                    |      ✅ <br>With maven, google-java-format, and optionally minishift.       | ✅ <br>With the official Java, and optionally the Lombok, extensions installed. |    ✅     |                     ✅                     | 🟠 <br>Only supports Spring applications. Support is currently considered _experimental_. |
-| Minimal (With no project-specific tooling) |                                     ✅                                      |                                       ✅                                        |    ✅     |                     🟠                     |                                            ❌                                             |
-|                   NodeJS                   |     ✅ <br>With latest stable node, AWS CLI, and optionally PNPm/Yarn.      |                                       ✅                                        |    ✅     |                     ✅                     |                                            ❌                                             |
-|                   Python                   |                       ✅ <br>With Python version 3.9                        |                ✅ <br>With the official Python VSCode extension.                |    ✅     |                     🟠                     |                                            ❌                                             |
+|            Toolchain\\\\Feature            |                           Development Environment                           |                               VSCode DevContainer                               | Gitignore | Pre-Commit Hooks[1](#footnote1) |                              Reproducible Production Builds                               |
+| :----------------------------------------: | :-------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: | :-------: | :-----------------------------: | :---------------------------------------------------------------------------------------: |
+|                    Elm                     | ✅ <br>Either as a standalone app or as part of a Node project with Parcel. |                    ✅ <br>With the Elm extension installed.                     |    ✅     |               ✅                |                                            ❌                                             |
+|                   Golang                   |                                     ✅                                      |                ✅ <br>With the official Go extension installed.                 |    ✅     |               ✅                |                  🟠 <br>Support is currently considered _experimental_.                   |
+|                  Haskell                   |      ✅ <br>Either as a simple project or just a place to run a repl.       |              ✅ <br>With the haskell.haskell extension installed.               |    ✅     |               ✅                |                                            🕓                                             |
+|                    Java                    |      ✅ <br>With maven, google-java-format, and optionally minishift.       | ✅ <br>With the official Java, and optionally the Lombok, extensions installed. |    ✅     |               ✅                | 🟠 <br>Only supports Spring applications. Support is currently considered _experimental_. |
+| Minimal (With no project-specific tooling) |                                     ✅                                      |                                       ✅                                        |    ✅     |               🟠                |                                            ❌                                             |
+|                   NodeJS                   |     ✅ <br>With latest stable node, AWS CLI, and optionally PNPm/Yarn.      |                                       ✅                                        |    ✅     |               ✅                |                                            ❌                                             |
+|                   Python                   |                       ✅ <br>With Python version 3.9                        |                ✅ <br>With the official Python VSCode extension.                |    ✅     |               🟠                |                                            ❌                                             |
+|                    Rust                    |                                     ✅                                      |                ✅ <br>With the official rust-analyzer extension.                |    ✅     |               ✅                |                                            ✅                                             |
 
 <a id="footnote1"><sup>1</sup></a> Marked as fully supported if any non-nix pre-commit hooks are added.
 See the Pre-Commit Hooks table below for details.
 
 ### Pre-Commit Hooks
 
-| Toolchain\\\\Hook Type | Nix Formatting[2](#footnote2) |        Formatters         |      Linters      |    Testing     |
-| :--------------------: | :---------------------------: | :-----------------------: | :---------------: | :------------: |
-|          Elm           |              ✅               |     ✅ <br>elm-format     | ✅ <br>elm-review |       ❌       |
-|         Golang         |              ✅               |       ✅ <br>go-fmt       |        ❌         | ✅ <br>go test |
-|        Haskell         |              ✅               |       ✅ <br>ormolu       |   ✅ <br>hlint    |       ❌       |
-|          Java          |              ✅               | ✅ <br>google-java-format |        ❌         |       ❌       |
-|        Minimal         |              ✅               |            ❌             |        ❌         |       ❌       |
-|         NodeJS         |              ✅               |      ✅ <br>prettier      |        ❌         |       ❌       |
-|         Python         |              ✅               |            ❌             |        ❌         |       ❌       |
+| Toolchain\\\\Hook Type | Nix Formatting[2](#footnote2) |        Formatters         |          Linters           |    Testing     |
+| :--------------------: | :---------------------------: | :-----------------------: | :------------------------: | :------------: |
+|          Elm           |              ✅               |     ✅ <br>elm-format     |     ✅ <br>elm-review      |       ❌       |
+|         Golang         |              ✅               |       ✅ <br>go-fmt       |             ❌             | ✅ <br>go test |
+|        Haskell         |              ✅               |       ✅ <br>ormolu       |        ✅ <br>hlint        |       ❌       |
+|          Java          |              ✅               | ✅ <br>google-java-format |             ❌             |       ❌       |
+|        Minimal         |              ✅               |            ❌             |             ❌             |       ❌       |
+|         NodeJS         |              ✅               |      ✅ <br>prettier      |             ❌             |       ❌       |
+|         Python         |              ✅               |            ❌             |             ❌             |       ❌       |
+|          Rust          |              ✅               |       ✅<br>rustfmt       | ✅<br>cargo check + clippy |       ❌       |
 
 <a id="footnote2"><sup>2</sup></a> [`alejandra`](https://github.com/kamadorueda/alejandra) is set up to format nix files.
 

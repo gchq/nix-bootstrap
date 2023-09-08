@@ -5,30 +5,61 @@
 module Bootstrap.Nix.Expr.MkShell (BuildInputSpec (..), mkShell) where
 
 import Bootstrap.Data.PreCommitHook
-  ( PreCommitHooksConfig (unPreCommitHooksConfig),
+  ( PreCommitHooksConfig (PreCommitHooksConfig),
   )
-import Bootstrap.Data.ProjectType (HasProjectSuperType)
+import Bootstrap.Data.ProjectType
+  ( HasProjectSuperType (projectSuperType),
+    ProjectSuperType (PSTRust),
+  )
 import Bootstrap.Nix.Expr
-  ( Expr (ESet),
+  ( Binding,
+    Expr (ELit, ESet),
+    Literal (LMultilineString),
     nix,
     nixbinding,
+    nixproperty,
     (|*),
+    (|=),
   )
 import Bootstrap.Nix.Expr.BuildInputs
   ( BuildInputSpec (BuildInputSpec, bisNixpkgsPackages, bisPreCommitHooksConfig, bisProjectType),
-    buildInputsBinding,
+    buildInputsBindings,
   )
 
 -- | A nixpkgs.mkShell expression. Expects `nixpkgs` to be in scope.
 mkShell :: HasProjectSuperType t => BuildInputSpec t -> Expr
-mkShell buildInputSpec@BuildInputSpec {bisPreCommitHooksConfig} =
+mkShell buildInputSpec@BuildInputSpec {bisPreCommitHooksConfig, bisProjectType} =
   [nix|nixpkgs.mkShell|]
     |* ESet
       False
-      ( catMaybes
-          [ if unPreCommitHooksConfig bisPreCommitHooksConfig
-              then Just [nixbinding|inherit (preCommitHooks.hooks) shellHook;|]
-              else Nothing,
-            Just $ buildInputsBinding buildInputSpec
-          ]
+      ( buildInputsBindings buildInputSpec
+          <> toList (shellHookBinding <$> shellHookFor bisPreCommitHooksConfig bisProjectType)
       )
+
+data ShellHook
+  = ShellHookFromPreCommit
+  | ShellHookRust
+  | ShellHookCombined (NonEmpty ShellHook)
+
+shellHookFor :: HasProjectSuperType t => PreCommitHooksConfig -> t -> Maybe ShellHook
+shellHookFor pchc pt = case (pchc, projectSuperType pt) of
+  (PreCommitHooksConfig True, PSTRust) -> Just $ ShellHookCombined (ShellHookRust :| [ShellHookFromPreCommit])
+  (PreCommitHooksConfig False, PSTRust) -> Just ShellHookRust
+  (PreCommitHooksConfig True, _) -> Just ShellHookFromPreCommit
+  _ -> Nothing
+
+shellHookBinding :: ShellHook -> Binding
+shellHookBinding = \case
+  ShellHookFromPreCommit -> [nixbinding|inherit (preCommitHooks.hooks) shellHook;|]
+  x -> withComponents $ shellHookComponentBinding x
+  where
+    withComponents :: [Text] -> Binding
+    withComponents xs =
+      [nixproperty|shellHook|]
+        |= ELit
+          (LMultilineString $ mconcat (("\n    " <>) <$> xs) <> "\n  ")
+    shellHookComponentBinding :: ShellHook -> [Text]
+    shellHookComponentBinding = \case
+      ShellHookFromPreCommit -> ["${preCommitHooks.hooks.shellHook}"]
+      ShellHookRust -> ["export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}"]
+      ShellHookCombined xs -> sconcat $ shellHookComponentBinding <$> xs

@@ -144,6 +144,8 @@ data Expr
     EList [Expr]
   | -- | List concatenation operator (++)
     EListConcatOperator
+  | -- | Path concatenation operator (+)
+    EPathConcatOperator
   | -- | Literal
     ELit Literal
   | -- | Property access (.)
@@ -197,6 +199,7 @@ writeExpr cp =
         <> T.concat (intersperse " " (writeExpr cp <$> exprs))
         <> "]"
     EListConcatOperator -> "++"
+    EPathConcatOperator -> "+"
     ELit l -> writeLiteral l
     EPropertyAccess e1 p -> writeExpr cp e1 <> "." <> writeProperty cp p
     ESet isRec bindings ->
@@ -221,6 +224,7 @@ mergeNestedLetExprs = \case
     _ -> ELetIn bindings (mergeNestedLetExprs e)
   EList exprs -> EList (mergeNestedLetExprs <$> exprs)
   EListConcatOperator -> EListConcatOperator
+  EPathConcatOperator -> EPathConcatOperator
   ELit l -> ELit l
   EPropertyAccess e1 p -> EPropertyAccess (mergeNestedLetExprs e1) (mergeNestedLetExprsP p)
   ESet isRec bindings -> ESet isRec (mergeNestedLetExprsB <$> bindings)
@@ -279,7 +283,8 @@ parseNonOperatorExpr =
       uncurry ESet <$> parseSet True,
       EIdent <$> parseIdentifier,
       EList <$> parseList,
-      EListConcatOperator <$ lexeme (symbol "++")
+      EListConcatOperator <$ lexeme (symbol "++"),
+      EPathConcatOperator <$ lexeme (symbol "+")
     ]
 
 -- | Parses an expression which is considered atomic by nix - i.e. it is unambiguously a
@@ -293,6 +298,7 @@ parseAtom allowPropertyAccess =
     [uncurry EPropertyAccess <$> parsePropertyAccess | allowPropertyAccess]
       <> [EGrouping <$> parseGrouping]
       <> [EListConcatOperator <$ lexeme (symbol "++") | allowPropertyAccess]
+      <> [EPathConcatOperator <$ lexeme (symbol "+") | allowPropertyAccess]
       <> [ ELit <$> parseLiteral True,
            parseImport,
            uncurry ESet <$> parseSet False,
@@ -696,6 +702,7 @@ isCorrectlyScoped' scope = \case
   EList [] -> pass
   EList (e1 : eRest) -> mergeScopeResults (isCorrectlyScoped' scope <$> e1 :| eRest)
   EListConcatOperator -> pass
+  EPathConcatOperator -> pass
   ELit _ -> pass
   EPropertyAccess e p -> mergeScopeResults (isCorrectlyScoped' scope e :| [propertyIsCorrectlyScoped scope p])
   ESet isRec bindings ->

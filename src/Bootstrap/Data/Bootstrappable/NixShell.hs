@@ -9,6 +9,7 @@ module Bootstrap.Data.Bootstrappable.NixShell
         nixShellExtraBindings,
         nixShellNixpkgsBuildInputs,
         nixShellOtherBuildInputs,
+        nixShellNixpkgsNativeBuildInputs,
         nixShellHooksRequireNixpkgs
       ),
     nixShellFor,
@@ -31,7 +32,16 @@ import Bootstrap.Data.ProjectType
     HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
     JavaOptions (JavaOptions),
     NodePackageManager (NPM, PNPm, Yarn),
-    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
+    ProjectType
+      ( Elm,
+        Go,
+        Haskell,
+        Java,
+        Minimal,
+        Node,
+        Python,
+        Rust
+      ),
     unInstallMinishift,
   )
 import Bootstrap.Nix.Expr
@@ -46,7 +56,12 @@ import Bootstrap.Nix.Expr
     nixproperty,
     (|=),
   )
-import Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (bisOtherPackages))
+import Bootstrap.Nix.Expr.BuildInputs
+  ( BuildInputSpec
+      ( bisNativeNixpkgsPackages,
+        bisOtherPackages
+      ),
+  )
 import Bootstrap.Nix.Expr.Haskell (haskellPackagesExpr)
 import Bootstrap.Nix.Expr.MkShell
   ( BuildInputSpec
@@ -74,6 +89,7 @@ data NixShell = NixShell
       ],
     nixShellNixpkgsBuildInputs :: [Expr],
     nixShellOtherBuildInputs :: [Expr],
+    nixShellNixpkgsNativeBuildInputs :: [Expr],
     -- | Used to determine whether to pass the nixpkgs argument to the pre-commit-hooks config
     nixShellHooksRequireNixpkgs :: Bool
   }
@@ -95,11 +111,14 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
       nixShellExtraBindings = extraBindingsFor projectType,
       nixShellNixpkgsBuildInputs = nixpkgsBuildInputsFor projectType,
       nixShellOtherBuildInputs = otherBuildInputsFor projectType,
+      nixShellNixpkgsNativeBuildInputs = nixpkgsNativeBuildInputsFor projectType,
       nixShellHooksRequireNixpkgs = maybe False nixPreCommitHookConfigRequiresNixpkgs nixPreCommitHookConfig
     }
   where
     extraBindingsFor :: ProjectType -> [(Bool, Binding)]
     extraBindingsFor = \case
+      Minimal -> []
+      Elm _ -> []
       Haskell haskellOptions@(HaskellOptions _ haskellProjectType) ->
         (True,)
           <$> [ [nixproperty|haskellPackages|] |= haskellPackagesExpr haskellOptions,
@@ -110,8 +129,11 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
                         HaskellProjectTypeBasic -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
                     )
               ]
+      Node _ -> []
+      Go _ -> []
+      Java _ -> []
       Python _ -> (False,) <$> (machNixLegacyNixBinding : one (pythonPackagesBinding False))
-      _ -> []
+      Rust -> []
       where
         ghcWithPackages :: [Identifier] -> Expr
         ghcWithPackages =
@@ -141,6 +163,7 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
           [[nix|maven|], [nix|google-java-format|], [nix|jdk|]]
             <> [[nix|minishift|] | unInstallMinishift installMinishift]
         Python _ -> []
+        Rust -> [[nix|libiconv|]]
     nodePackageManager :: NodePackageManager -> [Expr]
     nodePackageManager = \case
       NPM -> []
@@ -149,8 +172,25 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
     otherBuildInputsFor :: ProjectType -> [Expr]
     otherBuildInputsFor =
       sortBy compareBuildInputs . \case
+        Minimal -> []
+        Elm _ -> []
         Haskell (HaskellOptions _ _) -> [[nix|haskellEnv|]]
-        _ -> []
+        Node _ -> []
+        Go _ -> []
+        Java _ -> []
+        Python _ -> []
+        Rust -> []
+    nixpkgsNativeBuildInputsFor :: ProjectType -> [Expr]
+    nixpkgsNativeBuildInputsFor =
+      sortBy compareBuildInputs . \case
+        Minimal -> []
+        Elm _ -> []
+        Haskell _ -> []
+        Node _ -> []
+        Go _ -> []
+        Java _ -> []
+        Python _ -> []
+        Rust -> [[nix|cargo|], [nix|rustc|], [nix|rust-analyzer|]]
     compareBuildInputs :: Expr -> Expr -> Ordering
     compareBuildInputs (EIdent i1) (EIdent i2) = compare i1 i2
     compareBuildInputs (EPropertyAccess (EIdent i1) _) (EIdent i2) = compare i1 i2
@@ -166,7 +206,8 @@ instance IsNixExpr NixShell where
           { bisNixpkgsPackages = nixShellNixpkgsBuildInputs,
             bisOtherPackages = nixShellOtherBuildInputs,
             bisPreCommitHooksConfig = nixShellPreCommitHooksConfig,
-            bisProjectType = nixShellProjectType
+            bisProjectType = nixShellProjectType,
+            bisNativeNixpkgsPackages = nixShellNixpkgsNativeBuildInputs
           }
     where
       topLevelBindings :: (NonEmpty Binding)

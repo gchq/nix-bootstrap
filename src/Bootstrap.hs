@@ -16,7 +16,7 @@ import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapName),
   )
 import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
-import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
+import Bootstrap.Data.Bootstrappable.DefaultNix (SrcDir (SrcDirCurrent), defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
     devContainerDockerfileFor,
@@ -57,6 +57,9 @@ import Bootstrap.Data.Bootstrappable.Readme
         readmeUseFlakes
       ),
   )
+import Bootstrap.Data.Bootstrappable.Rust.CargoLock (cargoLockFor)
+import Bootstrap.Data.Bootstrappable.Rust.CargoToml (cargoTomlFor)
+import Bootstrap.Data.Bootstrappable.Rust.MainRs (mainRsFor)
 import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.Bootstrappable.VSCodeSettings (vsCodeSettingsFor)
 import Bootstrap.Data.BuildPlan
@@ -106,9 +109,10 @@ import Bootstrap.Data.ProjectType
         PSTJava,
         PSTMinimal,
         PSTNode,
-        PSTPython
+        PSTPython,
+        PSTRust
       ),
-    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python),
+    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python, Rust),
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
@@ -428,6 +432,7 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
               <$> promptNonemptyText "Enter your Maven ArtefactId (e.g. the 'demo' in 'com.example.demo'): "
       pure . Java $ JavaOptions installMinishift installLombok setUpJavaBuild
     PSTPython -> pure $ Python Python39
+    PSTRust -> pure Rust
   where
     askIfReproducibleBuildRequired :: m Bool
     askIfReproducibleBuildRequired = promptYesNoWithCustomPrompt do
@@ -497,7 +502,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
                  )
               ~: ( if rcUseFlakes mbpRunConfig
                      then Nothing
-                     else defaultNixFor mbpProjectName mbpProjectType
+                     else defaultNixFor SrcDirCurrent mbpProjectName mbpProjectType
                  )
               ~: nixShellCompatFor mbpRunConfig
               ~: nixPreCommitHookConfig
@@ -520,6 +525,9 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: preludeHsFor mbpProjectType
               ~: libHsFor mbpProjectType
               ~: mainHsFor mbpProjectType
+              ~: cargoLockFor mbpProjectType mbpProjectName
+              ~: cargoTomlFor mbpProjectType mbpProjectName
+              ~: mainRsFor mbpProjectType
               ~: GitPodYml
               ~: HNil
           )

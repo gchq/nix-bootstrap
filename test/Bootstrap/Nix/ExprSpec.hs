@@ -20,6 +20,7 @@ import Bootstrap.Nix.Expr
         EList,
         EListConcatOperator,
         ELit,
+        EPathConcatOperator,
         EPropertyAccess,
         ESet,
         EWith
@@ -87,7 +88,9 @@ instance Arbitrary Expr where
                     ),
                     ( 1,
                       EApplication
-                        <$> (EApplication <$> subexprWhichCouldBeAList <*> pure EListConcatOperator)
+                        <$> ( EApplication <$> subexprWhichCouldBeAList
+                                <*> oneof [pure EListConcatOperator, pure EPathConcatOperator]
+                            )
                         <*> subexprWhichCouldBeAList
                     )
                   ],
@@ -398,6 +401,7 @@ isAtomic = \case
   ELetIn _ _ -> False
   EList _ -> True
   EListConcatOperator -> True
+  EPathConcatOperator -> True
   ELit l -> case l of
     LInteger i -> i >= 0
     _ -> True
@@ -418,6 +422,7 @@ couldBeAFunction = \case
   ELetIn _ e -> couldBeAFunction e
   EList _ -> False
   EListConcatOperator -> True
+  EPathConcatOperator -> True
   ELit _ -> False
   EPropertyAccess _ _ -> True
   ESet _ _ -> False

@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
 -- | Copyright : (c) Crown Copyright GCHQ
-module Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (..), buildInputsBinding) where
+module Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (..), buildInputsBindings) where
 
 import Bootstrap.Data.PreCommitHook
   ( PreCommitHooksConfig (unPreCommitHooksConfig),
@@ -21,7 +21,12 @@ import Bootstrap.Nix.Expr
     (|=),
   )
 
-data BuildInputGroup = BIGNixpkgs [Expr] | BIGOther [Expr] | BIGPreCommitHooks | BIGPythonPackages
+data BuildInputGroup
+  = BIGNixpkgs [Expr]
+  | BIGOther [Expr]
+  | BIGPreCommitHooks
+  | BIGPythonPackages
+  | BIGNativeNixpkgsInputs [Expr]
 
 instance IsNixExpr BuildInputGroup where
   toNixExpr = \case
@@ -29,6 +34,7 @@ instance IsNixExpr BuildInputGroup where
     BIGOther otherPackages -> EList otherPackages
     BIGPreCommitHooks -> [nix|preCommitHooks.tools|]
     BIGPythonPackages -> [nix|[pythonPackages]|]
+    BIGNativeNixpkgsInputs nativeBuildInputs -> EWith [nix|nixpkgs|] $ EList nativeBuildInputs
 
 -- | Whether this group must be wrapped with brackets to be concatenated
 requiresGrouping :: BuildInputGroup -> Bool
@@ -37,16 +43,24 @@ requiresGrouping = \case
   BIGOther _ -> False
   BIGPreCommitHooks -> False
   BIGPythonPackages -> False
+  BIGNativeNixpkgsInputs _ -> True
 
 data BuildInputSpec projectType = BuildInputSpec
   { bisNixpkgsPackages :: [Expr],
     bisOtherPackages :: [Expr],
     bisPreCommitHooksConfig :: PreCommitHooksConfig,
-    bisProjectType :: projectType
+    bisProjectType :: projectType,
+    bisNativeNixpkgsPackages :: [Expr]
   }
 
-buildInputsBinding :: HasProjectSuperType t => BuildInputSpec t -> Binding
-buildInputsBinding spec = [nixproperty|buildInputs|] |= foldr (|++) buildInputGroupExpr1 otherBuildInputGroupExprs
+buildInputsBindings :: HasProjectSuperType t => BuildInputSpec t -> [Binding]
+buildInputsBindings spec@BuildInputSpec {bisNativeNixpkgsPackages} =
+  catMaybes
+    [ Just $ [nixproperty|buildInputs|] |= foldr (|++) buildInputGroupExpr1 otherBuildInputGroupExprs,
+      if null bisNativeNixpkgsPackages
+        then Nothing
+        else Just $ [nixproperty|nativeBuildInputs|] |= groupToExpr (BIGNativeNixpkgsInputs bisNativeNixpkgsPackages)
+    ]
   where
     buildInputGroups :: NonEmpty BuildInputGroup
     buildInputGroups = buildInputGroupsFor spec

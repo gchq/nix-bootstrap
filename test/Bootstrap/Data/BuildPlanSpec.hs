@@ -2,7 +2,7 @@
 module Bootstrap.Data.BuildPlanSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
-import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
+import Bootstrap.Data.Bootstrappable.DefaultNix (SrcDir (SrcDirCurrent), defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
     devContainerDockerfileFor,
@@ -22,6 +22,9 @@ import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookCon
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
 import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
 import Bootstrap.Data.Bootstrappable.Readme (Readme (Readme))
+import Bootstrap.Data.Bootstrappable.Rust.CargoLock (cargoLockFor)
+import Bootstrap.Data.Bootstrappable.Rust.CargoToml (cargoTomlFor)
+import Bootstrap.Data.Bootstrappable.Rust.MainRs (mainRsFor)
 import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.Bootstrappable.VSCodeSettings (vsCodeSettingsFor)
 import Bootstrap.Data.BuildPlan
@@ -38,7 +41,7 @@ import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.HList (HList (HNil), (~:))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
-import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), ProjectType (Go, Haskell), SetUpGoBuild (SetUpGoBuild))
+import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), ProjectType (Go, Haskell, Rust), SetUpGoBuild (SetUpGoBuild))
 import Data.Tree (Tree (Node))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
@@ -65,7 +68,7 @@ spec = describe "toReasonTree" do
                 ~: Envrc preCommitHooksConfig False
                 ~: buildNix
                 ~: flakeNixFor rcWithFlakes projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
-                ~: defaultNixFor projectName projectType
+                ~: defaultNixFor SrcDirCurrent projectName projectType
                 ~: nixShellFor rcDefault projectType preCommitHooksConfig (Just nixPreCommitHookConfig)
                 ~: nixShellCompatFor rcWithFlakes
                 ~: gitignoreFor rcDefault projectType preCommitHooksConfig
@@ -80,6 +83,9 @@ spec = describe "toReasonTree" do
                 ~: preludeHsFor haskellProjectType
                 ~: libHsFor haskellProjectType
                 ~: mainHsFor haskellProjectType
+                ~: cargoLockFor Rust projectName
+                ~: cargoTomlFor Rust projectName
+                ~: mainRsFor Rust
                 ~: GitPodYml
                 ~: HNil
             )
@@ -104,6 +110,8 @@ spec = describe "toReasonTree" do
               Node "settings.json - This configures the settings for the extensions we recommend for VSCode." []
             ],
           Node "app" [Node "Main.hs - The entrypoint of your haskell executable" []],
+          Node "Cargo.lock - The locked dependencies of your rust project" [],
+          Node "Cargo.toml - The configuration of your rust project" [],
           Node "default.nix - This configures your reproducible project builds." [],
           Node "flake.nix - This configures what tools are available in your development environment and links in the pre-commit hooks." [],
           Node
@@ -119,6 +127,7 @@ spec = describe "toReasonTree" do
           Node
             "src"
             [ Node "Lib.hs - The entrypoint of your haskell library" [],
+              Node "main.rs - Your rust application's entrypoint" [],
               Node "Prelude.hs - The haskell prelude - what this exports is implicitly imported into every other module" []
             ]
         ]

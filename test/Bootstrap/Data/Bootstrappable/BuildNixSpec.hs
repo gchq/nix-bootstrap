@@ -11,7 +11,7 @@ import Bootstrap.Data.ProjectType
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
-    ProjectType (Go, Java),
+    ProjectType (Go, Java, Rust),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (SetUpJavaBuild),
   )
@@ -121,6 +121,24 @@ in
         "java $JAVA_OPTS -jar /${projectName}"
       ];
     };
+  }
+|]
+              )
+      Nothing -> fail "Gave nothing for a project which should've had a build.nix generated."
+  it "renders correctly for a Rust project" do
+    case buildNixFor rcWithFlakes projectName Rust of
+      Just buildNix ->
+        bootstrapContent buildNix
+          >>= ( `shouldBe`
+                  Right
+                    [r|{nixpkgs}: let
+  src = ../.;
+  cargoToml = builtins.fromTOML (builtins.readFile (src + "/Cargo.toml"));
+in
+  nixpkgs.rustPlatform.buildRustPackage {
+    inherit src;
+    inherit (cargoToml.package) name version;
+    cargoLock.lockFile = src + "/Cargo.lock";
   }
 |]
               )

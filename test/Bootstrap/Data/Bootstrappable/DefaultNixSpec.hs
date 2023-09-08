@@ -4,14 +4,14 @@
 module Bootstrap.Data.Bootstrappable.DefaultNixSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
-import Bootstrap.Data.Bootstrappable.DefaultNix (defaultNixFor)
+import Bootstrap.Data.Bootstrappable.DefaultNix (SrcDir (SrcDirCurrent), defaultNixFor)
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType
   ( ArtefactId (ArtefactId),
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
-    ProjectType (Go, Java),
+    ProjectType (Go, Java, Rust),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (SetUpJavaBuild),
   )
@@ -24,7 +24,7 @@ spec :: Spec
 spec = describe "default.nix rendering" do
   it "renders correctly for a Go project" do
     let projectName = Unsafe.fromJust (mkProjectName "test-project")
-    case defaultNixFor projectName (Go $ SetUpGoBuild True) of
+    case defaultNixFor SrcDirCurrent projectName (Go $ SetUpGoBuild True) of
       Just defaultNix ->
         bootstrapContent defaultNix
           >>= ( `shouldBe`
@@ -49,6 +49,7 @@ in
   it "renders correctly for a Java project" do
     let projectName = Unsafe.fromJust (mkProjectName "test-project")
     case defaultNixFor
+      SrcDirCurrent
       projectName
       ( Java $
           JavaOptions
@@ -121,6 +122,27 @@ in
         "java $JAVA_OPTS -jar /${projectName}"
       ];
     };
+  }
+|]
+              )
+      Nothing -> fail "Gave nothing for a project which should've had a default.nix generated."
+
+  it "renders correctly for a Rust project" do
+    let projectName = Unsafe.fromJust (mkProjectName "test-project")
+    case defaultNixFor SrcDirCurrent projectName Rust of
+      Just defaultNix ->
+        bootstrapContent defaultNix
+          >>= ( `shouldBe`
+                  Right
+                    [r|let
+  nixpkgs = import (import nix/sources.nix).nixpkgs {};
+  src = ./.;
+  cargoToml = builtins.fromTOML (builtins.readFile (src + "/Cargo.toml"));
+in
+  nixpkgs.rustPlatform.buildRustPackage {
+    inherit src;
+    inherit (cargoToml.package) name version;
+    cargoLock.lockFile = src + "/Cargo.lock";
   }
 |]
               )
