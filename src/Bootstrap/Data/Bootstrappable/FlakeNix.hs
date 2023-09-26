@@ -183,7 +183,7 @@ instance IsNixExpr FlakeNix where
                             <> flakeNixExtraBindings
                         )
                         ( ESet False $
-                            [[nixbinding|checks.pre-commit-check = preCommitHooks.hooks;|] | usingHooks]
+                            [[nixbinding|checks.pre-commit-check = preCommitHooks.pureHooks;|] | usingHooks]
                               <> [ [nixbinding|devShell = self.devShells.${system}.default;|],
                                    [nixproperty|devShells.default|]
                                      |= mkShell

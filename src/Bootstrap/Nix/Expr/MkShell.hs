@@ -50,7 +50,7 @@ shellHookFor pchc pt = case (pchc, projectSuperType pt) of
 
 shellHookBinding :: ShellHook -> Binding
 shellHookBinding = \case
-  ShellHookFromPreCommit -> [nixbinding|inherit (preCommitHooks.hooks) shellHook;|]
+  ShellHookFromPreCommit -> [nixbinding|inherit (preCommitHooks.allHooks) shellHook;|]
   x -> withComponents $ shellHookComponentBinding x
   where
     withComponents :: [Text] -> Binding
@@ -60,6 +60,6 @@ shellHookBinding = \case
           (LMultilineString $ mconcat (("\n    " <>) <$> xs) <> "\n  ")
     shellHookComponentBinding :: ShellHook -> [Text]
     shellHookComponentBinding = \case
-      ShellHookFromPreCommit -> ["${preCommitHooks.hooks.shellHook}"]
+      ShellHookFromPreCommit -> ["${preCommitHooks.allHooks.shellHook}"]
       ShellHookRust -> ["export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}"]
       ShellHookCombined xs -> sconcat $ shellHookComponentBinding <$> xs

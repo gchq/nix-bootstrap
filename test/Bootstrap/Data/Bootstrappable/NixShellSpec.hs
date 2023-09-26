@@ -81,7 +81,7 @@ in
         niv
         rnix-lsp
       ]);
-    inherit (preCommitHooks.hooks) shellHook;
+    inherit (preCommitHooks.allHooks) shellHook;
   }
 |]
           )
@@ -158,7 +158,7 @@ in
 in
   nixpkgs.mkShell {
     buildInputs = preCommitHooks.tools ++ [pythonPackages] ++ (with nixpkgs; [niv rnix-lsp]);
-    inherit (preCommitHooks.hooks) shellHook;
+    inherit (preCommitHooks.allHooks) shellHook;
   }
 |]
           )

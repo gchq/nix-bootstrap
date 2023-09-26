@@ -98,7 +98,7 @@ check-dev-environment:
 
 pre-commit-check:
   stage: build
-  script: "nix-build nix/pre-commit-hooks.nix -A hooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
+  script: "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
 
 build-site:
   stage: build
@@ -232,7 +232,7 @@ check-dev-environment:
 
 pre-commit-check:
   stage: build
-  script: "nix-build nix/pre-commit-hooks.nix -A hooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
+  script: "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
 
 build:
   stage: build
@@ -260,6 +260,6 @@ check-dev-environment:
 
 pre-commit-check:
   stage: build
-  script: "nix-build nix/pre-commit-hooks.nix -A hooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
+  script: "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
 |]
           )

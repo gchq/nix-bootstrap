@@ -31,25 +31,34 @@ spec = describe "nix/pre-commit-hooks.nix rendering" do
   pre-commit-hooks-lib,
   nixpkgs,
   system,
-}: {
-  hooks = pre-commit-hooks-lib.lib.${system}.run {
-    src = ../.;
-    hooks = {
-      alejandra.enable = true;
-      go-fmt = {
-        enable = true;
-        entry = "${nixpkgs.go}/bin/go fmt";
-        files = "\\.go$";
-        pass_filenames = false;
-      };
-      go-test = {
-        enable = true;
-        entry = "${nixpkgs.go}/bin/go test";
-        files = "\\.(go|mod)$";
-        pass_filenames = false;
-      };
+}: let
+  # Function to make a set of pre-commit hooks
+  makeHooks = hooks:
+    pre-commit-hooks-lib.lib.${system}.run {
+      inherit hooks;
+      src = ../.;
+    };
+  # Hooks which don't depend on running in a dev environment
+  pureHooks = {
+    alejandra.enable = true;
+    go-fmt = {
+      enable = true;
+      entry = "${nixpkgs.go}/bin/go fmt";
+      files = "\\.go$";
+      pass_filenames = false;
+    };
+    go-test = {
+      enable = true;
+      entry = "${nixpkgs.go}/bin/go test";
+      files = "\\.(go|mod)$";
+      pass_filenames = false;
     };
   };
+  # Hooks which can run on pre-commit but not in CI
+  impureHooks = {};
+in {
+  pureHooks = makeHooks pureHooks;
+  allHooks = makeHooks (pureHooks // impureHooks);
   tools = (with pre-commit-hooks-lib.packages.${system}; [alejandra]) ++ (with nixpkgs; [go]);
 }
 |]
@@ -58,14 +67,23 @@ spec = describe "nix/pre-commit-hooks.nix rendering" do
     bootstrapContent (nixPreCommitHookConfigFor rcDefault $ Node NPM)
       >>= ( `shouldBe`
               Right
-                [r|{pre-commit-hooks-lib}: {
-  hooks = pre-commit-hooks-lib.run {
-    src = ../.;
-    hooks = {
-      alejandra.enable = true;
-      prettier.enable = true;
+                [r|{pre-commit-hooks-lib}: let
+  # Function to make a set of pre-commit hooks
+  makeHooks = hooks:
+    pre-commit-hooks-lib.run {
+      inherit hooks;
+      src = ../.;
     };
+  # Hooks which don't depend on running in a dev environment
+  pureHooks = {
+    alejandra.enable = true;
+    prettier.enable = true;
   };
+  # Hooks which can run on pre-commit but not in CI
+  impureHooks = {};
+in {
+  pureHooks = makeHooks pureHooks;
+  allHooks = makeHooks (pureHooks // impureHooks);
   tools = with pre-commit-hooks-lib; [alejandra prettier];
 }
 |]
@@ -81,19 +99,28 @@ spec = describe "nix/pre-commit-hooks.nix rendering" do
                 [r|{
   pre-commit-hooks-lib,
   nixpkgs,
-}: {
-  hooks = pre-commit-hooks-lib.run {
-    src = ../.;
-    hooks = {
-      alejandra.enable = true;
-      google-java-format = {
-        enable = true;
-        entry = "${nixpkgs.google-java-format}/bin/google-java-format -i";
-        files = "\\.java$";
-        pass_filenames = true;
-      };
+}: let
+  # Function to make a set of pre-commit hooks
+  makeHooks = hooks:
+    pre-commit-hooks-lib.run {
+      inherit hooks;
+      src = ../.;
+    };
+  # Hooks which don't depend on running in a dev environment
+  pureHooks = {
+    alejandra.enable = true;
+    google-java-format = {
+      enable = true;
+      entry = "${nixpkgs.google-java-format}/bin/google-java-format -i";
+      files = "\\.java$";
+      pass_filenames = true;
     };
   };
+  # Hooks which can run on pre-commit but not in CI
+  impureHooks = {};
+in {
+  pureHooks = makeHooks pureHooks;
+  allHooks = makeHooks (pureHooks // impureHooks);
   tools = (with pre-commit-hooks-lib; [alejandra]) ++ (with nixpkgs; [google-java-format]);
 }
 |]

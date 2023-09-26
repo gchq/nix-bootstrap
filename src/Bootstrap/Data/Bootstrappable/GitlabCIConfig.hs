@@ -62,7 +62,7 @@ instance Bootstrappable GitlabCIConfig where
                    "  script: \""
                      <> ( if gitlabCIConfigUseFlakes
                             then "nix build '.#runChecks'"
-                            else "nix-build nix/pre-commit-hooks.nix -A hooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
+                            else "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
                         )
                      <> "\""
                  ]
