@@ -74,7 +74,7 @@ spec = describe "toReasonTree" do
                 ~: gitignoreFor rcDefault projectType preCommitHooksConfig
                 ~: Readme projectName projectType devContainerConfig Nothing False
                 ~: nixPreCommitHookConfig
-                ~: gitlabCIConfigFor ciConfig rcDefault projectType preCommitHooksConfig
+                ~: gitlabCIConfigFor ciConfig rcDefault projectType (Just nixPreCommitHookConfig)
                 ~: devContainerDockerComposeFor devContainerConfig projectName
                 ~: devContainerDockerfileFor devContainerConfig
                 ~: devContainerJsonFor devContainerConfig projectName projectType

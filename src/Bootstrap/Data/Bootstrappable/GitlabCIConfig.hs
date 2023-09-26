@@ -13,11 +13,11 @@ import Bootstrap.Data.Bootstrappable
         bootstrapReason
       ),
   )
+import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
+  ( NixPreCommitHookConfig (nixPreCommitHookConfigImpureHookCommand),
+  )
 import Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig (ContinuousIntegrationConfig),
-  )
-import Bootstrap.Data.PreCommitHook
-  ( PreCommitHooksConfig (unPreCommitHooksConfig),
   )
 import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
@@ -32,7 +32,7 @@ import Bootstrap.Data.ProjectType
 data GitlabCIConfig = GitlabCIConfig
   { gitlabCIConfigUseFlakes :: Bool,
     gitlabCIConfigProjectType :: ProjectType,
-    gitlabCIConfigPreCommitHooksConfig :: PreCommitHooksConfig
+    gitlabCIConfigPreCommitHooksConfig :: Maybe NixPreCommitHookConfig
   }
 
 instance Bootstrappable GitlabCIConfig where
@@ -49,12 +49,18 @@ instance Bootstrappable GitlabCIConfig where
         "    - nix-env -iA nixpkgs.bash nixpkgs.openssh",
         "    - echo \"experimental-features = nix-command flakes\" >> /etc/nix/nix.conf",
         "",
-        "check-dev-environment:",
+        case nixPreCommitHookConfigImpureHookCommand <$> gitlabCIConfigPreCommitHooksConfig of
+          Just c | c /= "echo ok" -> "check-dev-environment-and-run-impure-hooks:"
+          _ -> "check-dev-environment:",
         "  stage: build",
         "  script:",
-        commandInShell "echo ok"
+        commandInShell $
+          maybe
+            "echo ok"
+            nixPreCommitHookConfigImpureHookCommand
+            gitlabCIConfigPreCommitHooksConfig
       ]
-        <> ( if unPreCommitHooksConfig gitlabCIConfigPreCommitHooksConfig
+        <> ( if isJust gitlabCIConfigPreCommitHooksConfig
                then
                  [ "",
                    "pre-commit-check:",
@@ -123,7 +129,7 @@ gitlabCIConfigFor ::
   ContinuousIntegrationConfig ->
   RunConfig ->
   ProjectType ->
-  PreCommitHooksConfig ->
+  Maybe NixPreCommitHookConfig ->
   Maybe GitlabCIConfig
 gitlabCIConfigFor (ContinuousIntegrationConfig False) _ _ _ = Nothing
 gitlabCIConfigFor (ContinuousIntegrationConfig True) RunConfig {rcUseFlakes} t p =
