@@ -134,7 +134,7 @@ spec = describe "flake.nix rendering" do
         inherit pre-commit-hooks-lib system;
       };
     in {
-      checks.pre-commit-check = preCommitHooks.hooks;
+      checks.pre-commit-check = preCommitHooks.pureHooks;
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
         buildInputs =
@@ -144,7 +144,7 @@ spec = describe "flake.nix rendering" do
             nodejs
             rnix-lsp
           ]);
-        inherit (preCommitHooks.hooks) shellHook;
+        inherit (preCommitHooks.allHooks) shellHook;
       };
       # runChecks is a hack required to allow checks to run on a single system
       # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
@@ -195,11 +195,11 @@ spec = describe "flake.nix rendering" do
         inherit pre-commit-hooks-lib nixpkgs system;
       };
     in {
-      checks.pre-commit-check = preCommitHooks.hooks;
+      checks.pre-commit-check = preCommitHooks.pureHooks;
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
         buildInputs = preCommitHooks.tools ++ (with nixpkgs; [go rnix-lsp]);
-        inherit (preCommitHooks.hooks) shellHook;
+        inherit (preCommitHooks.allHooks) shellHook;
       };
       defaultPackage = self.packages.${system}.default;
       packages.default = import nix/build.nix {
@@ -291,7 +291,7 @@ spec = describe "flake.nix rendering" do
         inherit pre-commit-hooks-lib system;
       };
     in {
-      checks.pre-commit-check = preCommitHooks.hooks;
+      checks.pre-commit-check = preCommitHooks.pureHooks;
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
         buildInputs = preCommitHooks.tools ++ (with nixpkgs; [libiconv rnix-lsp]);
@@ -302,7 +302,7 @@ spec = describe "flake.nix rendering" do
         ];
         shellHook = ''
           export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}
-          ${preCommitHooks.hooks.shellHook}
+          ${preCommitHooks.allHooks.shellHook}
         '';
       };
       defaultPackage = self.packages.${system}.default;

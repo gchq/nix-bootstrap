@@ -30,13 +30,14 @@ import Bootstrap.Data.ProjectType
   )
 import Bootstrap.Nix.Expr
   ( Binding (BNameValue),
-    Expr (EGrouping, EIdent, EList, ELit, ESet, EWith),
+    Expr (EGrouping, EIdent, ELetIn, EList, ELit, ESet, EWith),
     FunctionArgs (FASet),
     Identifier (Identifier),
     IsNixExpr (toNixExpr),
     Literal (LBool, LString),
     Property (PCons, PIdent),
     nix,
+    nixargs,
     nixbinding,
     nixident,
     nixproperty,
@@ -45,6 +46,8 @@ import Bootstrap.Nix.Expr
     (|:),
     (|=),
   )
+import Control.Lens (Field2 (_2), filtered, folded, (^..))
+import Relude.Extra.Tuple (dup)
 
 data NixPreCommitHookConfig = NixPreCommitHookConfig
   { nixPreCommitHookConfigHooks :: [PreCommitHook],
@@ -64,25 +67,53 @@ instance IsNixExpr NixPreCommitHookConfig where
           :| [[nixident|nixpkgs|] | nixPreCommitHookConfigRequiresNixpkgs]
           <> [[nixident|system|] | nixPreCommitHookConfigUsingFlakeLib]
       )
-      |: ESet
-        False
-        [ [nixproperty|hooks|] |= run |* ESet False runArgs,
-          [nixproperty|tools|]
-            |= if nixPreCommitHookConfigRequiresNixpkgs
-              then defaultToolsExpr |++ nixpkgsToolsExpr
-              else defaultToolsExpr
-        ]
+      |: ELetIn
+        ( [nixbinding|# Function to make a set of pre-commit hooks|]
+            :| [ [nixproperty|makeHooks|]
+                   |= ( [nixargs|hooks:|]
+                          |: ( run
+                                 |* [nix|{
+            inherit hooks;
+            src = ../.;
+          }|]
+                             )
+                      ),
+                 [nixbinding|# Hooks which don't depend on running in a dev environment|],
+                 [nixproperty|pureHooks|] |= ESet False pureHooks,
+                 [nixbinding|# Hooks which can run on pre-commit but not in CI|],
+                 [nixproperty|impureHooks|] |= ESet False impureHooks
+               ]
+        )
+        ( ESet
+            False
+            [ [nixbinding|pureHooks = makeHooks pureHooks;|],
+              [nixbinding|allHooks = makeHooks (pureHooks // impureHooks);|],
+              [nixproperty|tools|]
+                |= if nixPreCommitHookConfigRequiresNixpkgs
+                  then defaultToolsExpr |++ nixpkgsToolsExpr
+                  else defaultToolsExpr
+            ]
+        )
     where
+      allHooks :: [(Bool, Binding)]
+      allHooks =
+        sort nixPreCommitHookConfigHooks
+          <&> \case
+            (_, Nothing) -> Nothing
+            (a, Just b) -> Just (a, b)
+            . bimap preCommitHookIsPure toBinding
+            . dup
+          & catMaybes
+      pureHooks :: [Binding]
+      impureHooks :: [Binding]
+      (pureHooks, impureHooks) =
+        let hooksByCondition c = allHooks ^.. folded . filtered c . _2
+         in (hooksByCondition fst, hooksByCondition (not . fst))
       run :: Expr
       run =
         if nixPreCommitHookConfigUsingFlakeLib
           then [nix|pre-commit-hooks-lib.lib.${system}.run|]
           else [nix|pre-commit-hooks-lib.run|]
-      runArgs :: [Binding]
-      runArgs =
-        [ [nixbinding|src = ../.;|],
-          [nixproperty|hooks|] |= ESet False (catMaybes (toBinding <$> sort nixPreCommitHookConfigHooks))
-        ]
       mkToolsExpr :: Expr -> (PreCommitHookTool -> Bool) -> Expr
       mkToolsExpr parentSet condition =
         EGrouping . EWith parentSet $
@@ -159,6 +190,9 @@ preCommitHookToolIsFromHooksLib _ = False
 preCommitHookToolIsFromNixpkgs :: PreCommitHookTool -> Bool
 preCommitHookToolIsFromNixpkgs (NixpkgsPreCommitHookTool _) = True
 preCommitHookToolIsFromNixpkgs _ = False
+
+preCommitHookIsPure :: PreCommitHook -> Bool
+preCommitHookIsPure h = h /= elmReview
 
 -- | Gets the attribute name within its containing set (not including the containing set)
 preCommitHookToolSubAttrName :: PreCommitHookTool -> Maybe Text
