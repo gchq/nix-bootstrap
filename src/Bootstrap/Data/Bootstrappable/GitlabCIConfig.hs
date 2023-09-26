@@ -110,8 +110,8 @@ instance Bootstrappable GitlabCIConfig where
       nodePackageManagerInstall :: NodePackageManager -> Text
       nodePackageManagerInstall = \case
         NPM -> "npm ci"
-        Yarn -> "yarn --frozen-lockfile"
-        PNPm -> "pnpm --frozen-lockfile"
+        Yarn -> "yarn install --frozen-lockfile"
+        PNPm -> "pnpm install --frozen-lockfile"
       runWithPackageManager :: NodePackageManager -> Text
       runWithPackageManager =
         (<> " run ") . \case
