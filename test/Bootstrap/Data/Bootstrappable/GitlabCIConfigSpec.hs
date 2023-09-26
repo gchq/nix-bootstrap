@@ -47,7 +47,7 @@ check-dev-environment:
 build-site:
   stage: build
   script:
-    - nix develop -c pnpm --frozen-lockfile
+    - nix develop -c pnpm install --frozen-lockfile
     - nix develop -c pnpm run build
 |]
           )
@@ -73,7 +73,7 @@ check-dev-environment:
 build-site:
   stage: build
   script:
-    - nix-shell --run 'pnpm --frozen-lockfile'
+    - nix-shell --run 'pnpm install --frozen-lockfile'
     - nix-shell --run 'pnpm run build'
 |]
           )
