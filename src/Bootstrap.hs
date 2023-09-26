@@ -506,7 +506,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
                  )
               ~: nixShellCompatFor mbpRunConfig
               ~: nixPreCommitHookConfig
-              ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpRunConfig mbpProjectType mbpPreCommitHooksConfig
+              ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpRunConfig mbpProjectType nixPreCommitHookConfig
               ~: devContainerDockerComposeFor mbpDevContainerConfig mbpProjectName
               ~: devContainerDockerfileFor mbpDevContainerConfig
               ~: devContainerJsonFor mbpDevContainerConfig mbpProjectName mbpProjectType

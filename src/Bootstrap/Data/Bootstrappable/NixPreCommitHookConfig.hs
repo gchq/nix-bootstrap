@@ -3,7 +3,10 @@
 
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
-  ( NixPreCommitHookConfig (nixPreCommitHookConfigRequiresNixpkgs),
+  ( NixPreCommitHookConfig
+      ( nixPreCommitHookConfigRequiresNixpkgs,
+        nixPreCommitHookConfigImpureHookCommand
+      ),
     PreCommitHook,
     nixPreCommitHookConfigFor,
   )
@@ -52,7 +55,9 @@ import Relude.Extra.Tuple (dup)
 data NixPreCommitHookConfig = NixPreCommitHookConfig
   { nixPreCommitHookConfigHooks :: [PreCommitHook],
     nixPreCommitHookConfigRequiresNixpkgs :: Bool,
-    nixPreCommitHookConfigUsingFlakeLib :: Bool
+    nixPreCommitHookConfigUsingFlakeLib :: Bool,
+    -- | A command used to run any impure hooks manually, defaults to "echo ok"
+    nixPreCommitHookConfigImpureHookCommand :: Text
   }
 
 instance Bootstrappable NixPreCommitHookConfig where
@@ -146,6 +151,12 @@ nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
       nixPreCommitHookConfigRequiresNixpkgs =
         any preCommitHookToolIsFromNixpkgs (tool <$> nixPreCommitHookConfigHooks)
           || hpack `elem` nixPreCommitHookConfigHooks
+      nixPreCommitHookConfigImpureHookCommand =
+        if not (all preCommitHookIsPure nixPreCommitHookConfigHooks)
+          then case projectType of
+            Elm _ -> "elm-review"
+            _ -> "echo ok"
+          else "echo ok"
    in NixPreCommitHookConfig {nixPreCommitHookConfigUsingFlakeLib = rcUseFlakes, ..}
 
 data PreCommitHook = PreCommitHook

@@ -5,10 +5,12 @@ module Bootstrap.Data.Bootstrappable.GitlabCIConfigSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
+import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
+  ( nixPreCommitHookConfigFor,
+  )
 import Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig (ContinuousIntegrationConfig),
   )
-import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
     ElmOptions (ElmOptions),
@@ -26,8 +28,7 @@ spec :: Spec
 spec = describe "gitlab-ci.yml rendering" do
   let ciConfig = ContinuousIntegrationConfig True
   it "renders an Elm/Parcel gitlab-ci config without pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig False
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Elm $ ElmOptions (ElmModeNode PNPm) False) preCommitHooksConfig)
+    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Elm $ ElmOptions (ElmModeNode PNPm) False) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -52,8 +53,7 @@ build-site:
 |]
           )
   it "renders an Elm/Parcel gitlab-ci config without pre-commit or flakes checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig False
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Elm $ ElmOptions (ElmModeNode PNPm) False) preCommitHooksConfig)
+    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Elm $ ElmOptions (ElmModeNode PNPm) False) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -78,8 +78,9 @@ build-site:
 |]
           )
   it "renders a bare Elm gitlab-ci config with pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig True
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Elm $ ElmOptions ElmModeBare True) preCommitHooksConfig)
+    let projectType = Elm $ ElmOptions ElmModeBare True
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -91,10 +92,10 @@ default:
     - nix-env -iA nixpkgs.bash nixpkgs.openssh
     - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
-check-dev-environment:
+check-dev-environment-and-run-impure-hooks:
   stage: build
   script:
-    - nix-shell --run 'echo ok'
+    - nix-shell --run 'elm-review'
 
 pre-commit-check:
   stage: build
@@ -107,8 +108,9 @@ build-site:
 |]
           )
   it "renders a bare Elm gitlab-ci config with pre-commit checks and flakes correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig True
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Elm $ ElmOptions ElmModeBare True) preCommitHooksConfig)
+    let projectType = Elm $ ElmOptions ElmModeBare True
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -120,10 +122,10 @@ default:
     - nix-env -iA nixpkgs.bash nixpkgs.openssh
     - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
-check-dev-environment:
+check-dev-environment-and-run-impure-hooks:
   stage: build
   script:
-    - nix develop -c echo ok
+    - nix develop -c elm-review
 
 pre-commit-check:
   stage: build
@@ -136,8 +138,7 @@ build-site:
 |]
           )
   it "renders a Go gitlab-ci with a flake build and without pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig False
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Go $ SetUpGoBuild True) preCommitHooksConfig)
+    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Go $ SetUpGoBuild True) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -160,8 +161,9 @@ build:
 |]
           )
   it "renders a Go gitlab-ci with a flake build and with pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig True
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Go $ SetUpGoBuild True) preCommitHooksConfig)
+    let projectType = Go $ SetUpGoBuild True
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -188,8 +190,7 @@ build:
 |]
           )
   it "renders a Go gitlab-ci with a build and without pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig False
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Go $ SetUpGoBuild True) preCommitHooksConfig)
+    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Go $ SetUpGoBuild True) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -212,8 +213,9 @@ build:
 |]
           )
   it "renders a Go gitlab-ci with a build and with pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig True
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Go $ SetUpGoBuild True) preCommitHooksConfig)
+    let projectType = Go $ SetUpGoBuild True
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -240,8 +242,9 @@ build:
 |]
           )
   it "renders a gitlab-ci without a build and with pre-commit checks correctly" do
-    let preCommitHooksConfig = PreCommitHooksConfig True
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Go $ SetUpGoBuild False) preCommitHooksConfig)
+    let projectType = Go $ SetUpGoBuild False
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
