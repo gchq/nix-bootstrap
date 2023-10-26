@@ -9,7 +9,7 @@ import Bootstrap.Data.PreCommitHook
   )
 import Bootstrap.Data.ProjectType
   ( HasProjectSuperType (projectSuperType),
-    ProjectSuperType (PSTRust),
+    ProjectSuperType (PSTJava, PSTRust),
   )
 import Bootstrap.Nix.Expr
   ( Binding,
@@ -38,11 +38,14 @@ mkShell buildInputSpec@BuildInputSpec {bisPreCommitHooksConfig, bisProjectType} 
 
 data ShellHook
   = ShellHookFromPreCommit
+  | ShellHookJava
   | ShellHookRust
   | ShellHookCombined (NonEmpty ShellHook)
 
 shellHookFor :: HasProjectSuperType t => PreCommitHooksConfig -> t -> Maybe ShellHook
 shellHookFor pchc pt = case (pchc, projectSuperType pt) of
+  (PreCommitHooksConfig True, PSTJava) -> Just $ ShellHookCombined (ShellHookJava :| [ShellHookFromPreCommit])
+  (PreCommitHooksConfig False, PSTJava) -> Just ShellHookJava
   (PreCommitHooksConfig True, PSTRust) -> Just $ ShellHookCombined (ShellHookRust :| [ShellHookFromPreCommit])
   (PreCommitHooksConfig False, PSTRust) -> Just ShellHookRust
   (PreCommitHooksConfig True, _) -> Just ShellHookFromPreCommit
@@ -61,5 +64,6 @@ shellHookBinding = \case
     shellHookComponentBinding :: ShellHook -> [Text]
     shellHookComponentBinding = \case
       ShellHookFromPreCommit -> ["${preCommitHooks.allHooks.shellHook}"]
+      ShellHookJava -> ["export JAVA_HOME=\"${nixpkgs.jdk}\""]
       ShellHookRust -> ["export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}"]
       ShellHookCombined xs -> sconcat $ shellHookComponentBinding <$> xs
