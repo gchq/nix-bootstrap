@@ -10,7 +10,7 @@ import Bootstrap.Data.Bootstrappable.DevContainer
   )
 import Bootstrap.Data.Bootstrappable.Envrc (Envrc (Envrc))
 import Bootstrap.Data.Bootstrappable.FlakeNix (flakeNixFor)
-import Bootstrap.Data.Bootstrappable.GitPodYml (GitPodYml (GitPodYml))
+import Bootstrap.Data.Bootstrappable.GitPodYml (gitPodYmlFor)
 import Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor)
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.Haskell.LibHs (libHsFor)
@@ -86,7 +86,7 @@ spec = describe "toReasonTree" do
                 ~: cargoLockFor Rust projectName
                 ~: cargoTomlFor Rust projectName
                 ~: mainRsFor Rust
-                ~: GitPodYml
+                ~: gitPodYmlFor projectType
                 ~: HNil
             )
       pure $ toReasonTree buildPlan

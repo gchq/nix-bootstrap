@@ -35,7 +35,7 @@ import Bootstrap.Data.Bootstrappable.Elm.Review.ElmJson
   )
 import Bootstrap.Data.Bootstrappable.Envrc (Envrc (Envrc))
 import Bootstrap.Data.Bootstrappable.FlakeNix (flakeNixFor)
-import Bootstrap.Data.Bootstrappable.GitPodYml (GitPodYml (GitPodYml))
+import Bootstrap.Data.Bootstrappable.GitPodYml (gitPodYmlFor)
 import Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor)
 import Bootstrap.Data.Bootstrappable.GitlabCIConfig (gitlabCIConfigFor)
 import Bootstrap.Data.Bootstrappable.Go.Modfile (goModfileFor)
@@ -528,7 +528,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: cargoLockFor mbpProjectType mbpProjectName
               ~: cargoTomlFor mbpProjectType mbpProjectName
               ~: mainRsFor mbpProjectType
-              ~: GitPodYml
+              ~: gitPodYmlFor mbpProjectType
               ~: HNil
           )
     readmeWithBuildPlan :: BuildPlan -> m BuildPlanFile

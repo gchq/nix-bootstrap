@@ -10,14 +10,11 @@ module Bootstrap.Data.Bootstrappable.DevContainer
 where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason), bootstrapContentPrettyJson, bootstrapContentYaml)
-import Bootstrap.Data.Bootstrappable.VSCodeExtensions
-  ( VSCodeExtension,
-    extensionsFor,
-  )
 import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
 import qualified Bootstrap.Data.ProjectName as ProjectName
 import Bootstrap.Data.ProjectType (ProjectType)
+import Bootstrap.Data.VSCodeExtension (VSCodeExtension, vsCodeExtensionsFor)
 import Data.Aeson (KeyValue ((.=)), ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
 import Data.Char (isSpace)
@@ -154,7 +151,7 @@ devContainerJsonFor (DevContainerConfig True) projectName projectType =
   Just
     DevContainerJson
       { projectName = projectName,
-        extensions = extensionsFor projectType
+        extensions = vsCodeExtensionsFor projectType
       }
 
 newtype DevContainerDockerCompose = DevContainerDockerCompose
