@@ -1,13 +1,9 @@
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
-
 -- |
 -- Description : Bootstraps .vscode/extensions.json
 -- Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.VSCodeExtensions
   ( VSCodeExtensions,
     vsCodeExtensionsFileFor,
-    VSCodeExtension (..),
-    extensionsFor,
   )
 where
 
@@ -15,12 +11,8 @@ import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentPrettyJson,
   )
-import Bootstrap.Data.ProjectType
-  ( HaskellOptions (HaskellOptions),
-    InstallLombok (unInstallLombok),
-    JavaOptions (JavaOptions),
-    ProjectType (Elm, Go, Haskell, Java, Minimal, Node, Python, Rust),
-  )
+import Bootstrap.Data.ProjectType (ProjectType)
+import Bootstrap.Data.VSCodeExtension (vsCodeExtensionsFor)
 import Data.Aeson (KeyValue ((.=)), ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
 
@@ -35,27 +27,8 @@ instance Bootstrappable VSCodeExtensions where
 instance ToJSON VSCodeExtensions where
   toJSON (VSCodeExtensions projectType) =
     Aeson.object
-      ["recommendations" .= Aeson.Array (fromList . (toJSON <$>) $ extensionsFor projectType)]
+      ["recommendations" .= Aeson.Array (fromList . (toJSON <$>) $ vsCodeExtensionsFor projectType)]
 
 -- | Constructs `VSCodeExtensions` for the given `ProjectType`
 vsCodeExtensionsFileFor :: ProjectType -> Maybe VSCodeExtensions
 vsCodeExtensionsFileFor = Just . VSCodeExtensions
-
--- | Represents the ID of an individual extension
-newtype VSCodeExtension = VSCodeExtension Text
-  deriving newtype (ToJSON)
-
--- | The list of extensions we recommend for the given `ProjectType`
-extensionsFor :: ProjectType -> [VSCodeExtension]
-extensionsFor =
-  (VSCodeExtension <$>) . (["arrterian.nix-env-selector", "jnoortheen.nix-ide"] <>) . \case
-    Minimal -> []
-    Elm _ -> ["Elmtooling.elm-ls-vscode"]
-    (Haskell (HaskellOptions _ _)) -> ["haskell.haskell"]
-    Node _ -> []
-    Go _ -> ["golang.Go"]
-    Java (JavaOptions _ installLombok _) ->
-      ["vscjava.vscode-java-pack"]
-        <> ["gabrielbb.vscode-lombok" | unInstallLombok installLombok]
-    Python _ -> ["ms-python.python"]
-    Rust -> ["rust-lang.rust-analyzer"]
