@@ -55,6 +55,10 @@ spec = describe "README.md rendering" do
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -84,6 +88,9 @@ To develop with this project in GitPod, follow the instructions below:
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
 
+</p>
+</details>
+
 ## Running a Development Server
 
 To run a development server, use the `dev` script defined in `package.json`.
@@ -108,6 +115,10 @@ This will produce a `dist` directory with a built web app.
 
 ## Project Structure
 
+<details>
+<summary>Expand project structure tree</summary>
+<p>
+
 The following diagram explains how nix-bootstrap has laid out your infrastructure.
 Feel free to remove this once you're familiar with how it works, or amend it as you grow your project.
 
@@ -122,6 +133,9 @@ Feel free to remove this once you're familiar with how it works, or amend it as 
    |
    `- sources.nix - This is the interface between nix and the dependencies listed in sources.json.
 ```
+
+</p>
+</details>
 
 ## nix-bootstrap
 
@@ -151,6 +165,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -179,6 +197,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## Using the Repl
 
@@ -212,6 +233,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -240,6 +265,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## Using your project
 
@@ -275,6 +303,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 **__TODO:__** Write an overview of test_name
 
 ## Development Environment
+
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
 
 You can work on test_name in 3 ways:
 
@@ -320,7 +352,14 @@ _After following the steps above, you will be able to use any of the project's t
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the integrated terminal of Visual Studio Code._
 
+</p>
+</details>
+
 ## Project Structure
+
+<details>
+<summary>Expand project structure tree</summary>
+<p>
 
 The following diagram explains how nix-bootstrap has laid out your infrastructure.
 Feel free to remove this once you're familiar with how it works, or amend it as you grow your project.
@@ -336,6 +375,9 @@ Feel free to remove this once you're familiar with how it works, or amend it as 
    |
    `- sources.nix - This is the interface between nix and the dependencies listed in sources.json.
 ```
+
+</p>
+</details>
 
 ## nix-bootstrap
 
@@ -358,6 +400,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -386,6 +432,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## nix-bootstrap
 
@@ -408,6 +457,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -436,6 +489,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## Building for Production
 
@@ -464,6 +520,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -497,6 +557,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## Building for Production
 
@@ -525,6 +588,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -558,6 +625,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## Adding Python Dependencies
 
@@ -595,6 +665,10 @@ If you'd like to learn more about how the generated infrastructure works, or hav
 
 ## Development Environment
 
+<details>
+<summary>Expand development environment setup instructions</summary>
+<p>
+
 You can work on test_name in 2 ways:
 
   * [In GitPod](#use-in-gitpod)
@@ -623,6 +697,9 @@ To develop with this project in GitPod, follow the instructions below:
 4. Run `direnv allow` in the project root directory
 
 _After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._
+
+</p>
+</details>
 
 ## Adding Python Dependencies
 
