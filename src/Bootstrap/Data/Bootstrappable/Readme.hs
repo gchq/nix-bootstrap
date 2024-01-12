@@ -57,6 +57,10 @@ instance Bootstrappable Readme where
         <> ( [ "",
                "## Development Environment",
                "",
+               "<details>",
+               "<summary>Expand development environment setup instructions</summary>",
+               "<p>",
+               "",
                "You can work on "
                  <> unProjectName readmeProjectName
                  <> " in "
@@ -123,6 +127,10 @@ instance Bootstrappable Readme where
                  ]
                else []
            )
+        <> [ "",
+             "</p>",
+             "</details>"
+           ]
         <> ( case readmeProjectType of
                Elm ElmOptions {..} ->
                  [""]
@@ -218,13 +226,21 @@ instance Bootstrappable Readme where
                  [ "",
                    "## Project Structure",
                    "",
+                   "<details>",
+                   "<summary>Expand project structure tree</summary>",
+                   "<p>",
+                   "",
                    "The following diagram explains how nix-bootstrap has laid out your infrastructure.",
                    "Feel free to remove this once you're familiar with how it works, or amend it as you grow your project.",
                    "",
                    "```plaintext"
                  ]
                    <> lines (toText . drawTree $ toReasonTree buildPlan)
-                   <> ["```"]
+                   <> [ "```",
+                        "",
+                        "</p>",
+                        "</details>"
+                      ]
                Nothing -> []
            )
         <> [ "",
