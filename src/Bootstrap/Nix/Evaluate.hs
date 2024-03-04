@@ -40,7 +40,6 @@ import Bootstrap.Nix.Expr.Nixpkgs
   )
 import Bootstrap.Unix (runCommand, which)
 import Control.Exception (IOException, ioError, try)
-import Control.Monad.Catch (MonadCatch)
 import qualified Data.Text as T
 import qualified Relude.Extra.Map as M
 import System.IO.Error (userError)
@@ -68,7 +67,7 @@ runNix :: MonadIO m => NixBinaryPaths -> [String] -> m (Either IOException Strin
 runNix NixBinaryPaths {nixPath} = runCommand nixPath
 
 -- | Gets the path to the nix binary on the system using `which`
-getNixBinaryPaths :: (MonadCatch m, MonadIO m) => ExceptT IOException m NixBinaryPaths
+getNixBinaryPaths :: MonadIO m => ExceptT IOException m NixBinaryPaths
 getNixBinaryPaths = do
   nixPath <- ExceptT $ which "nix"
   nixEnvPath <- ExceptT $ which "nix-env"

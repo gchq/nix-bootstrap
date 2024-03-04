@@ -29,5 +29,5 @@ type MonadBootstrap m =
     Quote m
   )
 
-instance (Monad (TerminalT m a), MonadIO (TerminalT m a)) => Quote (TerminalT m a) where
+instance (Monad a, MonadIO (TerminalT m a)) => Quote (TerminalT m a) where
   newName = liftIO . newName
