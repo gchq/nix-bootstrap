@@ -21,7 +21,6 @@
     - "-XDeriveGeneric"
     - "-XGeneralizedNewtypeDeriving"
     - "-XLambdaCase"
-    - "-XNoCPP"
     - "-XOverloadedStrings"
     - "-XRecordWildCards"
     - "-XScopedTypeVariables"
@@ -2740,16 +2739,6 @@
     name: "Use 'getSum' from Relude"
     note: "'getSum' is already exported from Relude"
     rhs: getSum
-- warn:
-    lhs: Data.Semigroup.Option
-    name: "Use 'Option' from Relude"
-    note: "'Option' is already exported from Relude"
-    rhs: Option
-- warn:
-    lhs: Data.Semigroup.getOption
-    name: "Use 'getOption' from Relude"
-    note: "'getOption' is already exported from Relude"
-    rhs: getOption
 - warn:
     lhs: Data.Semigroup.Semigroup
     name: "Use 'Semigroup' from Relude"

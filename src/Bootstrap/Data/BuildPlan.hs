@@ -28,7 +28,7 @@ import Bootstrap.Error
 import Bootstrap.Monad (MonadBootstrap)
 import Bootstrap.Terminal (promptYesNo, withAttribute, withAttributes)
 import Control.Exception (IOException)
-import Control.Monad.Catch (MonadCatch, catchAll, try)
+import Control.Monad.Catch (catchAll, try)
 import Data.Char (toLower)
 import Data.Tree (Tree (Node, rootLabel, subForest))
 import Language.Haskell.TH (Quote)
@@ -61,9 +61,9 @@ getOverwriteStatus :: MonadIO m => FilePath -> Text -> m OverwriteStatus
 getOverwriteStatus path newContents = liftIO do
   doesFileExist path >>= \case
     True ->
-      readFileText path `catchAll` const (pure "") >>= \oldContents ->
+      readFileBS path `catchAll` const (pure "") >>= \oldContents ->
         pure $
-          if oldContents == newContents
+          if oldContents == encodeUtf8 newContents
             then NoContentChange
             else WillOverwrite
     False -> pure NothingToOverwrite
@@ -190,7 +190,7 @@ bootstrap BuildPlan {..} =
         r2 <- bootstrapFile (second contents f)
         pure (r1, r2)
 
-createParentDir :: (MonadCatch m, MonadIO m) => FilePath -> ExceptT Text m ()
+createParentDir :: MonadIO m => FilePath -> ExceptT Text m ()
 createParentDir path =
   let dir = takeDirectory path
    in ExceptT $
@@ -201,7 +201,7 @@ createParentDir path =
           )
           <$> liftIO (try $ createDirectoryIfMissing True dir)
 
-bootstrapFile :: (MonadCatch m, MonadIO m) => (FilePath, Text) -> ExceptT Text m ()
+bootstrapFile :: MonadIO m => (FilePath, Text) -> ExceptT Text m ()
 bootstrapFile (path, contents) =
   ExceptT $
     first

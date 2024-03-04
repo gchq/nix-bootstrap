@@ -13,7 +13,7 @@
 # limitations under the License.
 {nixpkgs}: let
   # haskell package set
-  baseHaskellPackages = nixpkgs.haskell.packages.ghc902;
+  baseHaskellPackages = nixpkgs.haskell.packages.ghc948;
 
   # dev tools
   haskellEnv = baseHaskellPackages.ghcWithPackages (
@@ -23,15 +23,10 @@
         haskell-language-server
       ]
   );
-  setUpHaskellLanguageServer = nixpkgs.writeShellScriptBin "setUpHaskellLanguageServer" ''
-    sed=${nixpkgs.gnused}/bin/sed
-    ${builtins.readFile ../scripts/set-up-haskell-language-server.sh}
-  '';
 in {
   inherit baseHaskellPackages;
   haskellDevTools = [
     haskellEnv
-    setUpHaskellLanguageServer
     # cabal uses wget but doesn't package it. This ensures a compatible version is used,
     # as devcontainers otherwise package the busybox version by default, which accepts
     # different arguments.
