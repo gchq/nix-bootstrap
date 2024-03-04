@@ -149,7 +149,7 @@ ggJavaIDEFiles =
             ".project",
             ".classpath",
             ".idea/",
-            ".iml"
+            "*.iml"
           ]
 
 ggJavaMobileTools :: GitignoreGroup
