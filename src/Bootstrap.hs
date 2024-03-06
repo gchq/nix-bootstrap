@@ -158,6 +158,9 @@ import System.Terminal
     withTerminal,
   )
 
+-- | The name of the current directory (excluding the rest of its path)
+newtype CurrentDirectoryName = CurrentDirectoryName Text
+
 nixBootstrap :: IO ()
 nixBootstrap = withTerminal $ runTerminalT do
   parseCommand >>= \case
@@ -196,12 +199,12 @@ nixBootstrap = withTerminal $ runTerminalT do
                 { rcNonInteractive = nonInteractive,
                   rcUseFlakes = useFlakes
                 }
-        nixBinaryPaths <- performInitialChecks runConfig
+        (currentDirectoryName, nixBinaryPaths) <- performInitialChecks runConfig
         buildPlan <-
           if rcFromScratch runConfig
             then do
               promptFlakesWarning runConfig
-              projectName <- promptProjectName
+              projectName <- promptProjectName currentDirectoryName
               preCommitHooksConfig <- promptPreCommitHooksConfig
               if useFlakes
                 then generateIntermediateFlake nixBinaryPaths runConfig projectName
@@ -225,7 +228,7 @@ nixBootstrap = withTerminal $ runTerminalT do
                     }
               Nothing -> do
                 promptFlakesWarning runConfig
-                projectName <- promptProjectName
+                projectName <- promptProjectName currentDirectoryName
                 preCommitHooksConfig <- promptPreCommitHooksConfig
                 if useFlakes
                   then generateIntermediateFlake nixBinaryPaths runConfig projectName
@@ -244,7 +247,7 @@ nixBootstrap = withTerminal $ runTerminalT do
     CommandVersion -> do
       putTextLn $ "nix-bootstrap version " <> toText (showVersion version)
 
-performInitialChecks :: forall m. MonadBootstrap m => RunConfig -> m NixBinaryPaths
+performInitialChecks :: forall m. MonadBootstrap m => RunConfig -> m (CurrentDirectoryName, NixBinaryPaths)
 performInitialChecks rc@RunConfig {rcUseFlakes} = do
   currentDirectoryName <- toText . takeFileName <$> liftIO getCurrentDirectory
   when (currentDirectoryName == "nix-bootstrap" || currentDirectoryName == "nix-bootstrap-hs") $
@@ -263,7 +266,7 @@ performInitialChecks rc@RunConfig {rcUseFlakes} = do
         then checkWorkingStateIsClean rc
         else offerToInitialiseGitRepo
       when rcUseFlakes $ checkNixFlakesAreConfigured nixBinaryPaths
-      pure nixBinaryPaths
+      pure (CurrentDirectoryName currentDirectoryName, nixBinaryPaths)
   where
     checkWorkingStateIsClean :: RunConfig -> m ()
     checkWorkingStateIsClean RunConfig {rcAllowDirty} = do
@@ -345,14 +348,14 @@ promptFlakesWarning RunConfig {rcUseFlakes} = when rcUseFlakes do
       exitFailure
 
 -- | Asks the user to enter a project name
-promptProjectName :: MonadBootstrap m => m ProjectName
-promptProjectName =
-  promptNonemptyText "Please enter a project name: "
+promptProjectName :: MonadBootstrap m => CurrentDirectoryName -> m ProjectName
+promptProjectName cdn@(CurrentDirectoryName currentDirectoryName) =
+  promptNonemptyText (Just currentDirectoryName) "Please enter a project name"
     >>= ( \case
             Just projectName -> pure projectName
             Nothing -> do
               putErrorLn "Invalid project name. Project names must begin with a letter and contain only alphanumerical characters, spaces, dashes (-), and underscores(_)."
-              promptProjectName
+              promptProjectName cdn
         )
       . mkProjectName
 
@@ -429,7 +432,7 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
           False -> pure NoJavaBuild
           True ->
             SetUpJavaBuild . ArtefactId
-              <$> promptNonemptyText "Enter your Maven ArtefactId (e.g. the 'demo' in 'com.example.demo'): "
+              <$> promptNonemptyText Nothing "Enter your Maven ArtefactId (e.g. the 'demo' in 'com.example.demo'): "
       pure . Java $ JavaOptions installMinishift installLombok setUpJavaBuild
     PSTPython -> pure $ Python Python39
     PSTRust -> pure Rust

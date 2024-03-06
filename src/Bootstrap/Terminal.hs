@@ -200,13 +200,18 @@ handleMultipleChoiceInput state onConfirmation goAgain = \case
 scrubLines :: MonadScreen m => Int -> m ()
 scrubLines n = moveCursorUp n *> deleteLines n
 
-promptNonemptyText :: MonadBootstrap m => Text -> m Text
-promptNonemptyText promptText = do
-  withAttribute (foreground blue) $ putText promptText
-  response <- T.strip <$> getFreeText (T.length promptText) initialTextInputState
+promptNonemptyText :: MonadBootstrap m => Maybe Text -> Text -> m Text
+promptNonemptyText mDefault promptText = do
+  let fullPromptText = case mDefault of
+        Just def -> promptText <> " (" <> def <> "):"
+        Nothing -> promptText
+  withAttribute (foreground blue) $ putText fullPromptText
+  response <- T.strip <$> getFreeText (T.length fullPromptText) initialTextInputState
   if T.null response
-    then reprompt "Please enter a value." $ promptNonemptyText promptText
-    else getConfirmation "entered" response id $ promptNonemptyText promptText
+    then case mDefault of
+      Just def -> pure def
+      Nothing -> reprompt "Please enter a value." $ promptNonemptyText mDefault promptText
+    else getConfirmation "entered" response id $ promptNonemptyText mDefault promptText
 
 promptYesNo :: MonadBootstrap m => Text -> m Bool
 promptYesNo = promptYesNoWithDefault Nothing
