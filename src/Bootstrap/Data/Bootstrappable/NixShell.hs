@@ -145,7 +145,7 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
             . fmap EIdent
     nixpkgsBuildInputsFor :: ProjectType -> [Expr]
     nixpkgsBuildInputsFor =
-      sortBy compareBuildInputs . (([nix|rnix-lsp|] : [[nix|niv|] | not rcUseFlakes]) <>) . \case
+      sortBy compareBuildInputs . (([[nix|niv|] | not rcUseFlakes]) <>) . \case
         Minimal -> []
         Elm elmOptions ->
           [ [nix|elmPackages.elm|],

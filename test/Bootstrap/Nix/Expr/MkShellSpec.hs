@@ -23,18 +23,16 @@ spec = do
     it "gives no shell hook when one isn't needed" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) PSTMinimal [])
         `shouldBe` [nix|nixpkgs.mkShell {
-  buildInputs = with nixpkgs; [];
 }|]
     it "gives a proper shell hook for projects with pre-commit hooks" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) PSTMinimal [])
         `shouldBe` [nix|nixpkgs.mkShell {
-  buildInputs = preCommitHooks.tools ++ (with nixpkgs; []);
+  buildInputs = preCommitHooks.tools;
   inherit (preCommitHooks.allHooks) shellHook;
 }|]
     it "gives a proper shell hook for Rust projects" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) PSTRust [])
         `shouldBe` [nix|nixpkgs.mkShell {
-  buildInputs = with nixpkgs; [];
   shellHook = ''
     export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}
   '';
@@ -42,7 +40,7 @@ spec = do
     it "gives a proper shell hook for Rust projects with pre-commit hooks" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) PSTRust [])
         `shouldBe` [nix|nixpkgs.mkShell {
-  buildInputs = preCommitHooks.tools ++ (with nixpkgs; []);
+  buildInputs = preCommitHooks.tools;
   shellHook = ''
     export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}
     ${preCommitHooks.allHooks.shellHook}

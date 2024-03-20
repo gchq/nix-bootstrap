@@ -49,11 +49,7 @@ spec = describe "flake.nix rendering" do
     in {
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
-        buildInputs = with nixpkgs; [
-          awscli2
-          nodejs
-          rnix-lsp
-        ];
+        buildInputs = with nixpkgs; [awscli2 nodejs];
       };
     });
 }
@@ -88,7 +84,6 @@ spec = describe "flake.nix rendering" do
           awscli2
           nodePackages.pnpm
           nodejs
-          rnix-lsp
         ];
       };
     });
@@ -137,13 +132,7 @@ spec = describe "flake.nix rendering" do
       checks.pre-commit-check = preCommitHooks.pureHooks;
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
-        buildInputs =
-          preCommitHooks.tools
-          ++ (with nixpkgs; [
-            awscli2
-            nodejs
-            rnix-lsp
-          ]);
+        buildInputs = preCommitHooks.tools ++ (with nixpkgs; [awscli2 nodejs]);
         inherit (preCommitHooks.allHooks) shellHook;
       };
       # runChecks is a hack required to allow checks to run on a single system
@@ -198,7 +187,7 @@ spec = describe "flake.nix rendering" do
       checks.pre-commit-check = preCommitHooks.pureHooks;
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
-        buildInputs = preCommitHooks.tools ++ (with nixpkgs; [go rnix-lsp]);
+        buildInputs = preCommitHooks.tools ++ (with nixpkgs; [go]);
         inherit (preCommitHooks.allHooks) shellHook;
       };
       defaultPackage = self.packages.${system}.default;
@@ -246,7 +235,7 @@ spec = describe "flake.nix rendering" do
     in {
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
-        buildInputs = [pythonPackages] ++ (with nixpkgs; [rnix-lsp]);
+        buildInputs = [pythonPackages];
       };
     });
 }
@@ -294,7 +283,7 @@ spec = describe "flake.nix rendering" do
       checks.pre-commit-check = preCommitHooks.pureHooks;
       devShell = self.devShells.${system}.default;
       devShells.default = nixpkgs.mkShell {
-        buildInputs = preCommitHooks.tools ++ (with nixpkgs; [libiconv rnix-lsp]);
+        buildInputs = preCommitHooks.tools ++ (with nixpkgs; [libiconv]);
         nativeBuildInputs = with nixpkgs; [
           cargo
           rust-analyzer
