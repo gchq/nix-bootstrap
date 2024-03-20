@@ -56,29 +56,33 @@ data BuildInputSpec projectType = BuildInputSpec
 buildInputsBindings :: HasProjectSuperType t => BuildInputSpec t -> [Binding]
 buildInputsBindings spec@BuildInputSpec {bisNativeNixpkgsPackages} =
   catMaybes
-    [ Just $ [nixproperty|buildInputs|] |= foldr (|++) buildInputGroupExpr1 otherBuildInputGroupExprs,
+    [ case buildInputGroupExprs of
+        [] -> Nothing
+        [buildInputGroupExpr1] ->
+          Just $ [nixproperty|buildInputs|] |= buildInputGroupExpr1
+        (buildInputGroupExpr1 : otherBuildInputGroupExprs) ->
+          Just $ [nixproperty|buildInputs|] |= foldr (|++) buildInputGroupExpr1 otherBuildInputGroupExprs,
       if null bisNativeNixpkgsPackages
         then Nothing
         else Just $ [nixproperty|nativeBuildInputs|] |= groupToExpr (BIGNativeNixpkgsInputs bisNativeNixpkgsPackages)
     ]
   where
-    buildInputGroups :: NonEmpty BuildInputGroup
+    buildInputGroups :: [BuildInputGroup]
     buildInputGroups = buildInputGroupsFor spec
     groupPackageSets :: Bool
     groupPackageSets = length buildInputGroups > 1
     groupToExpr :: BuildInputGroup -> Expr
     groupToExpr g = (if groupPackageSets && requiresGrouping g then EGrouping else id) (toNixExpr g)
-    buildInputGroupExpr1 :: Expr
-    otherBuildInputGroupExprs :: [Expr]
-    (buildInputGroupExpr1 :| otherBuildInputGroupExprs) = groupToExpr <$> buildInputGroups
+    buildInputGroupExprs :: [Expr]
+    buildInputGroupExprs = groupToExpr <$> buildInputGroups
 
-buildInputGroupsFor :: HasProjectSuperType t => BuildInputSpec t -> NonEmpty BuildInputGroup
+buildInputGroupsFor :: HasProjectSuperType t => BuildInputSpec t -> [BuildInputGroup]
 buildInputGroupsFor BuildInputSpec {..} =
-  BIGNixpkgs bisNixpkgsPackages
-    :| catMaybes
-      [ if unPreCommitHooksConfig bisPreCommitHooksConfig then Just BIGPreCommitHooks else Nothing,
-        if projectSuperType bisProjectType == PSTPython then Just BIGPythonPackages else Nothing,
-        case bisOtherPackages of
-          [] -> Nothing
-          otherPackages -> Just $ BIGOther otherPackages
-      ]
+  catMaybes
+    [ if null bisNixpkgsPackages then Nothing else Just (BIGNixpkgs bisNixpkgsPackages),
+      if unPreCommitHooksConfig bisPreCommitHooksConfig then Just BIGPreCommitHooks else Nothing,
+      if projectSuperType bisProjectType == PSTPython then Just BIGPythonPackages else Nothing,
+      case bisOtherPackages of
+        [] -> Nothing
+        otherPackages -> Just $ BIGOther otherPackages
+    ]

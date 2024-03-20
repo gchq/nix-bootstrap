@@ -36,7 +36,6 @@ in
       awscli2
       niv
       nodejs
-      rnix-lsp
     ];
   }
 |]
@@ -55,7 +54,6 @@ in
       niv
       nodePackages.pnpm
       nodejs
-      rnix-lsp
     ];
   }
 |]
@@ -74,13 +72,7 @@ in
   };
 in
   nixpkgs.mkShell {
-    buildInputs =
-      preCommitHooks.tools
-      ++ (with nixpkgs; [
-        go
-        niv
-        rnix-lsp
-      ]);
+    buildInputs = preCommitHooks.tools ++ (with nixpkgs; [go niv]);
     inherit (preCommitHooks.allHooks) shellHook;
   }
 |]
@@ -110,7 +102,7 @@ in
   haskellEnv = haskellPackages.ghcWithPackages (pkgs: with pkgs; [cabal-install haskell-language-server]);
 in
   nixpkgs.mkShell {
-    buildInputs = [haskellEnv] ++ (with nixpkgs; [niv rnix-lsp]);
+    buildInputs = [haskellEnv] ++ (with nixpkgs; [niv]);
   }
 |]
           )
@@ -131,7 +123,7 @@ in
   };
 in
   nixpkgs.mkShell {
-    buildInputs = [pythonPackages] ++ (with nixpkgs; [niv rnix-lsp]);
+    buildInputs = [pythonPackages] ++ (with nixpkgs; [niv]);
   }
 |]
           )
@@ -157,7 +149,7 @@ in
   };
 in
   nixpkgs.mkShell {
-    buildInputs = preCommitHooks.tools ++ [pythonPackages] ++ (with nixpkgs; [niv rnix-lsp]);
+    buildInputs = preCommitHooks.tools ++ [pythonPackages] ++ (with nixpkgs; [niv]);
     inherit (preCommitHooks.allHooks) shellHook;
   }
 |]
@@ -172,11 +164,7 @@ in
   nixpkgs = import sources.nixpkgs {};
 in
   nixpkgs.mkShell {
-    buildInputs = with nixpkgs; [
-      libiconv
-      niv
-      rnix-lsp
-    ];
+    buildInputs = with nixpkgs; [libiconv niv];
     nativeBuildInputs = with nixpkgs; [
       cargo
       rust-analyzer
