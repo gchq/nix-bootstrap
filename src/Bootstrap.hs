@@ -43,6 +43,7 @@ import Bootstrap.Data.Bootstrappable.Haskell.LibHs (libHsFor)
 import Bootstrap.Data.Bootstrappable.Haskell.MainHs (mainHsFor)
 import Bootstrap.Data.Bootstrappable.Haskell.PackageYaml (packageYamlFor)
 import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs (preludeHsFor)
+import Bootstrap.Data.Bootstrappable.HaskellPackagesNix (haskellPackagesNixFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
 import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
@@ -528,6 +529,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: preludeHsFor mbpProjectType
               ~: libHsFor mbpProjectType
               ~: mainHsFor mbpProjectType
+              ~: haskellPackagesNixFor mbpProjectType
               ~: cargoLockFor mbpProjectType mbpProjectName
               ~: cargoTomlFor mbpProjectType mbpProjectName
               ~: mainRsFor mbpProjectType
