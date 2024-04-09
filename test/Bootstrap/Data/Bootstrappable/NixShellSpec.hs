@@ -90,14 +90,8 @@ in
                 [r|let
   sources = import nix/sources.nix;
   nixpkgs = import sources.nixpkgs {};
-  haskellPackages = nixpkgs.haskell.packages.ghc902.override {
-    overrides = _: super: {
-      # The line below may be needed to circumvent a bug in nixpkgs.
-      # If the devshell builds successfully without it, feel free to remove it.
-      pretty-simple = super.pretty-simple.overrideAttrs {
-        doCheck = false;
-      };
-    };
+  haskellPackages = import nix/haskell-packages.nix {
+    inherit nixpkgs;
   };
   haskellEnv = haskellPackages.ghcWithPackages (pkgs: with pkgs; [cabal-install haskell-language-server]);
 in

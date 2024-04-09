@@ -62,7 +62,6 @@ import Bootstrap.Nix.Expr.BuildInputs
         bisOtherPackages
       ),
   )
-import Bootstrap.Nix.Expr.Haskell (haskellPackagesExpr)
 import Bootstrap.Nix.Expr.MkShell
   ( BuildInputSpec
       ( BuildInputSpec,
@@ -119,9 +118,9 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
     extraBindingsFor = \case
       Minimal -> []
       Elm _ -> []
-      Haskell haskellOptions@(HaskellOptions _ haskellProjectType) ->
+      Haskell (HaskellOptions _ haskellProjectType) ->
         (True,)
-          <$> [ [nixproperty|haskellPackages|] |= haskellPackagesExpr haskellOptions,
+          <$> [ [nixbinding|haskellPackages = import nix/haskell-packages.nix { inherit nixpkgs; };|],
                 [nixproperty|haskellEnv|]
                   |= ghcWithPackages
                     ( case haskellProjectType of

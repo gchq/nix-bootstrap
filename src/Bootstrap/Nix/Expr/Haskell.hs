@@ -12,22 +12,43 @@ import Bootstrap.Data.ProjectType
         HaskellProjectTypeReplOnly
       ),
   )
-import Bootstrap.Nix.Expr (Expr, nix, nixproperty, (|*), (|.))
+import Bootstrap.Nix.Expr
+  ( Expr (ESet),
+    nix,
+    nixargs,
+    nixbinding,
+    nixproperty,
+    (|*),
+    (|.),
+    (|:),
+    (|=),
+  )
 
 -- | An expression representing the haskell package set bootstrapped. Depends on
 -- nixpkgs being in scope.
 haskellPackagesExpr :: HaskellOptions -> Expr
-haskellPackagesExpr HaskellOptions {..} = case haskellOptionsHaskellProjectType of
-  HaskellProjectTypeReplOnly -> basePackageSet
-  HaskellProjectTypeBasic ->
-    (basePackageSet |. [nixproperty|override|])
-      |* [nix|{
-        overrides = _: super: {
-          # The line below may be needed to circumvent a bug in nixpkgs.
-          # If the devshell builds successfully without it, feel free to remove it.
-          pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };
-        };
-      }|]
+haskellPackagesExpr HaskellOptions {..} =
+  basePackageSet |. [nixproperty|override|]
+    |* ESet
+      False
+      [ [nixproperty|overrides|]
+          |= ( [nixargs|_:|]
+                 |: ( [nixargs|super:|]
+                        |: ESet
+                          False
+                          ( ( case haskellOptionsHaskellProjectType of
+                                HaskellProjectTypeReplOnly -> []
+                                HaskellProjectTypeBasic ->
+                                  [ [nixbinding|# The override of pretty-simple below may be needed to circumvent a bug in nixpkgs.|],
+                                    [nixbinding|# If the devshell builds successfully without it, feel free to remove it.|],
+                                    [nixbinding|pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };|]
+                                  ]
+                            )
+                              <> [[nixbinding|# You can overide packages here if you need any dependencies not in this set by default|]]
+                          )
+                    )
+             )
+      ]
   where
     basePackageSet :: Expr
     basePackageSet = [nix|nixpkgs.haskell.packages|] |. ghcVersionProperty haskellOptionsGHCVersion
