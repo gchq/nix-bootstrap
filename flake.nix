@@ -68,7 +68,6 @@
                 gnused
                 gnutar
                 niv
-                rnix-lsp
                 which
               ]
             );
