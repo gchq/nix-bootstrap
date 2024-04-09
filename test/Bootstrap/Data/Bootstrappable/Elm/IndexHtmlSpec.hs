@@ -29,7 +29,7 @@ spec = describe "index.html rendering" do
       )
       >>= ( `shouldBe`
               Right
-                [r|<!DOCTYPE HTML>
+                [r|<!DOCTYPE html>
 
 <html>
     <head>
