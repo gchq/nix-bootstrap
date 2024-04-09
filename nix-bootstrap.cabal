@@ -82,6 +82,7 @@ library
       Bootstrap.Nix.Expr.Nixpkgs
       Bootstrap.Nix.Expr.PreCommitHooks
       Bootstrap.Nix.Expr.Python
+      Bootstrap.Nix.Expr.ReproducibleBuild
       Bootstrap.Nix.Expr.ReproducibleBuild.Go
       Bootstrap.Nix.Expr.ReproducibleBuild.Java
       Bootstrap.Nix.Expr.ReproducibleBuild.Rust

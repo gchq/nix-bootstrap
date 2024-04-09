@@ -13,7 +13,7 @@ import Bootstrap.Data.Bootstrappable
       ),
     bootstrapContentNix,
   )
-import Bootstrap.Data.Bootstrappable.BuildNix (BuildNix)
+import Bootstrap.Data.Bootstrappable.BuildNix (BuildNix (unBuildNix))
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (NixPreCommitHookConfig)
 import Bootstrap.Data.Bootstrappable.NixShell
   ( NixShell
@@ -32,7 +32,7 @@ import Bootstrap.Data.PreCommitHook
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
 import Bootstrap.Data.ProjectType (ProjectType (Python))
 import Bootstrap.Nix.Expr
-  ( Binding,
+  ( Binding (BInherit),
     Expr (EGrouping, ELetIn, ELit, ESet),
     FunctionArgs (FASet),
     IsNixExpr (toNixExpr),
@@ -42,6 +42,7 @@ import Bootstrap.Nix.Expr
     nixbinding,
     nixident,
     nixproperty,
+    unsafeSimplifyBindings,
     (|*),
     (|:),
     (|=),
@@ -58,6 +59,7 @@ import Bootstrap.Nix.Expr.MkShell
   )
 import Bootstrap.Nix.Expr.PreCommitHooks (ImportPreCommitHooksArgs (ImportPreCommitHooksArgs, passNixpkgsThrough, passSystemThrough), importPreCommitHooks)
 import Bootstrap.Nix.Expr.Python (machNixFlakeInput, pythonPackagesBinding)
+import Bootstrap.Nix.Expr.ReproducibleBuild (ReproducibleBuildExpr (rbeRequirements), ReproducibleBuildRequirement (RBRNixpkgs), reproducibleBuildRequirementIdentifier)
 import Control.Lens
   ( Field2 (_2),
     filtered,
@@ -201,7 +203,14 @@ instance IsNixExpr FlakeNix where
                                     [nixproperty|packages.default|]
                                       |= ( [nix|import|]
                                              |* ELit (LPath . toText $ bootstrapName buildNix)
-                                             |* [nix|{ inherit nixpkgs; }|]
+                                             |* ESet
+                                               False
+                                               ( toList
+                                                   . unsafeSimplifyBindings
+                                                   . fmap toBuildRequirementBinding
+                                                   . rbeRequirements
+                                                   $ unBuildNix buildNix
+                                               )
                                          )
                                   ]
                                     <> (if usingHooks then runChecksDerivation else [])
@@ -210,6 +219,12 @@ instance IsNixExpr FlakeNix where
                   )
           ]
     where
+      toBuildRequirementBinding :: ReproducibleBuildRequirement -> Binding
+      toBuildRequirementBinding =
+        -- Note: When adding bindings here, check they are not interdependent as they will
+        -- be passed through `unsafeSimplifyBindings`.
+        \case
+          RBRNixpkgs -> BInherit . one $ reproducibleBuildRequirementIdentifier RBRNixpkgs
       runChecksDerivation :: [Binding]
       runChecksDerivation =
         [ [nixbinding|# runChecks is a hack required to allow checks to run on a single system|],

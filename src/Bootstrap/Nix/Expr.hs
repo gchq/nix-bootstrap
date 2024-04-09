@@ -68,6 +68,14 @@ module Bootstrap.Nix.Expr
     -- | `isMostlyCorrectlyScoped` returns `Right ()` if all of the identifiers used are in scope,
     -- although will give some false positives in cases of sets which may have unknown attributes.
     isMostlyCorrectlyScoped,
+
+    -- * Other helpers
+
+    -- | Deduplicates and organises a set of bindings; note it is the caller's responsibility to
+    -- check that these bindings don't reference each other as the reordering could make this fail.
+    --
+    -- The unsafe prefix simply highlights this responsibility.
+    unsafeSimplifyBindings,
   )
 where
 
@@ -77,6 +85,7 @@ import Control.Exception (IOException)
 import Control.Monad.Combinators.Expr (Operator (InfixL), makeExprParser)
 import Data.Data (Data, cast)
 import Data.List.NonEmpty ((<|))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
@@ -452,6 +461,64 @@ parseBinding requireNewLineAfterCommentLine =
       v <- lexeme $ parseE False
       void $ symbol ";"
       pure $ BNameValue n v
+
+-- | Organises a list of bindings, merging where possible and sorting.
+--
+-- Performs no action if any bindings are comments, as these cannot be meaningfully sorted.
+--
+-- Note: it is the caller's responsibility to check that these bindings don't reference
+-- each other as the reordering could make this fail. The unsafe prefix simply highlights
+-- this responsibility.
+unsafeSimplifyBindings :: NonEmpty Binding -> NonEmpty Binding
+unsafeSimplifyBindings initBs =
+  if any isCommentBinding initBs
+    then initBs
+    else case initBs of
+      (_ :| []) -> initBs
+      _ -> sortBindings $ mergeBindings initBs
+  where
+    isCommentBinding :: Binding -> Bool
+    isCommentBinding (BLineComment _) = True
+    isCommentBinding _ = False
+    mergeBindings :: NonEmpty Binding -> NonEmpty Binding
+    mergeBindings (b :| bs) = foldr integrateBinding (b :| []) bs
+    integrateBinding :: Binding -> NonEmpty Binding -> NonEmpty Binding
+    integrateBinding b acc = case find (sameBindingType b) acc of
+      Just bindingToMergeWith -> mergeTwoBindings b bindingToMergeWith :| NE.filter (/= bindingToMergeWith) acc
+      Nothing -> internallySortBinding b `NE.cons` acc
+    sameBindingType :: Binding -> Binding -> Bool
+    sameBindingType (BInherit _) (BInherit _) = True
+    sameBindingType (BInheritFrom a _) (BInheritFrom b _) = a == b
+    sameBindingType _ _ = False
+    mergeTwoBindings :: Binding -> Binding -> Binding
+    mergeTwoBindings (BInherit xs) (BInherit ys) = BInherit $ combineBindingIdents xs ys
+    mergeTwoBindings (BInheritFrom a xs) (BInheritFrom b ys) | a == b = BInheritFrom a $ combineBindingIdents xs ys
+    mergeTwoBindings a b = error $ "Two bindings " <> show (a, b) <> " cannot be merged; this is a bug in nix-bootstrap"
+    internallySortBinding :: Binding -> Binding
+    internallySortBinding (BInherit xs) = BInherit . fromList . sortNub $ toList xs
+    internallySortBinding (BInheritFrom a xs) = BInheritFrom a . fromList . sortNub $ toList xs
+    internallySortBinding b = b
+    combineBindingIdents :: NonEmpty Identifier -> NonEmpty Identifier -> NonEmpty Identifier
+    combineBindingIdents xs = fromList . sortNub . toList . (xs <>)
+    sortBindings :: NonEmpty Binding -> NonEmpty Binding
+    sortBindings = NE.sortBy compareBindings
+      where
+        compareBindings (BLineComment _) _ = error "Line comment bindings cannot be sorted; this occurring means there is a bug in nix-bootstrap"
+        compareBindings _ (BLineComment _) = error "Line comment bindings cannot be sorted; this occurring means there is a bug in nix-bootstrap"
+        compareBindings (BInherit xs) (BInherit ys) = compare xs ys
+        compareBindings (BInherit _) _ = LT
+        compareBindings _ (BInherit _) = GT
+        compareBindings (BInheritFrom e1 _) (BInheritFrom e2 _) = compare (writeExprForTerminal e1) (writeExprForTerminal e2)
+        compareBindings (BInheritFrom _ _) _ = LT
+        compareBindings _ (BInheritFrom _ _) = GT
+        compareBindings (BNameValue p1 _) (BNameValue p2 _) = compareProperties p1 p2
+        compareProperties (PIdent a) (PIdent b) = compare a b
+        compareProperties (PIdent _) _ = LT
+        compareProperties _ (PIdent _) = GT
+        compareProperties (PCons p1 _) (PCons p2 _) = compareProperties p1 p2
+        compareProperties (PCons _ _) _ = LT
+        compareProperties _ (PCons _ _) = GT
+        compareProperties (PAntiquote e1) (PAntiquote e2) = compare (writeExprForTerminal e1) (writeExprForTerminal e2)
 
 -- | A representation of a Nix identifier
 newtype Identifier = Identifier {unIdentifier :: Text}

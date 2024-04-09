@@ -10,18 +10,25 @@ import Bootstrap.Nix.Expr
     nixproperty,
     (|=),
   )
+import Bootstrap.Nix.Expr.ReproducibleBuild
+  ( ReproducibleBuildExpr (ReproducibleBuildExpr),
+    ReproducibleBuildRequirement (RBRNixpkgs),
+  )
 
 reproducibleRustBuild ::
   -- | src path
   Expr ->
-  Expr
+  ReproducibleBuildExpr
 reproducibleRustBuild srcDir =
-  ELetIn
-    ( ([nixproperty|src|] |= srcDir)
-        :| [[nixbinding|cargoToml = builtins.fromTOML (builtins.readFile (src + "/Cargo.toml"));|]]
-    )
-    [nix|nixpkgs.rustPlatform.buildRustPackage {
+  ReproducibleBuildExpr
+    ( ELetIn
+        ( ([nixproperty|src|] |= srcDir)
+            :| [[nixbinding|cargoToml = builtins.fromTOML (builtins.readFile (src + "/Cargo.toml"));|]]
+        )
+        [nix|nixpkgs.rustPlatform.buildRustPackage {
   inherit src;
   inherit (cargoToml.package) name version;
   cargoLock.lockFile = src + "/Cargo.lock";
 }|]
+    )
+    (one RBRNixpkgs)

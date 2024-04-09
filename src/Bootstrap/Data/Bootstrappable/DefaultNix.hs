@@ -3,7 +3,7 @@
 
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.DefaultNix
-  ( DefaultNix (defaultNixInBlockExpr),
+  ( DefaultNix (defaultNixReproducibleBuildExpr),
     SrcDir (..),
     defaultNixFor,
   )
@@ -30,18 +30,24 @@ import Bootstrap.Data.ProjectType
     SetUpJavaBuild (SetUpJavaBuild),
   )
 import Bootstrap.Nix.Expr
-  ( Expr (ELetIn),
+  ( Binding,
+    Expr (ELetIn),
     IsNixExpr (toNixExpr),
+    Property (PIdent),
     nix,
-    nixproperty,
     (|=),
   )
 import Bootstrap.Nix.Expr.Nixpkgs (nixpkgsFromNiv)
+import Bootstrap.Nix.Expr.ReproducibleBuild
+  ( ReproducibleBuildExpr (ReproducibleBuildExpr, rbeExpr, rbeRequirements),
+    ReproducibleBuildRequirement (RBRNixpkgs),
+    reproducibleBuildRequirementIdentifier,
+  )
 import Bootstrap.Nix.Expr.ReproducibleBuild.Go (reproducibleGoBuild)
 import Bootstrap.Nix.Expr.ReproducibleBuild.Java (reproducibleJavaBuild)
 import Bootstrap.Nix.Expr.ReproducibleBuild.Rust (reproducibleRustBuild)
 
-newtype DefaultNix = DefaultNix {defaultNixInBlockExpr :: Expr}
+newtype DefaultNix = DefaultNix {defaultNixReproducibleBuildExpr :: ReproducibleBuildExpr}
 
 instance Bootstrappable DefaultNix where
   bootstrapName = const "default.nix"
@@ -49,8 +55,13 @@ instance Bootstrappable DefaultNix where
   bootstrapContent = bootstrapContentNix
 
 instance IsNixExpr DefaultNix where
-  toNixExpr DefaultNix {..} =
-    ELetIn (one $ [nixproperty|nixpkgs|] |= nixpkgsFromNiv) defaultNixInBlockExpr
+  toNixExpr (DefaultNix ReproducibleBuildExpr {..}) =
+    ELetIn (bindingFor <$> rbeRequirements) rbeExpr
+    where
+      bindingFor :: ReproducibleBuildRequirement -> Binding
+      bindingFor r =
+        PIdent (reproducibleBuildRequirementIdentifier r) |= case r of
+          RBRNixpkgs -> nixpkgsFromNiv
 
 -- | The source directory for the build
 data SrcDir

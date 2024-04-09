@@ -14,13 +14,18 @@ import Bootstrap.Nix.Expr
     nixproperty,
     (|=),
   )
+import Bootstrap.Nix.Expr.ReproducibleBuild
+  ( ReproducibleBuildExpr (ReproducibleBuildExpr),
+    ReproducibleBuildRequirement (RBRNixpkgs),
+  )
 
-reproducibleJavaBuild :: ProjectName -> ArtefactId -> Expr
+reproducibleJavaBuild :: ProjectName -> ArtefactId -> ReproducibleBuildExpr
 reproducibleJavaBuild projectName artefactId =
-  ELetIn
-    ( ([nixproperty|projectName|] |= ELit (LString $ unProjectName projectName))
-        :| [ [nixproperty|artefactId|] |= ELit (LString $ unArtefactId artefactId),
-             [nixbinding|
+  ReproducibleBuildExpr
+    ( ELetIn
+        ( ([nixproperty|projectName|] |= ELit (LString $ unProjectName projectName))
+            :| [ [nixproperty|artefactId|] |= ELit (LString $ unArtefactId artefactId),
+                 [nixbinding|
         repository = nixpkgs.stdenv.mkDerivation {
             name = "${projectName}-repository";
             buildInputs = [nixpkgs.maven];
@@ -41,7 +46,7 @@ reproducibleJavaBuild projectName artefactId =
             # hash will be displayed when the build fails if so.
             outputHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
         };|],
-             [nixbinding|
+                 [nixbinding|
         builtJar = nixpkgs.stdenv.mkDerivation rec {
             pname = projectName;
             version = "0.0.1-SNAPSHOT";
@@ -55,7 +60,7 @@ reproducibleJavaBuild projectName artefactId =
             install -Dm644 target/${artefactId}-${version}.jar $out/${projectName}
             '';
         };|],
-             [nixbinding|
+                 [nixbinding|
         fromImage = nixpkgs.dockerTools.pullImage {
             imageName = "eclipse-temurin";
             imageDigest = "sha256:4cc7dfdfb7837f35c3820bcfbc5f666521364e2198960322848ab7d3e2ca3e88";
@@ -63,9 +68,9 @@ reproducibleJavaBuild projectName artefactId =
             finalImageTag = "17.0.4.1_1-jre";
             sha256 = "sha256-OIib6PQJc1xX+Xu2xtaFEo/jZtxypkg8Y9RFMcJf39w=";
         };|]
-           ]
-    )
-    [nix|
+               ]
+        )
+        [nix|
     nixpkgs.dockerTools.buildLayeredImage {
         inherit fromImage;
         name = projectName;
@@ -79,3 +84,5 @@ reproducibleJavaBuild projectName artefactId =
             Entrypoint = ["/bin/sh" "-c" "java $JAVA_OPTS -jar /${projectName}"];
         };
     }|]
+    )
+    (one RBRNixpkgs)

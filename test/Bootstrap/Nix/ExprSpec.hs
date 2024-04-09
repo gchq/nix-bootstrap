@@ -36,6 +36,7 @@ import Bootstrap.Nix.Expr
     nixident,
     nixproperty,
     parseExpr,
+    unsafeSimplifyBindings,
     writeExpr,
     writeExprForTerminal,
     (|*),
@@ -290,6 +291,39 @@ spec = do
         isMostlyCorrectlyScoped [nix|let y = x; x = 5; in y|] `shouldBe` Left (one [nixident|x|])
       it "returns Left for [nix|{ a = b; b = 1; }|]" do
         isMostlyCorrectlyScoped [nix|{ a = b; b = 1; }|] `shouldBe` Left (one [nixident|b|])
+  describe "unsafeSimplifyBindings" do
+    describe "when given bindings including comments" do
+      it "does nothing" do
+        let bindings = case [nix|{
+        a = "b";
+        b = 5;
+        # We take d from somewhere in scope
+        inherit d;
+}|] of
+              ESet False bs -> fromList bs
+              _ -> error "unsafeSimplifyBindings test: initial set was not correct"
+        unsafeSimplifyBindings bindings `shouldBe` bindings
+  describe "when given non-comment bindings" do
+    it "simplifies and sorts them" do
+      let bindings = case [nix|{
+        b = "bbbbb";
+        inherit (thing1) thing6;
+        a = "aaaaa";
+        inherit (thing1) thing3 thing4;
+        inherit l m n o p;
+        inherit (thing5) y x;
+        inherit d;
+}|] of
+            ESet False bs -> fromList bs
+            _ -> error "unsafeSimplifyBindings test: initial set was not correct"
+      ESet False (toList $ unsafeSimplifyBindings bindings)
+        `shouldBe` [nix|{
+        inherit d l m n o p;
+        inherit (thing1) thing3 thing4 thing6;
+        inherit (thing5) x y;
+        a = "aaaaa";
+        b = "bbbbb";
+}|]
 
 -- | An expectation that a Nix expression is the same when written out and parsed again.
 roundtrips :: Expr -> Expectation
