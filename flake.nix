@@ -52,26 +52,31 @@
           inherit (nixpkgs) alejandra;
           src = ./.;
         };
+        extraDevShellArgs = {
+          inherit (pre-commit-hooks.allHooks) shellHook;
+        };
       in {
         checks = {pre-commit-check = pre-commit-hooks.pureHooks;};
         defaultPackage = self.packages.${system}.default;
         devShell = self.devShells.${system}.default;
-        devShells.default = nixpkgs.mkShell {
-          buildInputs =
-            [buildBinaryCache]
-            ++ haskellDevTools
-            ++ pre-commit-hooks.tools
-            ++ (
-              with nixpkgs; [
-                coreutils
-                glab
-                gnused
-                gnutar
-                niv
-                which
-              ]
-            );
-          inherit (pre-commit-hooks.allHooks) shellHook;
+        devShells = {
+          default = nixpkgs.mkShell ({
+              buildInputs =
+                [buildBinaryCache]
+                ++ haskellDevTools
+                ++ pre-commit-hooks.tools
+                ++ (
+                  with nixpkgs; [
+                    coreutils
+                    glab
+                    gnused
+                    gnutar
+                    niv
+                    which
+                  ]
+                );
+            }
+            // extraDevShellArgs);
         };
         packages = {
           default = nix-bootstrap;
