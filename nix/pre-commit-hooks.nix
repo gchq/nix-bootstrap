@@ -85,7 +85,7 @@
       entry = "${
         nixpkgs.writeShellScriptBin
         "check-for-vulnerabilities"
-        "${nixpkgs.vulnix}/bin/vulnix -w vulnerability-whitelist.toml result"
+        "${nixpkgs.vulnix}/bin/vulnix -C -w vulnerability-whitelist.toml result/"
       }/bin/check-for-vulnerabilities";
       files = "nix-bootstrap";
       name = "check-for-vulnerabilities";
