@@ -35,4 +35,4 @@ jobs:
       - name: Build nix-bootstrap
         run: nix build
       - name: Check for vulnerabilities
-        run: nix run .\#ciPackages.vulnix -- -w vulnerability-whitelist.toml result
+        run: nix run .\#ciPackages.vulnix -- -C -w vulnerability-whitelist.toml result/
