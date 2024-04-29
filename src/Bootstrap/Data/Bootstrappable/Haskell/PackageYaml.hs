@@ -38,7 +38,7 @@ instance Bootstrappable PackageYaml where
       . getHaskellDependencyVersions nbps rc opts
       $ case haskellOptionsHaskellProjectType of
         HaskellProjectTypeReplOnly -> []
-        HaskellProjectTypeBasic -> [$(hdep "base"), $(hdep "relude")]
+        HaskellProjectTypeBasic _ -> [$(hdep "base"), $(hdep "relude")]
     pure . bootstrapContentYaml $ PackageYamlWithDependencies n dependencies
 
 data PackageYamlWithDependencies = PackageYamlWithDependencies ProjectName [HaskellDependency 'VersionKnown]
@@ -128,5 +128,5 @@ packageYamlFor :: NixBinaryPaths -> RunConfig -> ProjectName -> ProjectType -> M
 packageYamlFor nbps rc projectName = \case
   Haskell haskellOptions@(HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
-    HaskellProjectTypeBasic -> Just $ PackageYaml nbps rc projectName haskellOptions
+    HaskellProjectTypeBasic _ -> Just $ PackageYaml nbps rc projectName haskellOptions
   _ -> Nothing

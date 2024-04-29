@@ -59,7 +59,7 @@ import Bootstrap.Nix.Expr.MkShell
   )
 import Bootstrap.Nix.Expr.PreCommitHooks (ImportPreCommitHooksArgs (ImportPreCommitHooksArgs, passNixpkgsThrough, passSystemThrough), importPreCommitHooks)
 import Bootstrap.Nix.Expr.Python (machNixFlakeInput, pythonPackagesBinding)
-import Bootstrap.Nix.Expr.ReproducibleBuild (ReproducibleBuildExpr (rbeRequirements), ReproducibleBuildRequirement (RBRNixpkgs), reproducibleBuildRequirementIdentifier)
+import Bootstrap.Nix.Expr.ReproducibleBuild (ReproducibleBuildExpr (rbeRequirements), ReproducibleBuildRequirement (RBRHaskellPackages, RBRNixpkgs), reproducibleBuildRequirementIdentifier, sortRbeRequirements)
 import Control.Lens
   ( Field2 (_2),
     filtered,
@@ -208,6 +208,7 @@ instance IsNixExpr FlakeNix where
                                                ( toList
                                                    . unsafeSimplifyBindings
                                                    . fmap toBuildRequirementBinding
+                                                   . sortRbeRequirements
                                                    . rbeRequirements
                                                    $ unBuildNix buildNix
                                                )
@@ -224,7 +225,10 @@ instance IsNixExpr FlakeNix where
         -- Note: When adding bindings here, check they are not interdependent as they will
         -- be passed through `unsafeSimplifyBindings`.
         \case
-          RBRNixpkgs -> BInherit . one $ reproducibleBuildRequirementIdentifier RBRNixpkgs
+          RBRNixpkgs -> buildRequirementBindingInherit RBRNixpkgs
+          RBRHaskellPackages -> buildRequirementBindingInherit RBRHaskellPackages
+      buildRequirementBindingInherit :: ReproducibleBuildRequirement -> Binding
+      buildRequirementBindingInherit = BInherit . one . reproducibleBuildRequirementIdentifier
       runChecksDerivation :: [Binding]
       runChecksDerivation =
         [ [nixbinding|# runChecks is a hack required to allow checks to run on a single system|],

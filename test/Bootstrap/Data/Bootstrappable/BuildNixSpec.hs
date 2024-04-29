@@ -5,14 +5,18 @@ module Bootstrap.Data.Bootstrappable.BuildNixSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
 import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
+import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.ProjectName (ProjectName, mkProjectName)
 import Bootstrap.Data.ProjectType
   ( ArtefactId (ArtefactId),
+    HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic),
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
-    ProjectType (Go, Java, Rust),
+    ProjectType (Go, Haskell, Java, Rust),
     SetUpGoBuild (SetUpGoBuild),
+    SetUpHaskellBuild (SetUpHaskellBuild),
     SetUpJavaBuild (SetUpJavaBuild),
   )
 import qualified Relude.Unsafe as Unsafe
@@ -139,6 +143,42 @@ in
     inherit src;
     inherit (cargoToml.package) name version;
     cargoLock.lockFile = src + "/Cargo.lock";
+  }
+|]
+              )
+      Nothing -> fail "Gave nothing for a project which should've had a build.nix generated."
+  it "renders correctly for a Haskell project" do
+    case buildNixFor
+      rcWithFlakes
+      projectName
+      (Haskell $ HaskellOptions (GHCVersion 9 4 8) (HaskellProjectTypeBasic $ SetUpHaskellBuild True)) of
+      Just buildNix ->
+        bootstrapContent buildNix
+          >>= ( `shouldBe`
+                  Right
+                    [r|{
+  haskellPackages,
+  nixpkgs,
+}: let
+  # This is the core build of your program, but its closure includes all build inputs
+  unstripped = haskellPackages.callCabal2nix "test-project" ../. {};
+in
+  nixpkgs.stdenv.mkDerivation {
+    # This derivation strips out the build inputs from `unstripped` above to leave just your program
+    inherit (unstripped) name src version;
+    buildInputs = with nixpkgs; [
+      # This is an assumed set of system libraries needed; you can add to this as necessary.
+      # You can find out what your package needs by reading the output of `ldd` on your built binary.
+      glibc
+      gmp
+      libffi
+      # ncurses and zlib are not needed for the bootstrapped program, but are needed by lots of common Haskell libraries
+      ncurses
+      zlib
+    ];
+    installPhase = ''
+      mkdir -p $out/bin
+      cp ${(nixpkgs.haskell.lib.enableSeparateBinOutput unstripped).bin}/bin/app $out/bin/test-project'';
   }
 |]
               )

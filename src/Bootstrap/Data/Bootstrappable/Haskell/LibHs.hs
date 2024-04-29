@@ -49,5 +49,5 @@ libHsFor :: ProjectType -> Maybe LibHs
 libHsFor = \case
   Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
-    HaskellProjectTypeBasic -> Just LibHs
+    HaskellProjectTypeBasic _ -> Just LibHs
   _ -> Nothing

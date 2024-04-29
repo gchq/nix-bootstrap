@@ -38,7 +38,7 @@ haskellPackagesExpr HaskellOptions {..} =
                           False
                           ( ( case haskellOptionsHaskellProjectType of
                                 HaskellProjectTypeReplOnly -> []
-                                HaskellProjectTypeBasic ->
+                                HaskellProjectTypeBasic _ ->
                                   [ [nixbinding|# The override of pretty-simple below may be needed to circumvent a bug in nixpkgs.|],
                                     [nixbinding|# If the devshell builds successfully without it, feel free to remove it.|],
                                     [nixbinding|pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };|]

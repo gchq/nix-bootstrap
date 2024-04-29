@@ -15,7 +15,9 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType
-  ( JavaOptions (JavaOptions),
+  ( HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic),
+    JavaOptions (JavaOptions),
     ProjectType
       ( Elm,
         Go,
@@ -27,6 +29,7 @@ import Bootstrap.Data.ProjectType
         Rust
       ),
     SetUpGoBuild (SetUpGoBuild),
+    SetUpHaskellBuild (SetUpHaskellBuild),
     SetUpJavaBuild (SetUpJavaBuild),
   )
 import Bootstrap.Nix.Expr
@@ -40,10 +43,12 @@ import Bootstrap.Nix.Expr
 import Bootstrap.Nix.Expr.Nixpkgs (nixpkgsFromNiv)
 import Bootstrap.Nix.Expr.ReproducibleBuild
   ( ReproducibleBuildExpr (ReproducibleBuildExpr, rbeExpr, rbeRequirements),
-    ReproducibleBuildRequirement (RBRNixpkgs),
+    ReproducibleBuildRequirement (RBRHaskellPackages, RBRNixpkgs),
     reproducibleBuildRequirementIdentifier,
+    sortRbeRequirements,
   )
 import Bootstrap.Nix.Expr.ReproducibleBuild.Go (reproducibleGoBuild)
+import Bootstrap.Nix.Expr.ReproducibleBuild.Haskell (reproducibleHaskellBuild)
 import Bootstrap.Nix.Expr.ReproducibleBuild.Java (reproducibleJavaBuild)
 import Bootstrap.Nix.Expr.ReproducibleBuild.Rust (reproducibleRustBuild)
 
@@ -56,12 +61,13 @@ instance Bootstrappable DefaultNix where
 
 instance IsNixExpr DefaultNix where
   toNixExpr (DefaultNix ReproducibleBuildExpr {..}) =
-    ELetIn (bindingFor <$> rbeRequirements) rbeExpr
+    ELetIn (bindingFor <$> sortRbeRequirements rbeRequirements) rbeExpr
     where
       bindingFor :: ReproducibleBuildRequirement -> Binding
       bindingFor r =
         PIdent (reproducibleBuildRequirementIdentifier r) |= case r of
           RBRNixpkgs -> nixpkgsFromNiv
+          RBRHaskellPackages -> [nix|import nix/haskell-packages.nix { inherit nixpkgs; }|]
 
 -- | The source directory for the build
 data SrcDir
@@ -79,6 +85,8 @@ defaultNixFor :: SrcDir -> ProjectName -> ProjectType -> Maybe DefaultNix
 defaultNixFor srcDir projectName = \case
   Minimal -> Nothing
   Elm _ -> Nothing
+  Haskell (HaskellOptions _ (HaskellProjectTypeBasic (SetUpHaskellBuild True))) ->
+    Just . DefaultNix . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
   Haskell _ -> Nothing
   Node _ -> Nothing
   Go (SetUpGoBuild True) -> Just . DefaultNix $ reproducibleGoBuild projectName

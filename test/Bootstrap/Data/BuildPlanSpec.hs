@@ -41,7 +41,7 @@ import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.HList (HList (HNil), (~:))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
-import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), ProjectType (Go, Haskell, Rust), SetUpGoBuild (SetUpGoBuild))
+import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), ProjectType (Go, Haskell, Rust), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild))
 import Data.Tree (Tree (Node))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
@@ -59,7 +59,7 @@ spec = describe "toReasonTree" do
           ciConfig = ContinuousIntegrationConfig True
           devContainerConfig = DevContainerConfig True
           buildNix = buildNixFor rcWithFlakes projectName projectType
-          haskellProjectType = Haskell $ HaskellOptions (GHCVersion 9 0 2) HaskellProjectTypeBasic
+          haskellProjectType = Haskell $ HaskellOptions (GHCVersion 9 0 2) (HaskellProjectTypeBasic $ SetUpHaskellBuild True)
       let nixPreCommitHookConfig = nixPreCommitHookConfigFor rcDefault projectType
       buildPlan <-
         BuildPlan

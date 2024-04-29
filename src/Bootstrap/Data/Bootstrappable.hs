@@ -149,18 +149,23 @@ bootstrapContentNix a = do
             )
             <$> writeExprFormatted ShowComments expr
         Left (i1 :| iRest) ->
-          pure . Left $
-            "Nix expression is incorrectly scoped; it references the out of scope "
-              <> ( if null iRest
-                     then "identifier " <> toString (unIdentifier i1)
-                     else
-                       "identifiers "
-                         <> toString
-                           ( foldr (\i acc -> unIdentifier i <> ", " <> acc) ("and " <> unIdentifier i1) iRest
-                           )
-                 )
-              <> ". This is a bug in nix-bootstrap; please "
-              <> "contact the nix-bootstrap team to report it."
+          Left
+            . ( ( "Nix expression is incorrectly scoped; it references the out of scope "
+                    <> ( if null iRest
+                           then "identifier " <> toString (unIdentifier i1)
+                           else
+                             "identifiers "
+                               <> toString
+                                 ( foldr (\i acc -> unIdentifier i <> ", " <> acc) ("and " <> unIdentifier i1) iRest
+                                 )
+                       )
+                    <> ". This is a bug in nix-bootstrap; please "
+                    <> "contact the nix-bootstrap team to report it.\nBad expr was: "
+                )
+                  <>
+              )
+            . show
+            <$> writeExprFormatted ShowComments expr
 
 -- | A helper function when the generated file should be JSON
 --

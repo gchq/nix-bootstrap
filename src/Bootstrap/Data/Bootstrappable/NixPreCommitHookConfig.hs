@@ -142,7 +142,7 @@ nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
           Minimal -> []
           Elm _ -> [elmFormat, elmReview, prettier]
           Haskell (HaskellOptions _ HaskellProjectTypeReplOnly) -> []
-          Haskell (HaskellOptions _ HaskellProjectTypeBasic) -> [hlint, hpack, ormolu]
+          Haskell (HaskellOptions _ (HaskellProjectTypeBasic _)) -> [hlint, hpack, ormolu]
           Node _ -> [prettier]
           Go _ -> [goFmt, goTest]
           Java {} -> [googleJavaFormat]
