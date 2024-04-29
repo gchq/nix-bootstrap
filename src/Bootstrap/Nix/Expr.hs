@@ -149,6 +149,8 @@ data Expr
     EImport
   | -- | Let-In expression
     ELetIn (NonEmpty Binding) Expr
+  | -- | Line comment
+    ELineComment Text
   | -- | List
     EList [Expr]
   | -- | List concatenation operator (++)
@@ -190,7 +192,7 @@ infixl 7 |++
 (|++) e1 = (e1 |* EListConcatOperator |*)
 
 -- | Whether to include comments when formatting
-data CommentsPolicy = ShowComments | HideComments
+data CommentsPolicy = ShowComments | HideComments deriving stock (Eq)
 
 -- | Writes out an `Expr` as Nix code
 writeExpr :: CommentsPolicy -> Expr -> Text
@@ -202,11 +204,10 @@ writeExpr cp =
     EIdent (Identifier i) -> i
     EImport -> "import"
     ELetIn bindings e -> "let " <> sconcat (writeBinding cp <$> bindings) <> "in " <> writeExpr cp e
-    EList exprs ->
-      "["
-        <> (if length exprs > 2 then "\n" else "")
-        <> T.concat (intersperse " " (writeExpr cp <$> exprs))
-        <> "]"
+    ELineComment c -> case cp of
+      ShowComments -> "# " <> c <> "\n"
+      HideComments -> ""
+    EList exprs -> writeList cp exprs
     EListConcatOperator -> "++"
     EPathConcatOperator -> "+"
     ELit l -> writeLiteral l
@@ -231,6 +232,7 @@ mergeNestedLetExprs = \case
   ELetIn bindings e -> case e of
     ELetIn bindings' e' -> ELetIn (mergeNestedLetExprsB <$> (bindings <> bindings')) (mergeNestedLetExprs e')
     _ -> ELetIn bindings (mergeNestedLetExprs e)
+  ELineComment c -> ELineComment c
   EList exprs -> EList (mergeNestedLetExprs <$> exprs)
   EListConcatOperator -> EListConcatOperator
   EPathConcatOperator -> EPathConcatOperator
@@ -288,6 +290,7 @@ parseNonOperatorExpr =
       uncurry EFunc <$> parseFunction,
       parseImport,
       uncurry ELetIn <$> parseLetIn,
+      parseLineComment ELineComment True,
       uncurry EWith <$> parseWith,
       uncurry ESet <$> parseSet True,
       EIdent <$> parseIdentifier,
@@ -312,6 +315,7 @@ parseAtom allowPropertyAccess =
            parseImport,
            uncurry ESet <$> parseSet False,
            EIdent <$> parseIdentifier,
+           parseLineComment ELineComment True,
            EList <$> parseList
          ]
 
@@ -422,7 +426,7 @@ parseBinding requireNewLineAfterCommentLine =
     . lexeme
     $ try space
       *> choice
-        [ try parseBLineComment,
+        [ try (parseLineComment BLineComment requireNewLineAfterCommentLine),
           try parseBInherit,
           try parseBInheritFrom,
           try parseBNameValue
@@ -447,13 +451,6 @@ parseBinding requireNewLineAfterCommentLine =
           )
       void $ symbol ";"
       pure b
-    parseBLineComment :: Parser Binding
-    parseBLineComment = do
-      space *> char '#' *> space
-      BLineComment . toText
-        <$> manyTill
-          L.charLiteral
-          (if requireNewLineAfterCommentLine then void (char '\n') else void (char '\n') <|> eof)
     parseBNameValue :: Parser Binding
     parseBNameValue = do
       n <- lexeme $ parseProperty False
@@ -519,6 +516,36 @@ unsafeSimplifyBindings initBs =
         compareProperties (PCons _ _) _ = LT
         compareProperties _ (PCons _ _) = GT
         compareProperties (PAntiquote e1) (PAntiquote e2) = compare (writeExprForTerminal e1) (writeExprForTerminal e2)
+
+-- | Parses a line comment, such as `ELineComment` or `BLineComment`
+parseLineComment ::
+  (Text -> a) ->
+  -- | Whether to require a newline after a comment line
+  Bool ->
+  Parser a
+parseLineComment construct requireNewLineAfterCommentLine = do
+  space *> char '#' *> space
+  construct . toText
+    <$> manyTill
+      L.charLiteral
+      (if requireNewLineAfterCommentLine then void (char '\n') else void (char '\n') <|> eof)
+
+writeList :: CommentsPolicy -> [Expr] -> Text
+writeList cp exprs =
+  "["
+    <> (if useNewlines then "\n" else "")
+    <> writeListItems False "" exprs
+    <> "]"
+  where
+    useNewlines = length exprs > 2 || (cp == ShowComments && any isLineComment exprs)
+    isLineComment = \case
+      ELineComment _ -> True
+      _ -> False
+    writeListItems _ acc [] = acc
+    writeListItems lastItemWasLineComment acc (next : rest) =
+      if isLineComment next && cp == ShowComments
+        then writeListItems True (acc <> (if lastItemWasLineComment then "" else "\n") <> writeExpr cp next) rest
+        else writeListItems False (acc <> " " <> writeExpr cp next) rest
 
 -- | A representation of a Nix identifier
 newtype Identifier = Identifier {unIdentifier :: Text}
@@ -747,16 +774,16 @@ mkEitherParser p = first (toText . errorBundlePretty) . parse (between skipSpace
 -- is a coarse check which may give false positives, but all negatives
 -- will be genuine errors.
 isMostlyCorrectlyScoped :: Expr -> Either (NonEmpty Identifier) ()
-isMostlyCorrectlyScoped = isCorrectlyScoped' []
+isMostlyCorrectlyScoped = isMostlyCorrectlyScoped' []
 
 -- | Like `isMostlyCorrectlyScoped` but with some known existing scope
-isCorrectlyScoped' :: [Identifier] -> Expr -> Either (NonEmpty Identifier) ()
-isCorrectlyScoped' scope = \case
-  EApplication e1 e2 -> mergeScopeResults (isCorrectlyScoped' scope e1 :| [isCorrectlyScoped' scope e2])
+isMostlyCorrectlyScoped' :: [Identifier] -> Expr -> Either (NonEmpty Identifier) ()
+isMostlyCorrectlyScoped' scope = \case
+  EApplication e1 e2 -> mergeScopeResults (isMostlyCorrectlyScoped' scope e1 :| [isMostlyCorrectlyScoped' scope e2])
   EFunc args e ->
     let additionalScope = case args of FAOne i -> [i]; FASet is -> toList is
-     in isCorrectlyScoped' (scope <> additionalScope) e
-  EGrouping e -> isCorrectlyScoped' scope e
+     in isMostlyCorrectlyScoped' (scope <> additionalScope) e
+  EGrouping e -> isMostlyCorrectlyScoped' scope e
   EIdent i
     | i `elem` scope -> pass
     | i == Identifier "builtins" -> pass
@@ -765,20 +792,21 @@ isCorrectlyScoped' scope = \case
   EImport -> pass
   ELetIn (toList -> bindings) e ->
     mergeScopeResults
-      (bindingsAreCorrectlyScoped scope bindings :| [isCorrectlyScoped' (scope <> scopeFrom bindings) e])
+      (bindingsAreCorrectlyScoped scope bindings :| [isMostlyCorrectlyScoped' (scope <> scopeFrom bindings) e])
+  ELineComment _ -> pass
   EList [] -> pass
-  EList (e1 : eRest) -> mergeScopeResults (isCorrectlyScoped' scope <$> e1 :| eRest)
+  EList (e1 : eRest) -> mergeScopeResults (isMostlyCorrectlyScoped' scope <$> e1 :| eRest)
   EListConcatOperator -> pass
   EPathConcatOperator -> pass
   ELit _ -> pass
-  EPropertyAccess e p -> mergeScopeResults (isCorrectlyScoped' scope e :| [propertyIsCorrectlyScoped scope p])
+  EPropertyAccess e p -> mergeScopeResults (isMostlyCorrectlyScoped' scope e :| [propertyIsCorrectlyScoped scope p])
   ESet isRec bindings ->
     bindingsAreCorrectlyScoped
       ((if isRec then scopeFrom bindings else []) <> scope)
       bindings
-  EWith additionalScope _ -> isCorrectlyScoped' scope additionalScope
+  EWith additionalScope _ -> isMostlyCorrectlyScoped' scope additionalScope
 
--- | Used by isCorrectlyScoped' to ensure bindings are handled properly and in order
+-- | Used by isMostlyCorrectlyScoped' to ensure bindings are handled properly and in order
 --
 -- When inheriting from another set, bindings will always claim to be in scope.
 bindingsAreCorrectlyScoped :: [Identifier] -> [Binding] -> Either (NonEmpty Identifier) ()
@@ -805,14 +833,14 @@ bindingsAreCorrectlyScoped scope (b : bs) =
               is
           )
       -- ((\i -> if i `elem` scope || i == Identifier "builtins" then pass else ) <$> is)
-      BInheritFrom e _ -> isCorrectlyScoped' scope e
+      BInheritFrom e _ -> isMostlyCorrectlyScoped' scope e
       BLineComment _ -> pass
-      BNameValue p v -> mergeScopeResults (propertyIsCorrectlyScoped scope p :| [isCorrectlyScoped' scope v])
+      BNameValue p v -> mergeScopeResults (propertyIsCorrectlyScoped scope p :| [isMostlyCorrectlyScoped' scope v])
 
 propertyIsCorrectlyScoped :: [Identifier] -> Property -> Either (NonEmpty Identifier) ()
 propertyIsCorrectlyScoped scope = \case
   PIdent _ -> pass
-  PAntiquote e -> isCorrectlyScoped' scope e
+  PAntiquote e -> isMostlyCorrectlyScoped' scope e
   p1 `PCons` p2 -> mergeScopeResults (propertyIsCorrectlyScoped scope p1 :| [propertyIsCorrectlyScoped scope p2])
 
 -- | Merges scope results, ensuring all failures are kept in a `Left` value, or
