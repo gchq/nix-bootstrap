@@ -17,6 +17,7 @@ import Bootstrap.Nix.Expr
         EIdent,
         EImport,
         ELetIn,
+        ELineComment,
         EList,
         EListConcatOperator,
         ELit,
@@ -77,6 +78,7 @@ instance Arbitrary Expr where
             oneof
               [ EIdent <$> arbitrary,
                 pure EImport,
+                ELineComment . unLineCommentContents <$> arbitrary,
                 ELit <$> arbitrary
               ]
           genComplex =
@@ -126,9 +128,7 @@ instance Arbitrary Binding where
     oneof
       [ BInherit <$> listOf1 arbitrary,
         BInheritFrom <$> arbitrary <*> listOf1 arbitrary,
-        BLineComment . toText . toList
-          <$> listOf1
-            (arbitrary `suchThat` \c -> isAscii c && isPrint c && not (isSpace c) && c /= '\\'),
+        BLineComment . unLineCommentContents <$> arbitrary,
         BNameValue <$> (PIdent <$> arbitrary) <*> arbitrary
       ]
 
@@ -145,6 +145,14 @@ instance Arbitrary Literal where
         LPath . toText . unValidPathLiteralString <$> arbitrary,
         LString . toText . unValidLiteralString <$> arbitrary
       ]
+
+newtype LineCommentContents = LineCommentContents {unLineCommentContents :: Text}
+
+instance Arbitrary LineCommentContents where
+  arbitrary =
+    LineCommentContents . toText . toList
+      <$> listOf1
+        (arbitrary `suchThat` \c -> isAscii c && isPrint c && not (isSpace c) && c /= '\\')
 
 spec :: Spec
 spec = do
@@ -433,6 +441,7 @@ isAtomic = \case
   EIdent _ -> True
   EImport -> True
   ELetIn _ _ -> False
+  ELineComment _ -> False
   EList _ -> True
   EListConcatOperator -> True
   EPathConcatOperator -> True
@@ -454,6 +463,7 @@ couldBeAFunction = \case
   EIdent _ -> True
   EImport -> True
   ELetIn _ e -> couldBeAFunction e
+  ELineComment _ -> False
   EList _ -> False
   EListConcatOperator -> True
   EPathConcatOperator -> True
