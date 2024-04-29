@@ -51,5 +51,5 @@ mainHsFor :: ProjectType -> Maybe MainHs
 mainHsFor = \case
   Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
-    HaskellProjectTypeBasic -> Just MainHs
+    HaskellProjectTypeBasic _ -> Just MainHs
   _ -> Nothing

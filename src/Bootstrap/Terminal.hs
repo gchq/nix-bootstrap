@@ -11,6 +11,7 @@ module Bootstrap.Terminal
     promptYesNoWithDefault,
     promptYesNoWithCustomPromptAndDefault,
     putErrorLn,
+    askIfReproducibleBuildRequired,
     withAttribute,
     withAttributes,
   )
@@ -301,6 +302,18 @@ getFreeText minCursorPos state = do
           _ -> getFreeText minCursorPos state
         _ -> getFreeText minCursorPos state
     _ -> getFreeText minCursorPos state
+
+askIfReproducibleBuildRequired :: MonadBootstrap m => m Bool
+askIfReproducibleBuildRequired = promptYesNoWithCustomPrompt do
+  let (part1, part2, part3) =
+        ( "Would you like to set up a reproducible build for this project ",
+          "(EXPERIMENTAL)",
+          "?"
+        )
+  withAttribute (foreground blue) $ putText part1
+  withAttributes [bold, foreground yellow] $ putText part2
+  withAttribute (foreground blue) $ putText part3
+  pure $ sum $ T.length <$> [part1, part2, part3]
 
 putErrorLn :: MonadBootstrap m => Text -> m ()
 putErrorLn msg = withAttribute (foreground red) (putTextLn msg)

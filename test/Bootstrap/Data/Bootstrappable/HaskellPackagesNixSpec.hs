@@ -11,6 +11,7 @@ import Bootstrap.Data.ProjectType
     HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
     ProjectType (Go, Haskell),
     SetUpGoBuild (SetUpGoBuild),
+    SetUpHaskellBuild (SetUpHaskellBuild),
   )
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
@@ -37,7 +38,7 @@ nixpkgs.haskell.packages.ghc942.override {
               )
       Nothing -> fail "Gave nothing for a project which should've had a haskell-packages.nix generated."
   it "renders correctly for a full Haskell project" do
-    case haskellPackagesNixFor (Haskell $ HaskellOptions (GHCVersion 9 4 2) HaskellProjectTypeBasic) of
+    case haskellPackagesNixFor (Haskell $ HaskellOptions (GHCVersion 9 4 2) (HaskellProjectTypeBasic $ SetUpHaskellBuild True)) of
       Just haskellPackagesNix ->
         bootstrapContent haskellPackagesNix
           >>= ( `shouldBe`

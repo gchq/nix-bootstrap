@@ -24,6 +24,7 @@ import Bootstrap.Data.ProjectType
     HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
     ProjectType (Elm, Go, Haskell, Python),
     SetUpGoBuild (SetUpGoBuild),
+    SetUpHaskellBuild (SetUpHaskellBuild),
   )
 import Bootstrap.Nix.Command
   ( NixCommand (NixCommand),
@@ -46,6 +47,19 @@ instance Bootstrappable Readme where
   bootstrapReason = const "This helpfully explains to you what each file (including itself) does!"
   bootstrapContent Readme {..} = do
     let commandStyle = if readmeUseFlakes then NCSNew else NCSOld
+        buildFileName = if readmeUseFlakes then "nix/build.nix" else "default.nix"
+        buildingForProduction =
+          [ "",
+            "## Building for Production",
+            "",
+            "To produce a production build as defined in `"
+              <> buildFileName
+              <> "`, run `"
+              <> writeNixCommand (NixCommand commandStyle NCVBuild)
+              <> "`.",
+            "",
+            "This will produce a `result` directory with built artefacts."
+          ]
     pure . Right . unlines $
       intersperse
         ""
@@ -179,7 +193,7 @@ instance Bootstrappable Readme where
                      "",
                      "You can use the provided Haskell repl by running `cabal repl` in the dev shell."
                    ]
-                 HaskellProjectTypeBasic ->
+                 HaskellProjectTypeBasic (SetUpHaskellBuild withBuild) ->
                    [ "",
                      "## Using your project",
                      "",
@@ -187,16 +201,8 @@ instance Bootstrappable Readme where
                      "2. `cabal build` will build your application",
                      "3. `cabal run app` will run your application. **Note:** this will initially fail until you replace the body of the `lib` function in `src/Lib.hs`."
                    ]
-               Go (SetUpGoBuild True) ->
-                 [ "",
-                   "## Building for Production",
-                   "",
-                   "To produce a production build as defined in `default.nix`, run `"
-                     <> writeNixCommand (NixCommand commandStyle NCVBuild)
-                     <> "`.",
-                   "",
-                   "This will produce a `result` directory with built artefacts."
-                 ]
+                     <> if withBuild then buildingForProduction else []
+               Go (SetUpGoBuild True) -> buildingForProduction
                Python _ ->
                  [ "",
                    "## Adding Python Dependencies",

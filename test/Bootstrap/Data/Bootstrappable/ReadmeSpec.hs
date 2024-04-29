@@ -14,16 +14,7 @@ import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
 import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
-import Bootstrap.Data.ProjectType
-  ( ElmMode (ElmModeNode),
-    ElmOptions (ElmOptions),
-    HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
-    NodePackageManager (NPM, PNPm),
-    ProjectType (Elm, Go, Haskell, Node, Python),
-    PythonVersion (Python39),
-    SetUpGoBuild (SetUpGoBuild),
-  )
+import Bootstrap.Data.ProjectType (ElmMode (ElmModeNode), ElmOptions (ElmOptions), HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly), NodePackageManager (NPM, PNPm), ProjectType (Elm, Go, Haskell, Node, Python), PythonVersion (Python39), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
@@ -216,7 +207,7 @@ If you'd like to learn more about how the generated infrastructure works, or hav
     bootstrapContent
       ( Readme
           projectName
-          (Haskell $ HaskellOptions (GHCVersion 9 0 2) HaskellProjectTypeBasic)
+          (Haskell $ HaskellOptions (GHCVersion 9 0 2) (HaskellProjectTypeBasic $ SetUpHaskellBuild True))
           (DevContainerConfig False)
           Nothing
           False
@@ -274,6 +265,12 @@ _After following the steps above, you will be able to use any of the project's t
 1. Generate a cabal file by running `hpack`
 2. `cabal build` will build your application
 3. `cabal run app` will run your application. **Note:** this will initially fail until you replace the body of the `lib` function in `src/Lib.hs`.
+
+## Building for Production
+
+To produce a production build as defined in `default.nix`, run `nix-build`.
+
+This will produce a `result` directory with built artefacts.
 
 ## nix-bootstrap
 
@@ -563,7 +560,7 @@ _After following the steps above, you will be able to use any of the project's t
 
 ## Building for Production
 
-To produce a production build as defined in `default.nix`, run `nix build`.
+To produce a production build as defined in `nix/build.nix`, run `nix build`.
 
 This will produce a `result` directory with built artefacts.
 

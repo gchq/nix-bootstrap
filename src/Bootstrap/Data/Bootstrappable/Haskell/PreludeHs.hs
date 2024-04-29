@@ -36,5 +36,5 @@ preludeHsFor :: ProjectType -> Maybe PreludeHs
 preludeHsFor = \case
   Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
-    HaskellProjectTypeBasic -> Just PreludeHs
+    HaskellProjectTypeBasic _ -> Just PreludeHs
   _ -> Nothing

@@ -117,9 +117,9 @@ import Bootstrap.Data.ProjectType
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
-    haskellProjectTypeName,
     nodePackageManagerName,
     projectSuperTypeName,
+    promptHaskellProjectType,
   )
 import Bootstrap.Data.Version (MajorVersion (MajorVersion), displayMajorVersion)
 import Bootstrap.Error (CanDieOnError (dieOnError', dieOnErrorWithPrefix))
@@ -129,10 +129,10 @@ import Bootstrap.Niv (initialiseNiv)
 import Bootstrap.Nix.Evaluate (NixBinaryPaths, getAvailableGHCVersions, getNixBinaryPaths, getNixConfig, getNixVersion)
 import Bootstrap.Nix.Flake (generateIntermediateFlake)
 import Bootstrap.Terminal
-  ( promptChoice,
+  ( askIfReproducibleBuildRequired,
+    promptChoice,
     promptNonemptyText,
     promptYesNo,
-    promptYesNoWithCustomPrompt,
     promptYesNoWithDefault,
     putErrorLn,
     withAttribute,
@@ -411,7 +411,7 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
       availableGHCVersions <- getAvailableGHCVersions nixBinaryPaths runConfig
       case nonEmpty $ toList availableGHCVersions of
         Just availableGHCVersions' -> do
-          haskellProjectType <- promptChoice "What kind of Haskell project would you like?" universeNonEmpty haskellProjectTypeName
+          haskellProjectType <- promptHaskellProjectType
           ghcVersion <- promptChoice "Select a version of the Glasgow Haskell Compiler:" availableGHCVersions' printGHCVersion
           pure . Haskell $ HaskellOptions ghcVersion haskellProjectType
         Nothing -> putErrorLn "Could not find any versions of GHC in nixpkgs" *> exitFailure
@@ -437,18 +437,6 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
       pure . Java $ JavaOptions installMinishift installLombok setUpJavaBuild
     PSTPython -> pure $ Python Python39
     PSTRust -> pure Rust
-  where
-    askIfReproducibleBuildRequired :: m Bool
-    askIfReproducibleBuildRequired = promptYesNoWithCustomPrompt do
-      let (part1, part2, part3) =
-            ( "Would you like to set up a reproducible build for this project ",
-              "(EXPERIMENTAL)",
-              "?"
-            )
-      withAttribute (foreground blue) $ putText part1
-      withAttributes [bold, foreground yellow] $ putText part2
-      withAttribute (foreground blue) $ putText part3
-      pure $ sum $ T.length <$> [part1, part2, part3]
 
 data MakeBuildPlanArgs = MakeBuildPlanArgs
   { mbpNixBinaryPaths :: NixBinaryPaths,

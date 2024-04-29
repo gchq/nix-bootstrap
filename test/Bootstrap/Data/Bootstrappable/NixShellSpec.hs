@@ -8,14 +8,7 @@ import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookCon
 import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
 import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
-import Bootstrap.Data.ProjectType
-  ( HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic),
-    NodePackageManager (NPM, PNPm),
-    ProjectType (Go, Haskell, Node, Python, Rust),
-    PythonVersion (Python39),
-    SetUpGoBuild (SetUpGoBuild),
-  )
+import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), NodePackageManager (NPM, PNPm), ProjectType (Go, Haskell, Node, Python, Rust), PythonVersion (Python39), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild))
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Test.Util.RunConfig (rcDefault)
@@ -81,7 +74,7 @@ in
     bootstrapContent
       ( nixShellFor
           rcDefault
-          (Haskell $ HaskellOptions (GHCVersion 9 0 2) HaskellProjectTypeBasic)
+          (Haskell $ HaskellOptions (GHCVersion 9 0 2) (HaskellProjectTypeBasic $ SetUpHaskellBuild True))
           (PreCommitHooksConfig False)
           Nothing
       )

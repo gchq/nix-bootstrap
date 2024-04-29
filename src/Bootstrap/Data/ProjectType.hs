@@ -17,7 +17,8 @@ module Bootstrap.Data.ProjectType
     ElmMode (..),
     HaskellOptions (..),
     HaskellProjectType (..),
-    haskellProjectTypeName,
+    promptHaskellProjectType,
+    SetUpHaskellBuild (..),
     NodePackageManager (..),
     nodePackageManagerName,
     SetUpGoBuild (..),
@@ -37,10 +38,15 @@ module Bootstrap.Data.ProjectType
     migrateProjectTypeFromV3,
     ProjectTypeV4 (..),
     migrateProjectTypeFromV4,
+    ProjectTypeV5 (..),
+    migrateProjectTypeFromV5,
   )
 where
 
 import Bootstrap.Data.GHCVersion (GHCVersion)
+import Bootstrap.Monad (MonadBootstrap)
+import Bootstrap.Terminal (askIfReproducibleBuildRequired, promptChoice)
+import qualified Data.Text as T
 import Data.Tuple.Extra (uncurry3)
 import Dhall (FromDhall, ToDhall)
 import Dhall.Deriving
@@ -134,7 +140,16 @@ data HaskellOptionsDhallFields
 instance TextFunction HaskellOptionsDhallFields where
   textFunction = \case
     "haskellOptionsGHCVersion" -> "ghcVersion"
-    _anythingElse -> textFunction @(CamelCase <<< DropPrefix "haskellOptions") _anythingElse
+    _anythingElse
+      | "haskellOptionsV4" `T.isPrefixOf` _anythingElse -> textFunction @(CamelCase <<< DropPrefix "haskellOptionsV4") _anythingElse
+      | otherwise -> textFunction @(CamelCase <<< DropPrefix "haskellOptions") _anythingElse
+
+data HaskellOptionsV4 = HaskellOptionsV4
+  { haskellOptionsV4GHCVersion :: GHCVersion,
+    haskellOptionsV4HaskellProjectType :: HaskellProjectTypeV4
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Field HaskellOptionsDhallFields) HaskellOptionsV4
 
 data HaskellOptions = HaskellOptions
   { haskellOptionsGHCVersion :: GHCVersion,
@@ -143,16 +158,41 @@ data HaskellOptions = HaskellOptions
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Field HaskellOptionsDhallFields) HaskellOptions
 
+data HaskellProjectTypeV4
+  = HaskellProjectV4TypeReplOnly
+  | HaskellProjectV4TypeBasic
+  deriving stock (Bounded, Enum, Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "HaskellProjectTypeV4")) HaskellProjectTypeV4
+
 data HaskellProjectType
   = HaskellProjectTypeReplOnly
-  | HaskellProjectTypeBasic
-  deriving stock (Bounded, Enum, Eq, Generic, Show)
+  | HaskellProjectTypeBasic SetUpHaskellBuild
+  deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "HaskellProjectType")) HaskellProjectType
 
-haskellProjectTypeName :: HaskellProjectType -> Text
-haskellProjectTypeName = \case
-  HaskellProjectTypeReplOnly -> "REPL only"
-  HaskellProjectTypeBasic -> "Basic Library + Executable"
+data HaskellProjectTypeSimple
+  = HaskellProjectTypeSimpleReplOnly
+  | HaskellProjectTypeSimpleBasic
+  deriving stock (Bounded, Enum, Eq, Generic, Show)
+
+haskellProjectTypeSimpleName :: HaskellProjectTypeSimple -> Text
+haskellProjectTypeSimpleName = \case
+  HaskellProjectTypeSimpleReplOnly -> "REPL only"
+  HaskellProjectTypeSimpleBasic -> "Basic Library + Executable"
+
+newtype SetUpHaskellBuild = SetUpHaskellBuild {unSetUpHaskellBuild :: Bool}
+  deriving newtype (Bounded, Enum, FromDhall, ToDhall)
+  deriving stock (Eq, Show)
+
+promptHaskellProjectType :: MonadBootstrap m => m HaskellProjectType
+promptHaskellProjectType =
+  promptChoice
+    "What kind of Haskell project would you like?"
+    universeNonEmpty
+    haskellProjectTypeSimpleName
+    >>= \case
+      HaskellProjectTypeSimpleReplOnly -> pure HaskellProjectTypeReplOnly
+      HaskellProjectTypeSimpleBasic -> HaskellProjectTypeBasic . SetUpHaskellBuild <$> askIfReproducibleBuildRequired
 
 data NodePackageManager = NPM | PNPm | Yarn
   deriving stock (Bounded, Enum, Eq, Generic, Show)
@@ -328,7 +368,7 @@ migrateProjectTypeFromV3 =
 data ProjectTypeV4
   = PTV4Minimal
   | PTV4Elm ElmOptions
-  | PTV4Haskell HaskellOptions
+  | PTV4Haskell HaskellOptionsV4
   | PTV4Node NodePackageManager
   | PTV4Go SetUpGoBuild
   | PTV4Java JavaOptions
@@ -350,8 +390,54 @@ migrateProjectTypeFromV4 :: ProjectTypeV4 -> ProjectType
 migrateProjectTypeFromV4 = \case
   PTV4Minimal -> Minimal
   PTV4Elm x -> Elm x
-  PTV4Haskell x -> Haskell x
+  PTV4Haskell x -> Haskell $ migrateHaskellOptionsFromV4 x
   PTV4Node x -> Node x
   PTV4Go x -> Go x
   PTV4Java x -> Java x
   PTV4Python x -> Python x
+
+migrateHaskellOptionsFromV4 :: HaskellOptionsV4 -> HaskellOptions
+migrateHaskellOptionsFromV4 HaskellOptionsV4 {..} =
+  HaskellOptions
+    { haskellOptionsGHCVersion = haskellOptionsV4GHCVersion,
+      haskellOptionsHaskellProjectType = migrateHaskellProjectTypeFromV4 haskellOptionsV4HaskellProjectType
+    }
+
+migrateHaskellProjectTypeFromV4 :: HaskellProjectTypeV4 -> HaskellProjectType
+migrateHaskellProjectTypeFromV4 = \case
+  HaskellProjectV4TypeReplOnly -> HaskellProjectTypeReplOnly
+  HaskellProjectV4TypeBasic -> HaskellProjectTypeBasic $ SetUpHaskellBuild False
+
+data ProjectTypeV5
+  = PTV5Minimal
+  | PTV5Elm ElmOptions
+  | PTV5Haskell HaskellOptionsV4
+  | PTV5Node NodePackageManager
+  | PTV5Go SetUpGoBuild
+  | PTV5Java JavaOptions
+  | PTV5Python PythonVersion
+  | PTV5Rust
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectTypeV5
+
+instance HasProjectSuperType ProjectTypeV5 where
+  projectSuperType = \case
+    PTV5Minimal -> PSTMinimal
+    PTV5Elm _ -> PSTElm
+    PTV5Haskell _ -> PSTHaskell
+    PTV5Node _ -> PSTNode
+    PTV5Go _ -> PSTGo
+    PTV5Java {} -> PSTJava
+    PTV5Python _ -> PSTPython
+    PTV5Rust -> PSTRust
+
+migrateProjectTypeFromV5 :: ProjectTypeV5 -> ProjectType
+migrateProjectTypeFromV5 = \case
+  PTV5Minimal -> Minimal
+  PTV5Elm x -> Elm x
+  PTV5Haskell x -> Haskell $ migrateHaskellOptionsFromV4 x
+  PTV5Node x -> Node x
+  PTV5Go x -> Go x
+  PTV5Java x -> Java x
+  PTV5Python x -> Python x
+  PTV5Rust -> Rust

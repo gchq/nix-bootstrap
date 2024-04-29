@@ -125,7 +125,7 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
                   |= ghcWithPackages
                     ( case haskellProjectType of
                         HaskellProjectTypeReplOnly -> [[nixident|cabal-install|]]
-                        HaskellProjectTypeBasic -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
+                        HaskellProjectTypeBasic _ -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
                     )
               ]
       Node _ -> []
