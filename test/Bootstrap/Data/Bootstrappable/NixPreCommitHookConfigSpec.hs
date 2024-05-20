@@ -11,6 +11,7 @@ import Bootstrap.Data.ProjectType
   ( InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
+    JdkPackage (OpenJDK),
     NodePackageManager (NPM),
     ProjectType (Go, Java, Node),
     SetUpGoBuild (SetUpGoBuild),
@@ -92,7 +93,7 @@ in {
     bootstrapContent
       ( nixPreCommitHookConfigFor
           rcDefault
-          (Java $ JavaOptions (InstallMinishift False) (InstallLombok False) NoJavaBuild)
+          (Java $ JavaOptions (InstallMinishift False) (InstallLombok False) NoJavaBuild OpenJDK)
       )
       >>= ( `shouldBe`
               Right

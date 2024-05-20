@@ -5,9 +5,9 @@
 module Bootstrap.Nix.Expr.ReproducibleBuild.Java (reproducibleJavaBuild) where
 
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
-import Bootstrap.Data.ProjectType (ArtefactId (unArtefactId))
+import Bootstrap.Data.ProjectType (ArtefactId (unArtefactId), JdkPackage (GraalVM, OpenJDK))
 import Bootstrap.Nix.Expr
-  ( Expr (ELetIn, ELit),
+  ( Expr (ELetIn, EList, ELit),
     Literal (LString),
     nix,
     nixbinding,
@@ -19,16 +19,17 @@ import Bootstrap.Nix.Expr.ReproducibleBuild
     ReproducibleBuildRequirement (RBRNixpkgs),
   )
 
-reproducibleJavaBuild :: ProjectName -> ArtefactId -> ReproducibleBuildExpr
-reproducibleJavaBuild projectName artefactId =
+reproducibleJavaBuild :: ProjectName -> ArtefactId -> JdkPackage -> ReproducibleBuildExpr
+reproducibleJavaBuild projectName artefactId jdk =
   ReproducibleBuildExpr
     ( ELetIn
         ( ([nixproperty|projectName|] |= ELit (LString $ unProjectName projectName))
             :| [ [nixproperty|artefactId|] |= ELit (LString $ unArtefactId artefactId),
+                 [nixproperty|buildInputs|] |= EList (mvnOverride jdk),
                  [nixbinding|
         repository = nixpkgs.stdenv.mkDerivation {
+            inherit buildInputs;
             name = "${projectName}-repository";
-            buildInputs = [nixpkgs.maven];
             src = ./.;
             buildPhase = "mvn package -Dmaven.repo.local=$out";
             # keep only *.{pom,jar,sha1,nbm} and delete all ephemeral files with lastModified timestamps inside
@@ -48,10 +49,10 @@ reproducibleJavaBuild projectName artefactId =
         };|],
                  [nixbinding|
         builtJar = nixpkgs.stdenv.mkDerivation rec {
+            inherit buildInputs;
             pname = projectName;
             version = "0.0.1-SNAPSHOT";
             src = ./.;
-            buildInputs = [nixpkgs.maven];
             buildPhase = ''
             echo "Using repository ${repository}"
             mvn --offline -Dmaven.repo.local=${repository} package;
@@ -86,3 +87,8 @@ reproducibleJavaBuild projectName artefactId =
     }|]
     )
     (one RBRNixpkgs)
+
+mvnOverride :: JdkPackage -> [Expr]
+mvnOverride = \case
+  OpenJDK -> [[nix|nixpkgs.maven|]]
+  GraalVM -> [[nix|(nixpkgs.maven.override { jdk = nixpkgs.graalvm-ce; })|]]

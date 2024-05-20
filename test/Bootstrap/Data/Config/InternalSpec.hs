@@ -54,6 +54,7 @@ let JavaOptions =
       { installMinishift : Bool
       , installLombok : Bool
       , setUpJavaBuild : < SetUpJavaBuild : Text | NoJavaBuild >
+      , jdk : < OpenJDK | GraalVM >
       }
 
 let ProjectType =

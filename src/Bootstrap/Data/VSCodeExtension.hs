@@ -34,7 +34,7 @@ vsCodeExtensionsFor =
     (Haskell (HaskellOptions _ _)) -> ["haskell.haskell"]
     Node _ -> []
     Go _ -> ["golang.Go"]
-    Java (JavaOptions _ installLombok _) ->
+    Java (JavaOptions _ installLombok _ _) ->
       ["vscjava.vscode-java-pack"]
         <> ["gabrielbb.vscode-lombok" | unInstallLombok installLombok]
     Python _ -> ["ms-python.python"]

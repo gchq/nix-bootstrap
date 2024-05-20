@@ -32,8 +32,8 @@ import Bootstrap.Data.Config.Internal
         LoadConfigResultFound,
         LoadConfigResultNotFound
       ),
-    VersionedConfig (VersionedConfigV6),
-    VersionedProjectType (VPT6),
+    VersionedConfig (VersionedConfigV7),
+    VersionedProjectType (VPT7),
     configV3ProjectName,
     configV3ProjectType,
     configV3SetUpContinuousIntegration,
@@ -65,5 +65,5 @@ configFor ::
   Bool ->
   Config
 configFor a1 a2 a3 a4 a5 a6 =
-  VersionedConfigV6 $
-    ConfigV3Plus a1 (VPT6 a2) a3 a4 a5 a6
+  VersionedConfigV7 $
+    ConfigV3Plus a1 (VPT7 a2) a3 a4 a5 a6

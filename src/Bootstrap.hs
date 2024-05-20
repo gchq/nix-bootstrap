@@ -117,6 +117,7 @@ import Bootstrap.Data.ProjectType
     PythonVersion (Python39),
     SetUpGoBuild (SetUpGoBuild),
     SetUpJavaBuild (NoJavaBuild, SetUpJavaBuild),
+    jdkName,
     nodePackageManagerName,
     projectSuperTypeName,
     promptHaskellProjectType,
@@ -422,6 +423,7 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
       setUpGoBuild <- SetUpGoBuild <$> askIfReproducibleBuildRequired
       pure $ Go setUpGoBuild
     PSTJava -> do
+      jdk <- promptChoice "Select a Java Development Kit:" universeNonEmpty jdkName
       installMinishift <- InstallMinishift <$> promptYesNo "Would you like to install Minishift?"
       installLombok <-
         InstallLombok
@@ -434,7 +436,7 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
           True ->
             SetUpJavaBuild . ArtefactId
               <$> promptNonemptyText Nothing "Enter your Maven ArtefactId (e.g. the 'demo' in 'com.example.demo'): "
-      pure . Java $ JavaOptions installMinishift installLombok setUpJavaBuild
+      pure . Java $ JavaOptions installMinishift installLombok setUpJavaBuild jdk
     PSTPython -> pure $ Python Python39
     PSTRust -> pure Rust
 

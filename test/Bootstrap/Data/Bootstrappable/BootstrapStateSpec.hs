@@ -11,7 +11,7 @@ import Bootstrap.Data.DevContainer (DevContainerConfig (DevContainerConfig))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType
-  ( JavaOptions (JavaOptions),
+  ( JavaOptionsV2 (JavaOptionsV2),
     ProjectTypeV2
       ( PTV2Go,
         PTV2Java,
@@ -50,7 +50,7 @@ instance Arbitrary ProjectTypeV2 where
       [ pure PTV2Minimal,
         PTV2Node <$> arbitraryBoundedEnum,
         PTV2Go <$> arbitraryBoundedEnum,
-        PTV2Java <$> (JavaOptions <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary),
+        PTV2Java <$> (JavaOptionsV2 <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary),
         PTV2Python <$> arbitraryBoundedEnum
       ]
 

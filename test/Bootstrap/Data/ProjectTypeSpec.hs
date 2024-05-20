@@ -36,7 +36,7 @@ instance Arbitrary ProjectType where
               ),
         Node <$> arbitraryBoundedEnum,
         Go <$> arbitraryBoundedEnum,
-        Java <$> (JavaOptions <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary),
+        Java <$> (JavaOptions <$> arbitraryBoundedEnum <*> arbitraryBoundedEnum <*> arbitrary <*> arbitraryBoundedEnum),
         Python <$> arbitraryBoundedEnum
       ]
 

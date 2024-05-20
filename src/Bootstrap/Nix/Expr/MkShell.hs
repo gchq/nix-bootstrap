@@ -10,6 +10,8 @@ import Bootstrap.Data.PreCommitHook
 import Bootstrap.Data.ProjectType
   ( HasProjectSuperType (projectSuperType),
     ProjectSuperType (PSTJava, PSTRust),
+    ProjectType,
+    jdkPackageName,
   )
 import Bootstrap.Nix.Expr
   ( Binding,
@@ -27,7 +29,7 @@ import Bootstrap.Nix.Expr.BuildInputs
   )
 
 -- | A nixpkgs.mkShell expression. Expects `nixpkgs` to be in scope.
-mkShell :: HasProjectSuperType t => BuildInputSpec t -> Expr
+mkShell :: BuildInputSpec ProjectType -> Expr
 mkShell buildInputSpec@BuildInputSpec {bisPreCommitHooksConfig, bisProjectType} =
   [nix|nixpkgs.mkShell|]
     |* ESet
@@ -38,14 +40,14 @@ mkShell buildInputSpec@BuildInputSpec {bisPreCommitHooksConfig, bisProjectType} 
 
 data ShellHook
   = ShellHookFromPreCommit
-  | ShellHookJava
+  | ShellHookJava Text
   | ShellHookRust
   | ShellHookCombined (NonEmpty ShellHook)
 
-shellHookFor :: HasProjectSuperType t => PreCommitHooksConfig -> t -> Maybe ShellHook
+shellHookFor :: PreCommitHooksConfig -> ProjectType -> Maybe ShellHook
 shellHookFor pchc pt = case (pchc, projectSuperType pt) of
-  (PreCommitHooksConfig True, PSTJava) -> Just $ ShellHookCombined (ShellHookJava :| [ShellHookFromPreCommit])
-  (PreCommitHooksConfig False, PSTJava) -> Just ShellHookJava
+  (PreCommitHooksConfig True, PSTJava) -> Just $ ShellHookCombined (ShellHookJava (jdkPackageName pt) :| [ShellHookFromPreCommit])
+  (PreCommitHooksConfig False, PSTJava) -> Just $ ShellHookJava (jdkPackageName pt)
   (PreCommitHooksConfig True, PSTRust) -> Just $ ShellHookCombined (ShellHookRust :| [ShellHookFromPreCommit])
   (PreCommitHooksConfig False, PSTRust) -> Just ShellHookRust
   (PreCommitHooksConfig True, _) -> Just ShellHookFromPreCommit
@@ -64,6 +66,6 @@ shellHookBinding = \case
     shellHookComponentBinding :: ShellHook -> [Text]
     shellHookComponentBinding = \case
       ShellHookFromPreCommit -> ["${preCommitHooks.allHooks.shellHook}"]
-      ShellHookJava -> ["export JAVA_HOME=\"${nixpkgs.jdk}\""]
+      ShellHookJava jdk -> ["export JAVA_HOME=\"${nixpkgs."] ++ [jdk] ++ ["}\""]
       ShellHookRust -> ["export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}"]
       ShellHookCombined xs -> sconcat $ shellHookComponentBinding <$> xs

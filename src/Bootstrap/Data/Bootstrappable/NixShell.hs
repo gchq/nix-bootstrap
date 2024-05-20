@@ -31,6 +31,7 @@ import Bootstrap.Data.ProjectType
     HaskellOptions (HaskellOptions),
     HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
     JavaOptions (JavaOptions),
+    JdkPackage (GraalVM, OpenJDK),
     NodePackageManager (NPM, PNPm, Yarn),
     ProjectType
       ( Elm,
@@ -158,8 +159,9 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
         Node packageManager ->
           [[nix|awscli2|], [nix|nodejs|]] <> nodePackageManager packageManager
         Go _ -> [[nix|go|]]
-        Java (JavaOptions installMinishift _ _) ->
-          [[nix|maven|], [nix|google-java-format|], [nix|jdk|]]
+        Java (JavaOptions installMinishift _ _ jdkName) ->
+          [[nix|google-java-format|]]
+            <> jdkPackage jdkName
             <> [[nix|minishift|] | unInstallMinishift installMinishift]
         Python _ -> []
         Rust -> [[nix|libiconv|]]
@@ -168,6 +170,10 @@ nixShellFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig nixPreCommi
       NPM -> []
       PNPm -> [[nix|nodePackages.pnpm|]]
       Yarn -> [[nix|yarn|]]
+    jdkPackage :: JdkPackage -> [Expr]
+    jdkPackage = \case
+      OpenJDK -> [[nix|jdk|], [nix|maven|]]
+      GraalVM -> [[nix|graalvm-ce|], [nix|(maven.override { jdk = graalvm-ce; })|]]
     otherBuildInputsFor :: ProjectType -> [Expr]
     otherBuildInputsFor =
       sortBy compareBuildInputs . \case

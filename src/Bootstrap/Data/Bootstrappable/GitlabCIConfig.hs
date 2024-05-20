@@ -77,7 +77,7 @@ instance Bootstrappable GitlabCIConfig where
         <> case gitlabCIConfigProjectType of
           Elm opts -> elmSiteJob opts
           Go (SetUpGoBuild True) -> buildJob
-          Java (JavaOptions _ _ (SetUpJavaBuild _)) -> buildJob
+          Java (JavaOptions _ _ (SetUpJavaBuild _) _) -> buildJob
           _ -> []
     where
       buildJob :: [Text]
