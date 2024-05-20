@@ -91,7 +91,7 @@ defaultNixFor srcDir projectName = \case
   Node _ -> Nothing
   Go (SetUpGoBuild True) -> Just . DefaultNix $ reproducibleGoBuild projectName
   Go _ -> Nothing
-  Java (JavaOptions _ _ (SetUpJavaBuild artefactId)) -> Just . DefaultNix $ reproducibleJavaBuild projectName artefactId
+  Java (JavaOptions _ _ (SetUpJavaBuild artefactId) jdk) -> Just . DefaultNix $ reproducibleJavaBuild projectName artefactId jdk
   Java _ -> Nothing
   Python _ -> Nothing
   Rust -> Just . DefaultNix . reproducibleRustBuild $ srcDirExpr srcDir

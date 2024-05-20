@@ -7,7 +7,7 @@ import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
 import Bootstrap.Data.Bootstrappable.DefaultNix (SrcDir (SrcDirCurrent), defaultNixFor)
 import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.ProjectName (mkProjectName)
-import Bootstrap.Data.ProjectType (ArtefactId (ArtefactId), HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), InstallLombok (InstallLombok), InstallMinishift (InstallMinishift), JavaOptions (JavaOptions), ProjectType (Go, Haskell, Java, Rust), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild), SetUpJavaBuild (SetUpJavaBuild))
+import Bootstrap.Data.ProjectType (ArtefactId (ArtefactId), HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), InstallLombok (InstallLombok), InstallMinishift (InstallMinishift), JavaOptions (JavaOptions), JdkPackage (OpenJDK), ProjectType (Go, Haskell, Java, Rust), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild), SetUpJavaBuild (SetUpJavaBuild))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
@@ -49,6 +49,7 @@ in
             (InstallMinishift True)
             (InstallLombok True)
             (SetUpJavaBuild $ ArtefactId "testId")
+            OpenJDK
       ) of
       Just defaultNix ->
         bootstrapContent defaultNix
@@ -58,9 +59,10 @@ in
   nixpkgs = import (import nix/sources.nix).nixpkgs {};
   projectName = "test-project";
   artefactId = "testId";
+  buildInputs = [nixpkgs.maven];
   repository = nixpkgs.stdenv.mkDerivation {
+    inherit buildInputs;
     name = "${projectName}-repository";
-    buildInputs = [nixpkgs.maven];
     src = ./.;
     buildPhase = "mvn package -Dmaven.repo.local=$out";
     # keep only *.{pom,jar,sha1,nbm} and delete all ephemeral files with lastModified timestamps inside
@@ -79,10 +81,10 @@ in
     outputHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   };
   builtJar = nixpkgs.stdenv.mkDerivation rec {
+    inherit buildInputs;
     pname = projectName;
     version = "0.0.1-SNAPSHOT";
     src = ./.;
-    buildInputs = [nixpkgs.maven];
     buildPhase = ''
       echo "Using repository ${repository}"
       mvn --offline -Dmaven.repo.local=${repository} package;

@@ -14,6 +14,7 @@ import Bootstrap.Data.ProjectType
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
+    JdkPackage (OpenJDK),
     ProjectType (Go, Haskell, Java, Rust),
     SetUpGoBuild (SetUpGoBuild),
     SetUpHaskellBuild (SetUpHaskellBuild),
@@ -60,6 +61,7 @@ nixpkgs.buildGoModule {
             (InstallMinishift True)
             (InstallLombok True)
             (SetUpJavaBuild $ ArtefactId "testId")
+            OpenJDK
       ) of
       Just buildNix ->
         bootstrapContent buildNix
@@ -68,9 +70,10 @@ nixpkgs.buildGoModule {
                     [r|{nixpkgs}: let
   projectName = "test-project";
   artefactId = "testId";
+  buildInputs = [nixpkgs.maven];
   repository = nixpkgs.stdenv.mkDerivation {
+    inherit buildInputs;
     name = "${projectName}-repository";
-    buildInputs = [nixpkgs.maven];
     src = ./.;
     buildPhase = "mvn package -Dmaven.repo.local=$out";
     # keep only *.{pom,jar,sha1,nbm} and delete all ephemeral files with lastModified timestamps inside
@@ -89,10 +92,10 @@ nixpkgs.buildGoModule {
     outputHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   };
   builtJar = nixpkgs.stdenv.mkDerivation rec {
+    inherit buildInputs;
     pname = projectName;
     version = "0.0.1-SNAPSHOT";
     src = ./.;
-    buildInputs = [nixpkgs.maven];
     buildPhase = ''
       echo "Using repository ${repository}"
       mvn --offline -Dmaven.repo.local=${repository} package;

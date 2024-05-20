@@ -23,6 +23,10 @@ module Bootstrap.Data.ProjectType
     nodePackageManagerName,
     SetUpGoBuild (..),
     JavaOptions (..),
+    JavaOptionsV2 (JavaOptionsV2),
+    JdkPackage (..),
+    jdkName,
+    jdkPackageName,
     InstallMinishift (..),
     InstallLombok (..),
     ArtefactId (..),
@@ -40,6 +44,8 @@ module Bootstrap.Data.ProjectType
     migrateProjectTypeFromV4,
     ProjectTypeV5 (..),
     migrateProjectTypeFromV5,
+    ProjectTypeV6 (..),
+    migrateProjectTypeFromV6,
   )
 where
 
@@ -110,7 +116,7 @@ instance HasProjectSuperType ProjectType where
     Haskell _ -> PSTHaskell
     Node _ -> PSTNode
     Go _ -> PSTGo
-    Java {} -> PSTJava
+    Java _ -> PSTJava
     Python _ -> PSTPython
     Rust -> PSTRust
 
@@ -184,7 +190,7 @@ newtype SetUpHaskellBuild = SetUpHaskellBuild {unSetUpHaskellBuild :: Bool}
   deriving newtype (Bounded, Enum, FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
-promptHaskellProjectType :: MonadBootstrap m => m HaskellProjectType
+promptHaskellProjectType :: (MonadBootstrap m) => m HaskellProjectType
 promptHaskellProjectType =
   promptChoice
     "What kind of Haskell project would you like?"
@@ -208,10 +214,28 @@ newtype SetUpGoBuild = SetUpGoBuild {unSetUpGoBuild :: Bool}
   deriving newtype (Bounded, Enum, FromDhall, ToDhall)
   deriving stock (Eq, Show)
 
+data JavaOptionsV2 = JavaOptionsV2
+  { javaOptionsV2InstallMinishift :: InstallMinishift,
+    javaOptionsV2InstallLombok :: InstallLombok,
+    javaOptionsV2SetUpJavaBuild :: SetUpJavaBuild
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "javaOptionsV2")) JavaOptionsV2
+
+migrateJavaOptionsFromV2 :: JavaOptionsV2 -> JavaOptions
+migrateJavaOptionsFromV2 JavaOptionsV2 {..} =
+  JavaOptions
+    { installMinishift = javaOptionsV2InstallMinishift,
+      installLombok = javaOptionsV2InstallLombok,
+      setUpJavaBuild = javaOptionsV2SetUpJavaBuild,
+      jdk = OpenJDK
+    }
+
 data JavaOptions = JavaOptions
   { installMinishift :: InstallMinishift,
     installLombok :: InstallLombok,
-    setUpJavaBuild :: SetUpJavaBuild
+    setUpJavaBuild :: SetUpJavaBuild,
+    jdk :: JdkPackage
   }
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Field AsIs) JavaOptions
@@ -227,6 +251,22 @@ newtype InstallLombok = InstallLombok {unInstallLombok :: Bool}
 newtype ArtefactId = ArtefactId {unArtefactId :: Text}
   deriving newtype (FromDhall, ToDhall)
   deriving stock (Eq, Show)
+
+data JdkPackage = OpenJDK | GraalVM
+  deriving stock (Bounded, Enum, Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) JdkPackage
+
+jdkName :: JdkPackage -> Text
+jdkName = \case
+  OpenJDK -> "OpenJDK"
+  GraalVM -> "GraalVM CE"
+
+jdkPackageName :: ProjectType -> Text
+jdkPackageName = \case
+  Java (JavaOptions _ _ _ jdk) -> case jdk of
+    OpenJDK -> "jdk"
+    GraalVM -> "graalvm-ce"
+  _ -> ""
 
 data SetUpJavaBuild = SetUpJavaBuild ArtefactId | NoJavaBuild
   deriving stock (Eq, Generic, Show)
@@ -264,7 +304,7 @@ projectTypeCodec =
                 <|> Toml.dimatch matchGo PTV2Go (Toml.enumBounded "setUpGoBuild")
                 <|> Toml.dimatch
                   matchJava
-                  (PTV2Java . uncurry3 JavaOptions)
+                  (PTV2Java . uncurry3 JavaOptionsV2)
                   ( Toml.triple
                       (Toml.diwrap $ Toml.bool "installMinishift")
                       (Toml.diwrap $ Toml.bool "installLombok")
@@ -283,7 +323,7 @@ projectTypeCodec =
     matchGo _ = Nothing
 
     matchJava :: ProjectTypeV2 -> Maybe (InstallMinishift, InstallLombok, SetUpJavaBuild)
-    matchJava (PTV2Java (JavaOptions installMinishift installLombok setUpJavaBuild)) =
+    matchJava (PTV2Java (JavaOptionsV2 installMinishift installLombok setUpJavaBuild)) =
       Just (installMinishift, installLombok, setUpJavaBuild)
     matchJava _ = Nothing
 
@@ -312,7 +352,7 @@ data ProjectTypeV2
   = PTV2Minimal
   | PTV2Node NodePackageManager
   | PTV2Go SetUpGoBuild
-  | PTV2Java JavaOptions
+  | PTV2Java JavaOptionsV2
   | PTV2Python PythonVersion
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "PTV2")) ProjectTypeV2
@@ -340,7 +380,7 @@ data ProjectTypeV3
   | PTV3Elm ElmOptions
   | PTV3Node NodePackageManager
   | PTV3Go SetUpGoBuild
-  | PTV3Java JavaOptions
+  | PTV3Java JavaOptionsV2
   | PTV3Python PythonVersion
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectTypeV3
@@ -371,7 +411,7 @@ data ProjectTypeV4
   | PTV4Haskell HaskellOptionsV4
   | PTV4Node NodePackageManager
   | PTV4Go SetUpGoBuild
-  | PTV4Java JavaOptions
+  | PTV4Java JavaOptionsV2
   | PTV4Python PythonVersion
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectTypeV4
@@ -393,7 +433,7 @@ migrateProjectTypeFromV4 = \case
   PTV4Haskell x -> Haskell $ migrateHaskellOptionsFromV4 x
   PTV4Node x -> Node x
   PTV4Go x -> Go x
-  PTV4Java x -> Java x
+  PTV4Java x -> Java $ migrateJavaOptionsFromV2 x
   PTV4Python x -> Python x
 
 migrateHaskellOptionsFromV4 :: HaskellOptionsV4 -> HaskellOptions
@@ -414,7 +454,7 @@ data ProjectTypeV5
   | PTV5Haskell HaskellOptionsV4
   | PTV5Node NodePackageManager
   | PTV5Go SetUpGoBuild
-  | PTV5Java JavaOptions
+  | PTV5Java JavaOptionsV2
   | PTV5Python PythonVersion
   | PTV5Rust
   deriving stock (Eq, Generic, Show)
@@ -438,6 +478,29 @@ migrateProjectTypeFromV5 = \case
   PTV5Haskell x -> Haskell $ migrateHaskellOptionsFromV4 x
   PTV5Node x -> Node x
   PTV5Go x -> Go x
-  PTV5Java x -> Java x
+  PTV5Java x -> Java $ migrateJavaOptionsFromV2 x
   PTV5Python x -> Python x
   PTV5Rust -> Rust
+
+data ProjectTypeV6
+  = PTV6Minimal
+  | PTV6Elm ElmOptions
+  | PTV6Haskell HaskellOptions
+  | PTV6Node NodePackageManager
+  | PTV6Go SetUpGoBuild
+  | PTV6Java JavaOptionsV2
+  | PTV6Python PythonVersion
+  | PTV6Rust
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectTypeV6
+
+migrateProjectTypeFromV6 :: ProjectTypeV6 -> ProjectType
+migrateProjectTypeFromV6 = \case
+  PTV6Minimal -> Minimal
+  PTV6Elm x -> Elm x
+  PTV6Haskell x -> Haskell x
+  PTV6Node x -> Node x
+  PTV6Go x -> Go x
+  PTV6Java x -> Java $ migrateJavaOptionsFromV2 x
+  PTV6Python x -> Python x
+  PTV6Rust -> Rust

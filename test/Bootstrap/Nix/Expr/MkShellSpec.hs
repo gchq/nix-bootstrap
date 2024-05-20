@@ -7,7 +7,7 @@ import Bootstrap.Data.PreCommitHook
   ( PreCommitHooksConfig (PreCommitHooksConfig),
   )
 import Bootstrap.Data.ProjectType
-  ( ProjectSuperType (PSTMinimal, PSTRust),
+  ( ProjectType (Minimal, Rust),
   )
 import Bootstrap.Nix.Expr (nix)
 import Bootstrap.Nix.Expr.MkShell
@@ -21,24 +21,24 @@ spec :: Spec
 spec = do
   describe "mkShell" do
     it "gives no shell hook when one isn't needed" do
-      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) PSTMinimal [])
+      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) Minimal [])
         `shouldBe` [nix|nixpkgs.mkShell {
 }|]
     it "gives a proper shell hook for projects with pre-commit hooks" do
-      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) PSTMinimal [])
+      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) Minimal [])
         `shouldBe` [nix|nixpkgs.mkShell {
   buildInputs = preCommitHooks.tools;
   inherit (preCommitHooks.allHooks) shellHook;
 }|]
     it "gives a proper shell hook for Rust projects" do
-      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) PSTRust [])
+      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) Rust [])
         `shouldBe` [nix|nixpkgs.mkShell {
   shellHook = ''
     export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}
   '';
 }|]
     it "gives a proper shell hook for Rust projects with pre-commit hooks" do
-      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) PSTRust [])
+      mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) Rust [])
         `shouldBe` [nix|nixpkgs.mkShell {
   buildInputs = preCommitHooks.tools;
   shellHook = ''

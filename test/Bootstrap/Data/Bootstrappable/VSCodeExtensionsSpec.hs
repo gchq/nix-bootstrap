@@ -9,6 +9,7 @@ import Bootstrap.Data.ProjectType
   ( InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
     JavaOptions (JavaOptions),
+    JdkPackage (OpenJDK),
     ProjectType (Java),
     SetUpJavaBuild (NoJavaBuild),
   )
@@ -26,6 +27,7 @@ spec = describe ".vscode/extensions.json rendering" do
                 (InstallMinishift True)
                 (InstallLombok True)
                 NoJavaBuild
+                OpenJDK
           )
       )
       >>= ( `shouldBe`

@@ -52,10 +52,12 @@ import Bootstrap.Data.ProjectType
     ProjectTypeV3,
     ProjectTypeV4,
     ProjectTypeV5,
+    ProjectTypeV6,
     migrateProjectTypeFromV2,
     migrateProjectTypeFromV3,
     migrateProjectTypeFromV4,
     migrateProjectTypeFromV5,
+    migrateProjectTypeFromV6,
   )
 import Bootstrap.Monad (MonadBootstrap)
 import Control.Lens (Iso', iso, makeLenses)
@@ -98,6 +100,7 @@ data ConfigVersion
   | V4
   | V5
   | V6
+  | V7
 
 -- | Singled `ConfigVersion`
 data SConfigVersion (configVersion :: ConfigVersion) where
@@ -107,6 +110,7 @@ data SConfigVersion (configVersion :: ConfigVersion) where
   SV4 :: SConfigVersion 'V4
   SV5 :: SConfigVersion 'V5
   SV6 :: SConfigVersion 'V6
+  SV7 :: SConfigVersion 'V7
 
 type instance Sing = SConfigVersion
 
@@ -119,6 +123,7 @@ instance SingKind ConfigVersion where
     SV4 -> V4
     SV5 -> V5
     SV6 -> V6
+    SV7 -> V7
   toSing = \case
     V1 -> SomeSing SV1
     V2 -> SomeSing SV2
@@ -126,12 +131,13 @@ instance SingKind ConfigVersion where
     V4 -> SomeSing SV4
     V5 -> SomeSing SV5
     V6 -> SomeSing SV6
+    V7 -> SomeSing SV7
 
 -- | The most recent version of the config
-type Current = 'V6
+type Current = 'V7
 
 instance SingI Current where
-  sing = SV6
+  sing = SV7
 
 -- | nix-bootstrap's configuration
 type Config = VersionedConfig Current
@@ -144,6 +150,7 @@ data VersionedConfig version where
   VersionedConfigV4 :: ConfigV3Plus 'V4 -> VersionedConfig 'V4
   VersionedConfigV5 :: ConfigV3Plus 'V5 -> VersionedConfig 'V5
   VersionedConfigV6 :: ConfigV3Plus 'V6 -> VersionedConfig 'V6
+  VersionedConfigV7 :: ConfigV3Plus 'V7 -> VersionedConfig 'V7
 
 deriving stock instance Eq (VersionedProjectType version) => Eq (VersionedConfig version)
 
@@ -225,7 +232,7 @@ instance ToDhall Config where
   injectWith inputNormaliser =
     let innerEncoder = injectWith inputNormaliser
      in Encoder
-          { embed = \(VersionedConfigV6 c) -> embed innerEncoder c,
+          { embed = \(VersionedConfigV7 c) -> embed innerEncoder c,
             declared = declared innerEncoder
           }
 
@@ -233,7 +240,8 @@ data VersionedProjectType (version :: ConfigVersion) where
   VPT3 :: ProjectTypeV3 -> VersionedProjectType 'V3
   VPT4 :: ProjectTypeV4 -> VersionedProjectType 'V4
   VPT5 :: ProjectTypeV5 -> VersionedProjectType 'V5
-  VPT6 :: ProjectType -> VersionedProjectType 'V6
+  VPT6 :: ProjectTypeV6 -> VersionedProjectType 'V6
+  VPT7 :: ProjectType -> VersionedProjectType 'V7
 
 instance FromDhall (VersionedProjectType 'V3) where
   autoWith = versionedProjectTypeFromDhall (Proxy @ProjectTypeV3) VPT3
@@ -245,7 +253,10 @@ instance FromDhall (VersionedProjectType 'V5) where
   autoWith = versionedProjectTypeFromDhall (Proxy @ProjectTypeV5) VPT5
 
 instance FromDhall (VersionedProjectType 'V6) where
-  autoWith = versionedProjectTypeFromDhall (Proxy @ProjectType) VPT6
+  autoWith = versionedProjectTypeFromDhall (Proxy @ProjectTypeV6) VPT6
+
+instance FromDhall (VersionedProjectType 'V7) where
+  autoWith = versionedProjectTypeFromDhall (Proxy @ProjectType) VPT7
 
 instance ToDhall (VersionedProjectType 'V3) where
   injectWith = versionedProjectTypeToDhall (Proxy @ProjectTypeV3) (\(VPT3 x) -> x)
@@ -257,7 +268,10 @@ instance ToDhall (VersionedProjectType 'V5) where
   injectWith = versionedProjectTypeToDhall (Proxy @ProjectTypeV5) (\(VPT5 x) -> x)
 
 instance ToDhall (VersionedProjectType 'V6) where
-  injectWith = versionedProjectTypeToDhall (Proxy @ProjectType) (\(VPT6 x) -> x)
+  injectWith = versionedProjectTypeToDhall (Proxy @ProjectTypeV6) (\(VPT6 x) -> x)
+
+instance ToDhall (VersionedProjectType 'V7) where
+  injectWith = versionedProjectTypeToDhall (Proxy @ProjectType) (\(VPT7 x) -> x)
 
 versionedProjectTypeFromDhall ::
   forall underlying version.
@@ -284,7 +298,7 @@ versionedProjectTypeToDhall Proxy unwrap normaliser =
     Encoder {..} = injectWith @underlying normaliser
 
 _VersionedProjectType :: Iso' (VersionedProjectType Current) ProjectType
-_VersionedProjectType = iso (\(VPT6 x) -> x) VPT6
+_VersionedProjectType = iso (\(VPT7 x) -> x) VPT7
 
 -- | The location of a bootstrapped config file
 configPath :: FilePath
@@ -314,6 +328,7 @@ parseVersionedConfig v s = case v of
   SV4 -> parseFor VersionedConfigV4
   SV5 -> parseFor VersionedConfigV5
   SV6 -> parseFor VersionedConfigV6
+  SV7 -> parseFor VersionedConfigV7
   where
     parseFor :: FromDhall config => (config -> versionedConfig) -> m (Either SomeException versionedConfig)
     parseFor constructor = handleAll (pure . Left) . fmap (Right . constructor) . liftIO $ input auto s
@@ -371,7 +386,7 @@ makeLenses ''ConfigV3Plus
 
 -- | Isomorphism to the current config version
 _Current :: Iso' Config (ConfigV3Plus Current)
-_Current = iso (\(VersionedConfigV6 c) -> c) VersionedConfigV6
+_Current = iso (\(VersionedConfigV7 c) -> c) VersionedConfigV7
 
 -- | Loads the config from the appropriate file
 loadConfig :: MonadBootstrap m => m LoadConfigResult
@@ -388,6 +403,7 @@ loadConfig' nextToTry = do
   where
     tryPreviousConfigVersion :: SomeException -> SConfigVersion v -> m LoadConfigResult
     tryPreviousConfigVersion e v = case v of
+      SV7 -> loadConfig' SV6
       SV6 -> loadConfig' SV5
       SV5 -> loadConfig' SV4
       SV4 -> loadConfig' SV3
@@ -421,20 +437,20 @@ loadConfigAtVersion v = do
 upgradeConfig :: SConfigVersion version -> VersionedConfig version -> Config
 upgradeConfig _ = \case
   VersionedConfigV1 s ->
-    VersionedConfigV6
+    VersionedConfigV7
       ConfigV3Plus
         { _configV3ProjectName = stateProjectName s,
-          _configV3ProjectType = VPT6 . migrateProjectTypeFromV2 $ stateProjectType s,
+          _configV3ProjectType = VPT7 . migrateProjectTypeFromV2 $ stateProjectType s,
           _configV3SetUpPreCommitHooks = statePreCommitHooksConfig s,
           _configV3SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
           _configV3SetUpVSCodeDevContainer = stateDevContainerConfig s,
           _configV3UseNixFlakes = stateUseFlakes s
         }
   VersionedConfigV2 ConfigV2 {..} ->
-    VersionedConfigV6
+    VersionedConfigV7
       ConfigV3Plus
         { _configV3ProjectName = _configV2ProjectName,
-          _configV3ProjectType = VPT6 $ migrateProjectTypeFromV2 _configV2ProjectType,
+          _configV3ProjectType = VPT7 $ migrateProjectTypeFromV2 _configV2ProjectType,
           _configV3SetUpPreCommitHooks = _configV2SetUpPreCommitHooks,
           _configV3SetUpContinuousIntegration = _configV2SetUpContinuousIntegration,
           _configV3SetUpVSCodeDevContainer = _configV2SetUpVSCodeDevContainer,
@@ -443,9 +459,10 @@ upgradeConfig _ = \case
   (VersionedConfigV3 c) -> migrateFromV3Plus c (\(VPT3 x) -> x) migrateProjectTypeFromV3
   (VersionedConfigV4 c) -> migrateFromV3Plus c (\(VPT4 x) -> x) migrateProjectTypeFromV4
   (VersionedConfigV5 c) -> migrateFromV3Plus c (\(VPT5 x) -> x) migrateProjectTypeFromV5
-  c@(VersionedConfigV6 _) -> c
+  (VersionedConfigV6 c) -> migrateFromV3Plus c (\(VPT6 x) -> x) migrateProjectTypeFromV6
+  c@(VersionedConfigV7 _) -> c
   where
     migrateFromV3Plus ConfigV3Plus {..} deconstruct migrate =
       let oldProjectType = deconstruct _configV3ProjectType
-       in VersionedConfigV6
-            (ConfigV3Plus {_configV3ProjectType = VPT6 $ migrate oldProjectType, ..})
+       in VersionedConfigV7
+            (ConfigV3Plus {_configV3ProjectType = VPT7 $ migrate oldProjectType, ..})
