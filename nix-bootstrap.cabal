@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           nix-bootstrap
-version:        1.7.1.2
+version:        2.0.0.0
 author:         gchquser
 maintainer:     48051938+sd234678@users.noreply.github.com
 copyright:      Crown Copyright
@@ -25,7 +25,6 @@ library
       Bootstrap.Data.Bootstrappable
       Bootstrap.Data.Bootstrappable.BootstrapState
       Bootstrap.Data.Bootstrappable.BuildNix
-      Bootstrap.Data.Bootstrappable.DefaultNix
       Bootstrap.Data.Bootstrappable.DevContainer
       Bootstrap.Data.Bootstrappable.Elm.ElmJson
       Bootstrap.Data.Bootstrappable.Elm.IndexHtml
@@ -46,7 +45,6 @@ library
       Bootstrap.Data.Bootstrappable.Haskell.PreludeHs
       Bootstrap.Data.Bootstrappable.HaskellPackagesNix
       Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
-      Bootstrap.Data.Bootstrappable.NixShell
       Bootstrap.Data.Bootstrappable.NixShellCompat
       Bootstrap.Data.Bootstrappable.Python.Requirements
       Bootstrap.Data.Bootstrappable.Readme
@@ -72,7 +70,6 @@ library
       Bootstrap.Error
       Bootstrap.GitPod
       Bootstrap.Monad
-      Bootstrap.Niv
       Bootstrap.Nix.Command
       Bootstrap.Nix.Evaluate
       Bootstrap.Nix.Expr
@@ -174,7 +171,6 @@ test-suite nix-bootstrap-test
   other-modules:
       Bootstrap.Data.Bootstrappable.BootstrapStateSpec
       Bootstrap.Data.Bootstrappable.BuildNixSpec
-      Bootstrap.Data.Bootstrappable.DefaultNixSpec
       Bootstrap.Data.Bootstrappable.DevContainerSpec
       Bootstrap.Data.Bootstrappable.Elm.ElmJsonSpec
       Bootstrap.Data.Bootstrappable.Elm.IndexHtmlSpec
@@ -195,7 +191,6 @@ test-suite nix-bootstrap-test
       Bootstrap.Data.Bootstrappable.HaskellPackagesNixSpec
       Bootstrap.Data.Bootstrappable.NixPreCommitHookConfigSpec
       Bootstrap.Data.Bootstrappable.NixShellCompatSpec
-      Bootstrap.Data.Bootstrappable.NixShellSpec
       Bootstrap.Data.Bootstrappable.ReadmeSpec
       Bootstrap.Data.Bootstrappable.Rust.CargoLockSpec
       Bootstrap.Data.Bootstrappable.Rust.CargoTomlSpec

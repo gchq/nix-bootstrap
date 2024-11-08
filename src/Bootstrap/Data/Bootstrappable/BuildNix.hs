@@ -1,25 +1,42 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- |
 -- Copyright : (c) Crown Copyright GCHQ
 -- Description : The code for build.nix
 module Bootstrap.Data.Bootstrappable.BuildNix (BuildNix (unBuildNix), buildNixFor) where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentNix,
   )
-import Bootstrap.Data.Bootstrappable.DefaultNix
-  ( DefaultNix (defaultNixReproducibleBuildExpr),
-    SrcDir (SrcDirParent),
-    defaultNixFor,
-  )
 import Bootstrap.Data.ProjectName (ProjectName)
-import Bootstrap.Data.ProjectType (ProjectType)
-import Bootstrap.Nix.Expr (Expr (EFunc), FunctionArgs (FASet), IsNixExpr (toNixExpr))
+import Bootstrap.Data.ProjectType
+  ( HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic),
+    JavaOptions (JavaOptions),
+    ProjectType
+      ( Elm,
+        Go,
+        Haskell,
+        Java,
+        Minimal,
+        Node,
+        Python,
+        Rust
+      ),
+    SetUpGoBuild (SetUpGoBuild),
+    SetUpHaskellBuild (SetUpHaskellBuild),
+    SetUpJavaBuild (SetUpJavaBuild),
+  )
+import Bootstrap.Nix.Expr (Expr (EFunc), FunctionArgs (FASet), IsNixExpr (toNixExpr), nix)
 import Bootstrap.Nix.Expr.ReproducibleBuild
   ( ReproducibleBuildExpr (ReproducibleBuildExpr, rbeExpr, rbeRequirements),
     reproducibleBuildRequirementIdentifier,
   )
+import Bootstrap.Nix.Expr.ReproducibleBuild.Go (reproducibleGoBuild)
+import Bootstrap.Nix.Expr.ReproducibleBuild.Haskell (reproducibleHaskellBuild)
+import Bootstrap.Nix.Expr.ReproducibleBuild.Java (reproducibleJavaBuild)
+import Bootstrap.Nix.Expr.ReproducibleBuild.Rust (reproducibleRustBuild)
 
 -- | A separate nix file defining reproducible builds for flake projects,
 -- to save it all being kept in flake.nix
@@ -39,11 +56,34 @@ instance IsNixExpr BuildNix where
 
 -- | Gives a `BuildNix` (or `Nothing`) as appropriate for the project details
 -- given.
-buildNixFor :: RunConfig -> ProjectName -> ProjectType -> Maybe BuildNix
-buildNixFor RunConfig {rcUseFlakes} flakeNixProjectName flakeNixProjectType =
-  let reproducibleBuildExpr =
-        defaultNixReproducibleBuildExpr
-          <$> defaultNixFor SrcDirParent flakeNixProjectName flakeNixProjectType
-   in if rcUseFlakes
-        then BuildNix <$> reproducibleBuildExpr
-        else Nothing
+buildNixFor :: ProjectName -> ProjectType -> Maybe BuildNix
+buildNixFor flakeNixProjectName flakeNixProjectType =
+  BuildNix
+    <$> buildExprFor SrcDirParent flakeNixProjectName flakeNixProjectType
+
+-- | The source directory for the build
+data SrcDir
+  = -- | src = ./.;
+    SrcDirCurrent
+  | -- | src = ../.;
+    SrcDirParent
+
+srcDirExpr :: SrcDir -> Expr
+srcDirExpr = \case
+  SrcDirCurrent -> [nix|./.|]
+  SrcDirParent -> [nix|../.|]
+
+buildExprFor :: SrcDir -> ProjectName -> ProjectType -> Maybe ReproducibleBuildExpr
+buildExprFor srcDir projectName = \case
+  Minimal -> Nothing
+  Elm _ -> Nothing
+  Haskell (HaskellOptions _ (HaskellProjectTypeBasic (SetUpHaskellBuild True))) ->
+    Just . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
+  Haskell _ -> Nothing
+  Node _ -> Nothing
+  Go (SetUpGoBuild True) -> Just $ reproducibleGoBuild projectName
+  Go _ -> Nothing
+  Java (JavaOptions _ _ (SetUpJavaBuild artefactId) jdk) -> Just $ reproducibleJavaBuild projectName artefactId jdk
+  Java _ -> Nothing
+  Python _ -> Nothing
+  Rust -> Just . reproducibleRustBuild $ srcDirExpr srcDir

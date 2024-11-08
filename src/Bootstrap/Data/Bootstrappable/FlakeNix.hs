@@ -4,7 +4,6 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.FlakeNix (flakeNixFor) where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable
       ( bootstrapContent,
@@ -14,27 +13,36 @@ import Bootstrap.Data.Bootstrappable
     bootstrapContentNix,
   )
 import Bootstrap.Data.Bootstrappable.BuildNix (BuildNix (unBuildNix))
-import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (NixPreCommitHookConfig)
-import Bootstrap.Data.Bootstrappable.NixShell
-  ( NixShell
-      ( NixShell,
-        nixShellExtraBindings,
-        nixShellHooksRequireNixpkgs,
-        nixShellNixpkgsBuildInputs,
-        nixShellNixpkgsNativeBuildInputs,
-        nixShellOtherBuildInputs
-      ),
-    nixShellFor,
-  )
+import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (NixPreCommitHookConfig (nixPreCommitHookConfigRequiresNixpkgs))
 import Bootstrap.Data.PreCommitHook
   ( PreCommitHooksConfig (unPreCommitHooksConfig),
   )
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
-import Bootstrap.Data.ProjectType (ProjectType (Python))
+import Bootstrap.Data.ProjectType
+  ( ElmMode (ElmModeBare, ElmModeNode),
+    ElmOptions (elmOptionElmMode),
+    HaskellOptions (HaskellOptions),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    InstallMinishift (unInstallMinishift),
+    JavaOptions (JavaOptions),
+    JdkPackage (GraalVM, OpenJDK),
+    NodePackageManager (NPM, PNPm, Yarn),
+    ProjectType
+      ( Elm,
+        Go,
+        Haskell,
+        Java,
+        Minimal,
+        Node,
+        Python,
+        Rust
+      ),
+  )
 import Bootstrap.Nix.Expr
   ( Binding (BInherit),
-    Expr (EGrouping, ELetIn, ELit, ESet),
+    Expr (EApplication, EFunc, EGrouping, EIdent, ELetIn, EList, ELit, EPropertyAccess, ESet, EWith),
     FunctionArgs (FASet),
+    Identifier,
     IsNixExpr (toNixExpr),
     Literal (LPath, LString),
     nix,
@@ -60,12 +68,6 @@ import Bootstrap.Nix.Expr.MkShell
 import Bootstrap.Nix.Expr.PreCommitHooks (ImportPreCommitHooksArgs (ImportPreCommitHooksArgs, passNixpkgsThrough, passSystemThrough), importPreCommitHooks)
 import Bootstrap.Nix.Expr.Python (machNixFlakeInput, pythonPackagesBinding)
 import Bootstrap.Nix.Expr.ReproducibleBuild (ReproducibleBuildExpr (rbeRequirements), ReproducibleBuildRequirement (RBRHaskellPackages, RBRNixpkgs), reproducibleBuildRequirementIdentifier, sortRbeRequirements)
-import Control.Lens
-  ( Field2 (_2),
-    filtered,
-    folded,
-    (^..),
-  )
 
 data FlakeNix = FlakeNix
   { flakeNixPreCommitHooksConfig :: PreCommitHooksConfig,
@@ -90,7 +92,6 @@ instance Bootstrappable FlakeNix where
   bootstrapContent = bootstrapContentNix
 
 flakeNixFor ::
-  RunConfig ->
   ProjectName ->
   ProjectType ->
   PreCommitHooksConfig ->
@@ -98,35 +99,107 @@ flakeNixFor ::
   Maybe BuildNix ->
   Maybe FlakeNix
 flakeNixFor
-  rc@RunConfig {rcUseFlakes}
   flakeNixProjectName
   flakeNixProjectType
   flakeNixPreCommitHooksConfig
   nixPreCommitHookConfig
   flakeNixBuildNix =
-    let NixShell
-          { nixShellExtraBindings,
-            nixShellNixpkgsBuildInputs,
-            nixShellOtherBuildInputs,
-            nixShellNixpkgsNativeBuildInputs,
-            nixShellHooksRequireNixpkgs
-          } =
-            nixShellFor rc flakeNixProjectType flakeNixPreCommitHooksConfig nixPreCommitHookConfig
-     in if rcUseFlakes
-          then
-            Just
-              FlakeNix
-                { flakeNixExtraBindings = (nixShellExtraBindings ^.. folded . filtered fst . _2) <> extraBindings,
-                  flakeNixNixpkgsBuildInputs = nixShellNixpkgsBuildInputs,
-                  flakeNixOtherBuildInputs = nixShellOtherBuildInputs,
-                  flakeNixNixpkgsNativeBuildInputs = nixShellNixpkgsNativeBuildInputs,
-                  flakeNixHooksRequireNixpkgs = nixShellHooksRequireNixpkgs,
-                  ..
-                }
-          else Nothing
+    Just
+      FlakeNix
+        { flakeNixExtraBindings = extraBindingsFor flakeNixProjectType,
+          flakeNixNixpkgsBuildInputs = nixpkgsBuildInputsFor flakeNixProjectType,
+          flakeNixOtherBuildInputs = otherBuildInputsFor flakeNixProjectType,
+          flakeNixNixpkgsNativeBuildInputs = nixpkgsNativeBuildInputsFor flakeNixProjectType,
+          flakeNixHooksRequireNixpkgs = maybe False nixPreCommitHookConfigRequiresNixpkgs nixPreCommitHookConfig,
+          ..
+        }
     where
-      extraBindings :: [Binding]
-      extraBindings = [pythonPackagesBinding True | case flakeNixProjectType of Python _ -> True; _ -> False]
+      extraBindingsFor :: ProjectType -> [Binding]
+      extraBindingsFor = \case
+        Minimal -> []
+        Elm _ -> []
+        Haskell (HaskellOptions _ haskellProjectType) ->
+          [ [nixbinding|haskellPackages = import nix/haskell-packages.nix { inherit nixpkgs; };|],
+            [nixproperty|haskellEnv|]
+              |= ghcWithPackages
+                ( case haskellProjectType of
+                    HaskellProjectTypeReplOnly -> [[nixident|cabal-install|]]
+                    HaskellProjectTypeBasic _ -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
+                )
+          ]
+        Node _ -> []
+        Go _ -> []
+        Java _ -> []
+        Python _ -> [pythonPackagesBinding]
+        Rust -> []
+        where
+          ghcWithPackages :: [Identifier] -> Expr
+          ghcWithPackages =
+            EApplication [nix|haskellPackages.ghcWithPackages|]
+              . EGrouping
+              . EFunc [nixargs|pkgs:|]
+              . EWith [nix|pkgs|]
+              . EList
+              . fmap EIdent
+      nixpkgsBuildInputsFor :: ProjectType -> [Expr]
+      nixpkgsBuildInputsFor =
+        sortBy compareBuildInputs . \case
+          Minimal -> []
+          Elm elmOptions ->
+            [ [nix|elmPackages.elm|],
+              [nix|elmPackages.elm-json|],
+              [nix|elmPackages.elm-language-server|]
+            ]
+              <> case elmOptionElmMode elmOptions of
+                ElmModeBare -> []
+                ElmModeNode packageManager -> [nix|nodejs|] : nodePackageManager packageManager
+          Haskell (HaskellOptions _ _) -> []
+          Node packageManager ->
+            [[nix|awscli2|], [nix|nodejs|]] <> nodePackageManager packageManager
+          Go _ -> [[nix|go|]]
+          Java (JavaOptions installMinishift _ _ jdkName) ->
+            [[nix|google-java-format|]]
+              <> jdkPackage jdkName
+              <> [[nix|minishift|] | unInstallMinishift installMinishift]
+          Python _ -> []
+          Rust -> [[nix|libiconv|]]
+      nodePackageManager :: NodePackageManager -> [Expr]
+      nodePackageManager = \case
+        NPM -> []
+        PNPm -> [[nix|nodePackages.pnpm|]]
+        Yarn -> [[nix|yarn|]]
+      jdkPackage :: JdkPackage -> [Expr]
+      jdkPackage = \case
+        OpenJDK -> [[nix|jdk|], [nix|maven|]]
+        GraalVM -> [[nix|graalvm-ce|], [nix|(maven.override { jdk = graalvm-ce; })|]]
+      otherBuildInputsFor :: ProjectType -> [Expr]
+      otherBuildInputsFor =
+        sortBy compareBuildInputs . \case
+          Minimal -> []
+          Elm _ -> []
+          Haskell (HaskellOptions _ _) -> [[nix|haskellEnv|]]
+          Node _ -> []
+          Go _ -> []
+          Java _ -> []
+          Python _ -> []
+          Rust -> []
+      nixpkgsNativeBuildInputsFor :: ProjectType -> [Expr]
+      nixpkgsNativeBuildInputsFor =
+        sortBy compareBuildInputs . \case
+          Minimal -> []
+          Elm _ -> []
+          Haskell _ -> []
+          Node _ -> []
+          Go _ -> []
+          Java _ -> []
+          Python _ -> []
+          Rust -> [[nix|cargo|], [nix|rustc|], [nix|rust-analyzer|]]
+      compareBuildInputs :: Expr -> Expr -> Ordering
+      compareBuildInputs (EIdent i1) (EIdent i2) = compare i1 i2
+      compareBuildInputs (EPropertyAccess (EIdent i1) _) (EIdent i2) = compare i1 i2
+      compareBuildInputs (EIdent i1) (EPropertyAccess (EIdent i2) _) = compare i1 i2
+      compareBuildInputs (EPropertyAccess (EIdent i1) _) (EPropertyAccess (EIdent i2) _) = compare i1 i2
+      compareBuildInputs _ _ = EQ
 
 instance IsNixExpr FlakeNix where
   toNixExpr FlakeNix {..} =

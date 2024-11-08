@@ -7,8 +7,7 @@ module Bootstrap.Data.Bootstrappable.Readme
         readmeProjectName,
         readmeProjectType,
         readmeHasDevContainer,
-        readmeMBuildPlan,
-        readmeUseFlakes
+        readmeMBuildPlan
       ),
   )
 where
@@ -28,7 +27,6 @@ import Bootstrap.Data.ProjectType
   )
 import Bootstrap.Nix.Command
   ( NixCommand (NixCommand),
-    NixCommandStyle (NCSNew, NCSOld),
     NixCommandVariant (NCVBuild),
     writeNixCommand,
   )
@@ -38,16 +36,14 @@ data Readme = Readme
   { readmeProjectName :: ProjectName,
     readmeProjectType :: ProjectType,
     readmeHasDevContainer :: DevContainerConfig,
-    readmeMBuildPlan :: Maybe BuildPlan,
-    readmeUseFlakes :: Bool
+    readmeMBuildPlan :: Maybe BuildPlan
   }
 
 instance Bootstrappable Readme where
   bootstrapName = const "README.md"
   bootstrapReason = const "This helpfully explains to you what each file (including itself) does!"
   bootstrapContent Readme {..} = do
-    let commandStyle = if readmeUseFlakes then NCSNew else NCSOld
-        buildFileName = if readmeUseFlakes then "nix/build.nix" else "default.nix"
+    let buildFileName = "nix/build.nix"
         buildingForProduction =
           [ "",
             "## Building for Production",
@@ -55,7 +51,7 @@ instance Bootstrappable Readme where
             "To produce a production build as defined in `"
               <> buildFileName
               <> "`, run `"
-              <> writeNixCommand (NixCommand commandStyle NCVBuild)
+              <> writeNixCommand (NixCommand NCVBuild)
               <> "`.",
             "",
             "This will produce a `result` directory with built artefacts."
@@ -104,20 +100,14 @@ instance Bootstrappable Readme where
              "   ```sh",
              "   sh <(curl -L https://nixos.org/nix/install) --daemon",
              "   ```",
-             ""
-           ]
-        <> ( if readmeUseFlakes
-               then
-                 [ "2. [Install direnv **>=2.23.0** by following the instructions for your system](https://direnv.net/docs/installation.html)",
-                   "",
-                   "    - You can check your current version by running `direnv version`",
-                   "    - On the latest Ubuntu, this is available using `apt-get`",
-                   "    - If you can't install it through your OS's package manager, download a release from the [GitHub releases page](https://github.com/direnv/direnv/releases) and put it somewhere on your `$PATH`.",
-                   ""
-                 ]
-               else ["2. [Install direnv, following the instructions for your system](https://direnv.net/docs/installation.html)"]
-           )
-        <> [ "3. [Follow the instructions to hook direnv into your shell](https://direnv.net/docs/hook.html)",
+             "",
+             "2. [Install direnv **>=2.23.0** by following the instructions for your system](https://direnv.net/docs/installation.html)",
+             "",
+             "    - You can check your current version by running `direnv version`",
+             "    - On the latest Ubuntu, this is available using `apt-get`",
+             "    - If you can't install it through your OS's package manager, download a release from the [GitHub releases page](https://github.com/direnv/direnv/releases) and put it somewhere on your `$PATH`.",
+             "",
+             "3. [Follow the instructions to hook direnv into your shell](https://direnv.net/docs/hook.html)",
              "4. Run `direnv allow` in the project root directory",
              "",
              "_After following the steps above, you will be able to use any of the project's tools mentioned below when in the project folders; direnv will automatically make the tools available when you `cd` into the project._"
@@ -216,15 +206,10 @@ instance Bootstrappable Readme where
                    "   ```python",
                    "   numpy",
                    "   pandas==1.4.2",
-                   "   ```"
+                   "   ```",
+                   "",
+                   "Note that the `requirements.txt` file has to be tracked by git in order to add dependencies. This can be done by running `git add -N requirements.txt` in this projects root directory"
                  ]
-                   <> ( if readmeUseFlakes
-                          then
-                            [ "",
-                              "Note that the `requirements.txt` file has to be tracked by git in order to add dependencies. This can be done by running `git add -N requirements.txt` in this projects root directory"
-                            ]
-                          else []
-                      )
                _ -> []
            )
         <> ( case readmeMBuildPlan of

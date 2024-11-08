@@ -7,7 +7,6 @@ module Bootstrap.Cli
     fromScratchFlagName,
     parseCommand,
     showHelp,
-    useFlakesFlagName,
   )
 where
 
@@ -43,7 +42,6 @@ data RunConfig = RunConfig
   { rcAllowDirty :: Bool,
     rcFromScratch :: Bool,
     rcNonInteractive :: Bool,
-    rcUseFlakes :: Bool,
     rcWithDevContainer :: Maybe DevContainerConfig
   }
 
@@ -63,7 +61,6 @@ parseCommand = do
               let rcAllowDirty = AllowDirty `elem` options
                   rcFromScratch = FromScratch `elem` options
                   rcNonInteractive = NonInteractive `elem` options
-                  rcUseFlakes = UseFlakes `elem` options
                   rcWithDevContainer =
                     if WithDevContainer `elem` options
                       then Just (DevContainerConfig True)
@@ -75,7 +72,6 @@ data Flag
   | FromScratch
   | Help
   | NonInteractive
-  | UseFlakes
   | Version
   | WithDevContainer
   deriving stock (Eq)
@@ -86,13 +82,9 @@ allowDirtyFlagName = "allow-dirty"
 fromScratchFlagName :: IsString s => s
 fromScratchFlagName = "from-scratch"
 
-useFlakesFlagName :: IsString s => s
-useFlakesFlagName = "experimental-use-flakes"
-
 cliOptions :: [OptDescr Flag]
 cliOptions =
   [ GetOpt.Option [] [allowDirtyFlagName] (NoArg AllowDirty) "Allow nix-bootstrap to run even if the current state of the git repo is dirty.",
-    GetOpt.Option [] [useFlakesFlagName] (NoArg UseFlakes) "(EXPERIMENTAL) Use nix flakes instead of the stable nix file structure.",
     GetOpt.Option [] [fromScratchFlagName] (NoArg FromScratch) $
       "Ignore any previous nix-bootstrap state files and re-prompt for every "
         <> "configuration question. Note that this doesn't delete files which are not overwritten in the new configuration.",

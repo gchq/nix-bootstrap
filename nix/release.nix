@@ -21,7 +21,6 @@
       configureFlags = ["-fprod"];
       preBuild = ''
         sed -i 's:proc "alejandra":proc "${nixpkgs.alejandra.outPath}/bin/alejandra":g' src/Bootstrap/Unix.hs
-        sed -i 's:runCommand "niv":runCommand "${nixpkgs.niv.outPath}/bin/niv":g' src/Bootstrap/Unix.hs
         sed -i 's:runCommand "which":runCommand "${nixpkgs.which.outPath}/bin/which":g' src/Bootstrap/Unix.hs
       '';
     }
@@ -36,7 +35,6 @@ in {
       gmp
       libffi
       ncurses
-      niv
       which
       zlib
     ];

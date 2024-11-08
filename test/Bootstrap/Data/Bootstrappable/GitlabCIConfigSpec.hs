@@ -21,14 +21,13 @@ import Bootstrap.Data.ProjectType
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Test.Util.CanDieOnError ()
-import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "gitlab-ci.yml rendering" do
   let ciConfig = ContinuousIntegrationConfig True
   it "renders an Elm/Parcel gitlab-ci config without pre-commit checks correctly" do
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Elm $ ElmOptions (ElmModeNode PNPm) False) Nothing)
+    bootstrapContent (gitlabCIConfigFor ciConfig (Elm $ ElmOptions (ElmModeNode PNPm) False) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -53,7 +52,7 @@ build-site:
 |]
           )
   it "renders an Elm/Parcel gitlab-ci config without pre-commit or flakes checks correctly" do
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Elm $ ElmOptions (ElmModeNode PNPm) False) Nothing)
+    bootstrapContent (gitlabCIConfigFor ciConfig (Elm $ ElmOptions (ElmModeNode PNPm) False) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -68,49 +67,19 @@ default:
 check-dev-environment:
   stage: build
   script:
-    - nix-shell --run 'echo ok'
+    - nix develop -c echo ok
 
 build-site:
   stage: build
   script:
-    - nix-shell --run 'pnpm install --frozen-lockfile'
-    - nix-shell --run 'pnpm run build'
+    - nix develop -c pnpm install --frozen-lockfile
+    - nix develop -c pnpm run build
 |]
           )
   it "renders a bare Elm gitlab-ci config with pre-commit checks correctly" do
     let projectType = Elm $ ElmOptions ElmModeBare True
-        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault projectType nixPreCommitHookConfig)
-      >>= ( `shouldBe`
-              Right
-                [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
-
-default:
-  before_script:
-    - nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs
-    - nix-channel --update
-    - nix-env -iA nixpkgs.bash nixpkgs.openssh
-    - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
-
-check-dev-environment-and-run-impure-hooks:
-  stage: build
-  script:
-    - nix-shell --run 'elm-review'
-
-pre-commit-check:
-  stage: build
-  script: "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
-
-build-site:
-  stage: build
-  script:
-    - nix-shell --run 'elm make src/Main.elm'
-|]
-          )
-  it "renders a bare Elm gitlab-ci config with pre-commit checks and flakes correctly" do
-    let projectType = Elm $ ElmOptions ElmModeBare True
-        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes projectType nixPreCommitHookConfig)
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -129,7 +98,39 @@ check-dev-environment-and-run-impure-hooks:
 
 pre-commit-check:
   stage: build
-  script: "nix build '.#runChecks'"
+  script:
+    - nix build '.#runChecks'
+
+build-site:
+  stage: build
+  script:
+    - nix develop -c elm make src/Main.elm
+|]
+          )
+  it "renders a bare Elm gitlab-ci config with pre-commit checks and flakes correctly" do
+    let projectType = Elm $ ElmOptions ElmModeBare True
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig projectType nixPreCommitHookConfig)
+      >>= ( `shouldBe`
+              Right
+                [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
+
+default:
+  before_script:
+    - nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs
+    - nix-channel --update
+    - nix-env -iA nixpkgs.bash nixpkgs.openssh
+    - echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+
+check-dev-environment-and-run-impure-hooks:
+  stage: build
+  script:
+    - nix develop -c elm-review
+
+pre-commit-check:
+  stage: build
+  script:
+    - nix build '.#runChecks'
 
 build-site:
   stage: build
@@ -138,7 +139,7 @@ build-site:
 |]
           )
   it "renders a Go gitlab-ci with a flake build and without pre-commit checks correctly" do
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes (Go $ SetUpGoBuild True) Nothing)
+    bootstrapContent (gitlabCIConfigFor ciConfig (Go $ SetUpGoBuild True) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -157,13 +158,14 @@ check-dev-environment:
 
 build:
   stage: build
-  script: "nix build"
+  script:
+    - nix build
 |]
           )
   it "renders a Go gitlab-ci with a flake build and with pre-commit checks correctly" do
     let projectType = Go $ SetUpGoBuild True
-        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
-    bootstrapContent (gitlabCIConfigFor ciConfig rcWithFlakes projectType nixPreCommitHookConfig)
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -182,15 +184,17 @@ check-dev-environment:
 
 pre-commit-check:
   stage: build
-  script: "nix build '.#runChecks'"
+  script:
+    - nix build '.#runChecks'
 
 build:
   stage: build
-  script: "nix build"
+  script:
+    - nix build
 |]
           )
   it "renders a Go gitlab-ci with a build and without pre-commit checks correctly" do
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault (Go $ SetUpGoBuild True) Nothing)
+    bootstrapContent (gitlabCIConfigFor ciConfig (Go $ SetUpGoBuild True) Nothing)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -205,17 +209,18 @@ default:
 check-dev-environment:
   stage: build
   script:
-    - nix-shell --run 'echo ok'
+    - nix develop -c echo ok
 
 build:
   stage: build
-  script: "nix-build"
+  script:
+    - nix build
 |]
           )
   it "renders a Go gitlab-ci with a build and with pre-commit checks correctly" do
     let projectType = Go $ SetUpGoBuild True
-        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault projectType nixPreCommitHookConfig)
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -230,21 +235,23 @@ default:
 check-dev-environment:
   stage: build
   script:
-    - nix-shell --run 'echo ok'
+    - nix develop -c echo ok
 
 pre-commit-check:
   stage: build
-  script: "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
+  script:
+    - nix build '.#runChecks'
 
 build:
   stage: build
-  script: "nix-build"
+  script:
+    - nix build
 |]
           )
   it "renders a gitlab-ci without a build and with pre-commit checks correctly" do
     let projectType = Go $ SetUpGoBuild False
-        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor rcDefault projectType
-    bootstrapContent (gitlabCIConfigFor ciConfig rcDefault projectType nixPreCommitHookConfig)
+        nixPreCommitHookConfig = Just $ nixPreCommitHookConfigFor projectType
+    bootstrapContent (gitlabCIConfigFor ciConfig projectType nixPreCommitHookConfig)
       >>= ( `shouldBe`
               Right
                 [r|image: nixos/nix@sha256:473a2b527958665554806aea24d0131bacec46d23af09fef4598eeab331850fa
@@ -259,10 +266,11 @@ default:
 check-dev-environment:
   stage: build
   script:
-    - nix-shell --run 'echo ok'
+    - nix develop -c echo ok
 
 pre-commit-check:
   stage: build
-  script: "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
+  script:
+    - nix build '.#runChecks'
 |]
           )

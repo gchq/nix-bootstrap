@@ -15,7 +15,6 @@ module Bootstrap.Nix.Evaluate
   )
 where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.GHCVersion (GHCVersion, parseGHCVersion)
 import Bootstrap.Data.Version (MajorVersion, parseMajorVersion)
 import Bootstrap.Error
@@ -33,11 +32,8 @@ import Bootstrap.Nix.Expr
     nixproperty,
     writeExprForTerminal,
     (|.),
-    (|=),
   )
-import Bootstrap.Nix.Expr.Nixpkgs
-  ( nixpkgsExpr,
-  )
+import Bootstrap.Nix.Expr.Nixpkgs (nixpkgsBinding)
 import Bootstrap.Unix (runCommand, which)
 import Control.Exception (IOException, ioError, try)
 import qualified Data.Text as T
@@ -113,32 +109,28 @@ getNixVersion NixBinaryPaths {nixEnvPath} = do
 -- | Encloses the expression in single quotes and evaluates it, giving back stdout in a `Right` value.
 --
 -- Gives a `Left` value if the command execution fails
-evaluateNixExpression :: MonadIO m => NixBinaryPaths -> RunConfig -> Expr -> m (Either IOException String)
-evaluateNixExpression NixBinaryPaths {..} RunConfig {rcUseFlakes} expr =
+evaluateNixExpression :: MonadIO m => NixBinaryPaths -> Expr -> m (Either IOException String)
+evaluateNixExpression NixBinaryPaths {..} expr =
   liftIO
     . try
     . hSilence [stdout, stderr]
     $ readProcess
-      (if rcUseFlakes then nixPath else nixInstantiatePath)
-      ( if rcUseFlakes
-          then ["eval", "--impure", "--expr", toString (writeExprForTerminal expr)]
-          else ["--eval", "--expr", toString (writeExprForTerminal expr)]
-      )
+      nixPath
+      ["eval", "--impure", "--expr", toString (writeExprForTerminal expr)]
       ""
 
 -- | Gets the version of the derivation named that is provided by the pinned nixpkgs.
 --
 -- >>> getVersionOfNixpkgsAttribute (NixBinaryPaths {..}) (RunConfig {..}) "go"
 -- "1.17.7"
-getVersionOfNixpkgsAttribute :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> Text -> m (Either IOException String)
-getVersionOfNixpkgsAttribute nixBinaryPaths rc attrName = do
+getVersionOfNixpkgsAttribute :: MonadBootstrap m => NixBinaryPaths -> Text -> m (Either IOException String)
+getVersionOfNixpkgsAttribute nixBinaryPaths attrName = do
   resetPermissionsInGitPod
   runWithProgressMsg LongRunning ("Getting version of " <> attrName <> " in the pinned version of nixpkgs") . ExceptT $
     evaluateNixExpression
       nixBinaryPaths
-      rc
       ( ELetIn
-          (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr rc)
+          (one nixpkgsBinding)
           [nix|nixpkgs|]
           |. PIdent (Identifier attrName)
           |. [nixproperty|.version|]
@@ -155,8 +147,8 @@ extractNixVersionString nixVersionValue =
     "\\1"
 
 -- | Gets the available GHC versions in the pinned nixpkgs.
-getAvailableGHCVersions :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> m (Set GHCVersion)
-getAvailableGHCVersions nixBinaryPaths rc =
+getAvailableGHCVersions :: MonadBootstrap m => NixBinaryPaths -> m (Set GHCVersion)
+getAvailableGHCVersions nixBinaryPaths =
   dieOnError
     (("Could not get list of available GHC versions: " <>) . toText . displayException)
     $ ExceptT do
@@ -164,9 +156,8 @@ getAvailableGHCVersions nixBinaryPaths rc =
       runWithProgressMsg LongRunning "Getting available versions of GHC in the pinned version of nixpkgs" . ExceptT $
         evaluateNixExpression
           nixBinaryPaths
-          rc
           ( ELetIn
-              (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr rc)
+              (one nixpkgsBinding)
               [nix|builtins.attrNames nixpkgs.haskell.packages|]
           )
           <&> second (parse parseAttributes "")

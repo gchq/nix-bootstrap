@@ -14,7 +14,6 @@ module Bootstrap.Data.HaskellDependency
   )
 where
 
-import Bootstrap.Cli (RunConfig)
 import Bootstrap.Data.ProjectType (HaskellOptions)
 import Bootstrap.Nix.Evaluate
   ( NixBinaryPaths,
@@ -27,10 +26,9 @@ import Bootstrap.Nix.Expr
     Property (PIdent),
     nixproperty,
     (|.),
-    (|=),
   )
 import Bootstrap.Nix.Expr.Haskell (haskellPackagesExpr)
-import Bootstrap.Nix.Expr.Nixpkgs (nixpkgsExpr)
+import Bootstrap.Nix.Expr.Nixpkgs (nixpkgsBinding)
 import Control.Exception (IOException)
 import Data.Aeson (ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
@@ -138,20 +136,18 @@ hdep name = case M.lookup name dependencies of
 getHaskellDependencyVersions ::
   MonadIO m =>
   NixBinaryPaths ->
-  RunConfig ->
   HaskellOptions ->
   [HaskellDependency 'VersionUnknown] ->
   m (Either IOException [HaskellDependency 'VersionKnown])
-getHaskellDependencyVersions nixBinaryPaths rc haskellOptions deps = do
+getHaskellDependencyVersions nixBinaryPaths haskellOptions deps = do
   results <- forM deps \case
     HaskellDependencyBase -> pure $ Right HaskellDependencyBase
     HaskellDependencyBoot d -> pure . Right $ HaskellDependencyBoot d
     HaskellDependencyVersioned d HaskellDependencyVersionUnknown -> do
       evaluateNixExpression
         nixBinaryPaths
-        rc
         ( ELetIn
-            (one $ [nixproperty|nixpkgs|] |= nixpkgsExpr rc)
+            (one nixpkgsBinding)
             ( EGrouping (haskellPackagesExpr haskellOptions)
                 |. PIdent (Identifier d)
                 |. [nixproperty|version|]

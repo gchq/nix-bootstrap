@@ -4,12 +4,10 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 -- | Description : Compatibility for pre-flake tools to work with the bootstraped flake.nix
 module Bootstrap.Data.Bootstrappable.NixShellCompat
-  ( NixShellCompat,
-    nixShellCompatFor,
+  ( NixShellCompat (NixShellCompat),
   )
 where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentNix,
@@ -40,9 +38,3 @@ instance IsNixExpr NixShellCompat where
         }.tar.gz";
         sha256 = lock.nodes.flake-compat.locked.narHash;
         }) {src = ./.;}).shellNix|]
-
-nixShellCompatFor :: RunConfig -> Maybe NixShellCompat
-nixShellCompatFor RunConfig {rcUseFlakes} =
-  if rcUseFlakes
-    then Just NixShellCompat
-    else Nothing

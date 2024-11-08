@@ -19,19 +19,18 @@ import Bootstrap.Data.ProjectType
   )
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "nix/pre-commit-hooks.nix rendering" do
   it "renders correctly when using default Go hooks" do
-    bootstrapContent (nixPreCommitHookConfigFor rcWithFlakes $ Go $ SetUpGoBuild False)
+    bootstrapContent (nixPreCommitHookConfigFor $ Go $ SetUpGoBuild False)
       >>= ( `shouldBe`
               Right
                 [r|{
   pre-commit-hooks-lib,
-  nixpkgs,
   system,
+  nixpkgs,
 }: let
   # Function to make a set of pre-commit hooks
   makeHooks = hooks:
@@ -65,13 +64,16 @@ in {
 |]
           )
   it "renders correctly when using default NPM hooks" do
-    bootstrapContent (nixPreCommitHookConfigFor rcDefault $ Node NPM)
+    bootstrapContent (nixPreCommitHookConfigFor $ Node NPM)
       >>= ( `shouldBe`
               Right
-                [r|{pre-commit-hooks-lib}: let
+                [r|{
+  pre-commit-hooks-lib,
+  system,
+}: let
   # Function to make a set of pre-commit hooks
   makeHooks = hooks:
-    pre-commit-hooks-lib.run {
+    pre-commit-hooks-lib.lib.${system}.run {
       inherit hooks;
       src = ../.;
     };
@@ -85,25 +87,25 @@ in {
 in {
   pureHooks = makeHooks pureHooks;
   allHooks = makeHooks (pureHooks // impureHooks);
-  tools = with pre-commit-hooks-lib; [alejandra prettier];
+  tools = with pre-commit-hooks-lib.packages.${system}; [alejandra prettier];
 }
 |]
           )
   it "renders correctly when using default Java hooks" do
     bootstrapContent
       ( nixPreCommitHookConfigFor
-          rcDefault
           (Java $ JavaOptions (InstallMinishift False) (InstallLombok False) NoJavaBuild OpenJDK)
       )
       >>= ( `shouldBe`
               Right
                 [r|{
   pre-commit-hooks-lib,
+  system,
   nixpkgs,
 }: let
   # Function to make a set of pre-commit hooks
   makeHooks = hooks:
-    pre-commit-hooks-lib.run {
+    pre-commit-hooks-lib.lib.${system}.run {
       inherit hooks;
       src = ../.;
     };
@@ -122,7 +124,7 @@ in {
 in {
   pureHooks = makeHooks pureHooks;
   allHooks = makeHooks (pureHooks // impureHooks);
-  tools = (with pre-commit-hooks-lib; [alejandra]) ++ (with nixpkgs; [google-java-format]);
+  tools = (with pre-commit-hooks-lib.packages.${system}; [alejandra]) ++ (with nixpkgs; [google-java-format]);
 }
 |]
           )

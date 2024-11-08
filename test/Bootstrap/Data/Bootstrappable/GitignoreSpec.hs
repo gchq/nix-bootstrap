@@ -13,13 +13,12 @@ import Bootstrap.Data.ProjectType
   )
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe ".gitignore rendering" do
   it "renders blocks correctly with go and flakes, without pre-commit hooks" do
-    bootstrapContent (gitignoreFor rcWithFlakes (Go $ SetUpGoBuild False) (PreCommitHooksConfig False))
+    bootstrapContent (gitignoreFor (Go $ SetUpGoBuild False) (PreCommitHooksConfig False))
       >>= ( `shouldBe`
               Right
                 [r|# Binaries for programs and plugins
@@ -52,10 +51,13 @@ result-*
           )
 
   it "renders blocks correctly with yarn and pre-commit hooks" do
-    bootstrapContent (gitignoreFor rcDefault (Node Yarn) (PreCommitHooksConfig True))
+    bootstrapContent (gitignoreFor (Node Yarn) (PreCommitHooksConfig True))
       >>= ( `shouldBe`
               Right
-                [r|# Nix Artefacts
+                [r|# Direnv Config
+/.direnv
+
+# Nix Artefacts
 result
 result-*
 

@@ -90,12 +90,6 @@ The simplest way to get started is to run the following script:
 sh <(curl -L https://raw.githubusercontent.com/gchq/nix-bootstrap/main/scripts/run.sh)
 ```
 
-Or to run nix-bootstrap with flakes enabled:
-
-```sh
-sh <(curl -L https://raw.githubusercontent.com/gchq/nix-bootstrap/main/scripts/run.sh) --experimental-use-flakes
-```
-
 Alternatively, you can always clone the repo and build nix-bootstrap using `nix build`.
 The built binary will then be available in `./result/bin/nix-bootstrap`.
 

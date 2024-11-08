@@ -8,7 +8,6 @@ module Bootstrap.Data.Bootstrappable.Haskell.PackageYaml
   )
 where
 
-import Bootstrap.Cli (RunConfig)
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentYaml,
@@ -27,15 +26,15 @@ import qualified Data.Aeson as Aeson
 import Relude.Extra.Bifunctor (firstF)
 
 -- | The haskell project's package.yaml
-data PackageYaml = PackageYaml NixBinaryPaths RunConfig ProjectName HaskellOptions
+data PackageYaml = PackageYaml NixBinaryPaths ProjectName HaskellOptions
 
 instance Bootstrappable PackageYaml where
   bootstrapName = const "package.yaml"
   bootstrapReason = const "The configuration of your haskell project"
-  bootstrapContent (PackageYaml nbps rc n opts@HaskellOptions {haskellOptionsHaskellProjectType}) = runExceptT do
+  bootstrapContent (PackageYaml nbps n opts@HaskellOptions {haskellOptionsHaskellProjectType}) = runExceptT do
     dependencies <- ExceptT
       . firstF (("Could not get haskell dependency versions: " <>) . displayException)
-      . getHaskellDependencyVersions nbps rc opts
+      . getHaskellDependencyVersions nbps opts
       $ case haskellOptionsHaskellProjectType of
         HaskellProjectTypeReplOnly -> []
         HaskellProjectTypeBasic _ -> [$(hdep "base"), $(hdep "relude")]
@@ -124,9 +123,9 @@ instance ToJSON PackageYamlWithDependencies where
         )
       ]
 
-packageYamlFor :: NixBinaryPaths -> RunConfig -> ProjectName -> ProjectType -> Maybe PackageYaml
-packageYamlFor nbps rc projectName = \case
+packageYamlFor :: NixBinaryPaths -> ProjectName -> ProjectType -> Maybe PackageYaml
+packageYamlFor nbps projectName = \case
   Haskell haskellOptions@(HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
-    HaskellProjectTypeBasic _ -> Just $ PackageYaml nbps rc projectName haskellOptions
+    HaskellProjectTypeBasic _ -> Just $ PackageYaml nbps projectName haskellOptions
   _ -> Nothing
