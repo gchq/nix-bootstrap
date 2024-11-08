@@ -20,26 +20,28 @@ module Bootstrap.Data.Config
     configSetUpPreCommitHooks,
     configSetUpContinuousIntegration,
     configSetUpVSCodeDevContainer,
-    configUseNixFlakes,
+
+    -- * Exceptions
+    NonFlakeConfigException,
   )
 where
 
 import Bootstrap.Data.Config.Internal
   ( Config,
-    ConfigV3Plus (ConfigV3Plus),
+    ConfigV8 (ConfigV8),
     LoadConfigResult
       ( LoadConfigResultError,
         LoadConfigResultFound,
         LoadConfigResultNotFound
       ),
-    VersionedConfig (VersionedConfigV7),
-    VersionedProjectType (VPT7),
-    configV3ProjectName,
-    configV3ProjectType,
-    configV3SetUpContinuousIntegration,
-    configV3SetUpPreCommitHooks,
-    configV3SetUpVSCodeDevContainer,
-    configV3UseNixFlakes,
+    NonFlakeConfigException,
+    VersionedConfig (VersionedConfigV8),
+    VersionedProjectType (VPT8),
+    configV8ProjectName,
+    configV8ProjectType,
+    configV8SetUpContinuousIntegration,
+    configV8SetUpPreCommitHooks,
+    configV8SetUpVSCodeDevContainer,
     loadConfig,
     _Current,
   )
@@ -52,7 +54,7 @@ import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig)
 import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType (ProjectType)
 
-makeConfigLenses 'ConfigV3Plus
+makeConfigLenses 'ConfigV8
 
 -- | Initialise a new `Config` from scratch
 configFor ::
@@ -61,9 +63,7 @@ configFor ::
   PreCommitHooksConfig ->
   ContinuousIntegrationConfig ->
   DevContainerConfig ->
-  -- | Whether to enable Nix Flakes
-  Bool ->
   Config
-configFor a1 a2 a3 a4 a5 a6 =
-  VersionedConfigV7 $
-    ConfigV3Plus a1 (VPT7 a2) a3 a4 a5 a6
+configFor a1 a2 a3 a4 a5 =
+  VersionedConfigV8 $
+    ConfigV8 a1 (VPT8 a2) a3 a4 a5

@@ -1,22 +1,21 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap (nixBootstrap) where
 
 import Bootstrap.Cli
   ( Command (CommandHelp, CommandRun, CommandVersion),
-    RunConfig (RunConfig, rcAllowDirty, rcFromScratch, rcNonInteractive, rcUseFlakes, rcWithDevContainer),
+    RunConfig (RunConfig, rcAllowDirty, rcFromScratch, rcNonInteractive, rcWithDevContainer),
     allowDirtyFlagName,
     fromScratchFlagName,
     parseCommand,
     showHelp,
-    useFlakesFlagName,
   )
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapName),
   )
 import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
-import Bootstrap.Data.Bootstrappable.DefaultNix (SrcDir (SrcDirCurrent), defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
     devContainerDockerfileFor,
@@ -45,8 +44,7 @@ import Bootstrap.Data.Bootstrappable.Haskell.PackageYaml (packageYamlFor)
 import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs (preludeHsFor)
 import Bootstrap.Data.Bootstrappable.HaskellPackagesNix (haskellPackagesNixFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
-import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
-import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
+import Bootstrap.Data.Bootstrappable.NixShellCompat (NixShellCompat (NixShellCompat))
 import Bootstrap.Data.Bootstrappable.Python.Requirements (Requirements (Requirements))
 import Bootstrap.Data.Bootstrappable.Readme
   ( Readme
@@ -54,8 +52,7 @@ import Bootstrap.Data.Bootstrappable.Readme
         readmeHasDevContainer,
         readmeMBuildPlan,
         readmeProjectName,
-        readmeProjectType,
-        readmeUseFlakes
+        readmeProjectType
       ),
   )
 import Bootstrap.Data.Bootstrappable.Rust.CargoLock (cargoLockFor)
@@ -77,13 +74,13 @@ import Bootstrap.Data.Config
         LoadConfigResultFound,
         LoadConfigResultNotFound
       ),
+    NonFlakeConfigException,
     configFor,
     configProjectName,
     configProjectType,
     configSetUpContinuousIntegration,
     configSetUpPreCommitHooks,
     configSetUpVSCodeDevContainer,
-    configUseNixFlakes,
     loadConfig,
   )
 import Bootstrap.Data.ContinuousIntegration
@@ -126,7 +123,6 @@ import Bootstrap.Data.Version (MajorVersion (MajorVersion), displayMajorVersion)
 import Bootstrap.Error (CanDieOnError (dieOnError', dieOnErrorWithPrefix))
 import Bootstrap.GitPod (resetPermissionsInGitPod)
 import Bootstrap.Monad (MonadBootstrap)
-import Bootstrap.Niv (initialiseNiv)
 import Bootstrap.Nix.Evaluate (NixBinaryPaths, getAvailableGHCVersions, getNixBinaryPaths, getNixConfig, getNixVersion)
 import Bootstrap.Nix.Flake (generateIntermediateFlake)
 import Bootstrap.Terminal
@@ -173,44 +169,30 @@ nixBootstrap = withTerminal $ runTerminalT do
           loadConfig >>= \case
             LoadConfigResultFound c -> pure $ Just c
             LoadConfigResultNotFound -> pure Nothing
-            LoadConfigResultError e -> do
-              putErrorLn . toText $ displayException e
-              putErrorLn "Invalid config file found; please delete the file and try again."
-              exitFailure
+            LoadConfigResultError e -> case fromException @NonFlakeConfigException e of
+              Just _nonFlakeConfigException -> do
+                putErrorLn "Cannot upgrade config; nix-bootstrap now requires all projects to use flakes."
+                putErrorLn " Please bootstrap from scratch by deleting your nix-bootstrap config file and running nix-bootstrap again."
+                putErrorLn " Note that this will result in some old infrastructure remaining for you to clean up."
+                exitFailure
+              Nothing -> do
+                putErrorLn . toText $ displayException e
+                putErrorLn "Invalid config file found; please delete the file and try again."
+                exitFailure
         showWelcomeMessage
         resetPermissionsInGitPod
-        useFlakes <- case mConfig of
-          Just cfg ->
-            if rcFromScratch initialRunConfig
-              then pure $ rcUseFlakes initialRunConfig
-              else
-                if rcUseFlakes initialRunConfig && not (cfg ^. configUseNixFlakes)
-                  then do
-                    putErrorLn $
-                      "This project has been not configured to use nix flakes; re-run with --"
-                        <> fromScratchFlagName
-                        <> " and --"
-                        <> useFlakesFlagName
-                        <> " to re-configure the project to use nix flakes"
-                    exitFailure
-                  else pure $ cfg ^. configUseNixFlakes
-          Nothing -> pure $ rcUseFlakes initialRunConfig
         let nonInteractive = maybe False (const $ rcNonInteractive initialRunConfig) mConfig
             runConfig =
               initialRunConfig
-                { rcNonInteractive = nonInteractive,
-                  rcUseFlakes = useFlakes
+                { rcNonInteractive = nonInteractive
                 }
         (currentDirectoryName, nixBinaryPaths) <- performInitialChecks runConfig
         buildPlan <-
           if rcFromScratch runConfig
             then do
-              promptFlakesWarning runConfig
               projectName <- promptProjectName currentDirectoryName
               preCommitHooksConfig <- promptPreCommitHooksConfig
-              if useFlakes
-                then generateIntermediateFlake nixBinaryPaths runConfig projectName
-                else initialiseNiv runConfig preCommitHooksConfig
+              generateIntermediateFlake nixBinaryPaths runConfig projectName
               promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig
             else case mConfig of
               Just cfg -> do
@@ -229,12 +211,9 @@ nixBootstrap = withTerminal $ runTerminalT do
                       mbpRunConfig = runConfig
                     }
               Nothing -> do
-                promptFlakesWarning runConfig
                 projectName <- promptProjectName currentDirectoryName
                 preCommitHooksConfig <- promptPreCommitHooksConfig
-                if useFlakes
-                  then generateIntermediateFlake nixBinaryPaths runConfig projectName
-                  else initialiseNiv runConfig preCommitHooksConfig
+                generateIntermediateFlake nixBinaryPaths runConfig projectName
                 promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig
         confirmBuildPlan buildPlan >>= \case
           Just confirmedBuildPlan -> do
@@ -250,7 +229,7 @@ nixBootstrap = withTerminal $ runTerminalT do
       putTextLn $ "nix-bootstrap version " <> toText (showVersion version)
 
 performInitialChecks :: forall m. MonadBootstrap m => RunConfig -> m (CurrentDirectoryName, NixBinaryPaths)
-performInitialChecks rc@RunConfig {rcUseFlakes} = do
+performInitialChecks rc = do
   currentDirectoryName <- toText . takeFileName <$> liftIO getCurrentDirectory
   when (currentDirectoryName == "nix-bootstrap" || currentDirectoryName == "nix-bootstrap-hs") $
     putErrorLn "In nix-bootstrap directory; exiting. (Test in another directory.)" >> exitFailure
@@ -267,7 +246,7 @@ performInitialChecks rc@RunConfig {rcUseFlakes} = do
       if inGitRepo
         then checkWorkingStateIsClean rc
         else offerToInitialiseGitRepo
-      when rcUseFlakes $ checkNixFlakesAreConfigured nixBinaryPaths
+      checkNixFlakesAreConfigured nixBinaryPaths
       pure (CurrentDirectoryName currentDirectoryName, nixBinaryPaths)
   where
     checkWorkingStateIsClean :: RunConfig -> m ()
@@ -296,9 +275,7 @@ performInitialChecks rc@RunConfig {rcUseFlakes} = do
                 <> displayMajorVersion nixVersion
                 <> ") doesn't support flakes. Please upgrade to nix >= "
                 <> displayMajorVersion requiredNixVersion
-                <> " or remove the --"
-                <> useFlakesFlagName
-                <> " flag."
+                <> "."
             exitFailure
         checkExperimentalFeatures :: m ()
         checkExperimentalFeatures = do
@@ -338,17 +315,6 @@ showWelcomeMessage = do
   putTextLn "This program will take you through the process of setting up a new project with nix-based infrastructure."
   putTextLn "It is expected to be run in an empty git repository."
 
--- | Warns the user that flakes are an experimental feature if they are using them
-promptFlakesWarning :: MonadBootstrap m => RunConfig -> m ()
-promptFlakesWarning RunConfig {rcUseFlakes} = when rcUseFlakes do
-  withAttributes [bold, foreground yellow] do
-    putTextLn "Nix Flakes are an experimental feature of nix and their API is subject to breaking changes without warning."
-    putTextLn "Flakes bootstrapped with nix-bootstrap may stop working following a nix version upgrade or when users on your team have different nix versions."
-  promptYesNo "Please confirm you understand and accept these risks"
-    >>= flip unless do
-      putTextLn "Okay, exiting."
-      exitFailure
-
 -- | Asks the user to enter a project name
 promptProjectName :: MonadBootstrap m => CurrentDirectoryName -> m ProjectName
 promptProjectName cdn@(CurrentDirectoryName currentDirectoryName) =
@@ -384,14 +350,14 @@ promptBuildConfig
         <$> promptYesNoWithDefault
           (unDevContainerConfig <$> rcWithDevContainer)
           "Would you like to set up a VSCode DevContainer?"
-    mbpProjectType <- promptProjectType mbpNixBinaryPaths mbpRunConfig mbpDevContainerConfig
+    mbpProjectType <- promptProjectType mbpNixBinaryPaths mbpDevContainerConfig
     mbpContinuousIntegrationConfig <-
       ContinuousIntegrationConfig
         <$> promptYesNo "Would you like to set up CI with GitLab CI?"
     makeBuildPlan MakeBuildPlanArgs {..}
 
-promptProjectType :: forall m. MonadBootstrap m => NixBinaryPaths -> RunConfig -> DevContainerConfig -> m ProjectType
-promptProjectType nixBinaryPaths runConfig devContainerConfig = do
+promptProjectType :: forall m. MonadBootstrap m => NixBinaryPaths -> DevContainerConfig -> m ProjectType
+promptProjectType nixBinaryPaths devContainerConfig = do
   superType <- promptChoice "Select a project type:" universeNonEmpty projectSuperTypeName
   case superType of
     PSTMinimal -> pure Minimal
@@ -409,7 +375,7 @@ promptProjectType nixBinaryPaths runConfig devContainerConfig = do
           "Would you like to set up elm-review with a default configuration for code quality?"
       pure $ Elm ElmOptions {..}
     PSTHaskell -> do
-      availableGHCVersions <- getAvailableGHCVersions nixBinaryPaths runConfig
+      availableGHCVersions <- getAvailableGHCVersions nixBinaryPaths
       case nonEmpty $ toList availableGHCVersions of
         Just availableGHCVersions' -> do
           haskellProjectType <- promptHaskellProjectType
@@ -462,20 +428,19 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
         { readmeProjectName = mbpProjectName,
           readmeProjectType = mbpProjectType,
           readmeHasDevContainer = mbpDevContainerConfig,
-          readmeMBuildPlan = Nothing,
-          readmeUseFlakes = rcUseFlakes mbpRunConfig
+          readmeMBuildPlan = Nothing
         }
     mkInitialBuildPlanMap :: m (Map FilePath BuildPlanFile)
     mkInitialBuildPlanMap = do
       let nixPreCommitHookConfig =
             if unPreCommitHooksConfig mbpPreCommitHooksConfig
-              then Just $ nixPreCommitHookConfigFor mbpRunConfig mbpProjectType
+              then Just $ nixPreCommitHookConfigFor mbpProjectType
               else Nothing
-          buildNix = buildNixFor mbpRunConfig mbpProjectName mbpProjectType
+          buildNix = buildNixFor mbpProjectName mbpProjectType
       goModfile <-
         case mbpProjectType of
           Go (SetUpGoBuild True) ->
-            Just <$> goModfileFor mbpNixBinaryPaths mbpRunConfig mbpProjectName
+            Just <$> goModfileFor mbpNixBinaryPaths mbpProjectName
           _ -> pure Nothing
       pythonRequirementsFile <- case mbpProjectType of
         Python _ -> do
@@ -484,23 +449,15 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
         _ -> pure Nothing
       fromList
         <$> toBuildPlanFiles
-          ( configFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig mbpContinuousIntegrationConfig mbpDevContainerConfig (rcUseFlakes mbpRunConfig)
-              ~: Envrc mbpPreCommitHooksConfig (rcUseFlakes mbpRunConfig)
-              ~: gitignoreFor mbpRunConfig mbpProjectType mbpPreCommitHooksConfig
+          ( configFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig mbpContinuousIntegrationConfig mbpDevContainerConfig
+              ~: Envrc mbpPreCommitHooksConfig
+              ~: gitignoreFor mbpProjectType mbpPreCommitHooksConfig
               ~: initialReadme
               ~: buildNix
-              ~: flakeNixFor mbpRunConfig mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig buildNix
-              ~: ( if rcUseFlakes mbpRunConfig
-                     then Nothing
-                     else Just $ nixShellFor mbpRunConfig mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig
-                 )
-              ~: ( if rcUseFlakes mbpRunConfig
-                     then Nothing
-                     else defaultNixFor SrcDirCurrent mbpProjectName mbpProjectType
-                 )
-              ~: nixShellCompatFor mbpRunConfig
+              ~: flakeNixFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig buildNix
+              ~: NixShellCompat
               ~: nixPreCommitHookConfig
-              ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpRunConfig mbpProjectType nixPreCommitHookConfig
+              ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpProjectType nixPreCommitHookConfig
               ~: devContainerDockerComposeFor mbpDevContainerConfig mbpProjectName
               ~: devContainerDockerfileFor mbpDevContainerConfig
               ~: devContainerJsonFor mbpDevContainerConfig mbpProjectName mbpProjectType
@@ -515,7 +472,7 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
               ~: elmPackageJsonFor mbpProjectType
               ~: elmIndexHtmlFor mbpProjectName mbpProjectType
               ~: elmIndexJsFor mbpProjectType
-              ~: packageYamlFor mbpNixBinaryPaths mbpRunConfig mbpProjectName mbpProjectType
+              ~: packageYamlFor mbpNixBinaryPaths mbpProjectName mbpProjectType
               ~: preludeHsFor mbpProjectType
               ~: libHsFor mbpProjectType
               ~: mainHsFor mbpProjectType

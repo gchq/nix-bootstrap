@@ -5,18 +5,16 @@ module Bootstrap.Data.Bootstrappable.NixShellCompatSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent))
 import Bootstrap.Data.Bootstrappable.NixShellCompat
-  ( nixShellCompatFor,
+  ( NixShellCompat (NixShellCompat),
   )
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "shell.nix (compat) rendering" do
-  it "isn't created for non-flake projects" (nixShellCompatFor rcDefault `shouldBe` Nothing)
   it "renders correctly" do
-    bootstrapContent (nixShellCompatFor rcWithFlakes)
+    bootstrapContent NixShellCompat
       >>= ( `shouldBe`
               Right
                 [r|(import (let

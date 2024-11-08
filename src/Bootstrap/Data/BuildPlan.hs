@@ -103,17 +103,8 @@ toBuildPlanFiles (x `HCons` xs) = do
 type T = Tree String
 
 toReasonTree :: BuildPlan -> T
-toReasonTree = mergeDuplicateNodes . go (Node "/" []) . (nivFiles <>) . buildPlanFiles
+toReasonTree = mergeDuplicateNodes . go (Node "/" []) . buildPlanFiles
   where
-    nivFiles :: [(FilePath, BuildPlanFile)]
-    nivFiles =
-      [ ( "nix/sources.json",
-          BuildPlanFile "This contains metadata about your nix dependencies." "" WillOverwrite
-        ),
-        ( "nix/sources.nix",
-          BuildPlanFile "This is the interface between nix and the dependencies listed in sources.json." "" WillOverwrite
-        )
-      ]
     go :: T -> [(FilePath, BuildPlanFile)] -> T
     go t [] = t
     go t (x : xs) = go (widenTree t $ mkNode x) xs

@@ -2,34 +2,25 @@
 
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Nix.Command
-  ( NixCommandStyle (..),
-    NixCommandVariant (..),
+  ( NixCommandVariant (..),
     NixCommand (NixCommand),
     writeNixCommand,
   )
 where
 
-data NixCommandStyle = NCSOld | NCSNew
-
 data NixCommandVariant = NCVBuild
 
-data NixCommand = NixCommand
-  { ncStyle :: NixCommandStyle,
-    ncVariant :: NixCommandVariant
+newtype NixCommand = NixCommand
+  { ncVariant :: NixCommandVariant
   }
 
 -- | Prints a nix command in the form it would be used in a shell.
 --
--- >>> writeNixCommand (NixCommand NCSOld NCVBuild)
--- nix-build
---
--- >>> writeNixCommand (NixCommand NCSNew NCVBuild)
+-- >>> writeNixCommand (NixCommand NCVBuild)
 -- nix build
 writeNixCommand :: forall s. (IsString s, Semigroup s) => NixCommand -> s
-writeNixCommand NixCommand {..} = "nix" <> separator <> commandPart
+writeNixCommand NixCommand {..} = "nix " <> commandPart
   where
-    separator :: s
-    separator = case ncStyle of NCSOld -> "-"; NCSNew -> " "
     commandPart :: s
     commandPart = case ncVariant of
       NCVBuild -> "build"

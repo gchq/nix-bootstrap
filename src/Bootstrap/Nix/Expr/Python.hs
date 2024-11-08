@@ -12,7 +12,6 @@ import Bootstrap.Nix.Expr
     nixbinding,
     nixproperty,
     (|*),
-    (|.),
     (|=),
   )
 
@@ -41,19 +40,11 @@ machNixFlakeInput =
 
 -- | A binding which provides python packages based on requirements.txt.
 --
--- It expects mach-nix to be in scope.
---
--- If the flake parameter is True, it also expects system to be in scope.
+-- It expects mach-nix any system to be in scope.
 pythonPackagesBinding ::
-  -- | Whether working with the mach-nix flake (as opposed to legacy builtins.fetchGit)
-  Bool ->
   Binding
-pythonPackagesBinding isFlake =
-  [nixproperty|pythonPackages|]
-    |= ( (if isFlake then [nix|mach-nix.lib.${system}|] else [nix|mach-nix|])
-           |. [nixproperty|mkPython|]
-       )
-    |* [nix|rec {
+pythonPackagesBinding =
+  [nixbinding|pythonPackages = mach-nix.lib.${system}.mkPython (rec {
           requirements = builtins.readFile ./requirements.txt;
           python = "python39";
-        }|]
+        });|]

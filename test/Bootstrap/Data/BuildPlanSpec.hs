@@ -2,7 +2,6 @@
 module Bootstrap.Data.BuildPlanSpec (spec) where
 
 import Bootstrap.Data.Bootstrappable.BuildNix (buildNixFor)
-import Bootstrap.Data.Bootstrappable.DefaultNix (SrcDir (SrcDirCurrent), defaultNixFor)
 import Bootstrap.Data.Bootstrappable.DevContainer
   ( devContainerDockerComposeFor,
     devContainerDockerfileFor,
@@ -19,8 +18,7 @@ import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs
   ( preludeHsFor,
   )
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
-import Bootstrap.Data.Bootstrappable.NixShell (nixShellFor)
-import Bootstrap.Data.Bootstrappable.NixShellCompat (nixShellCompatFor)
+import Bootstrap.Data.Bootstrappable.NixShellCompat (NixShellCompat (NixShellCompat))
 import Bootstrap.Data.Bootstrappable.Readme (Readme (Readme))
 import Bootstrap.Data.Bootstrappable.Rust.CargoLock (cargoLockFor)
 import Bootstrap.Data.Bootstrappable.Rust.CargoToml (cargoTomlFor)
@@ -47,7 +45,6 @@ import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
 import Test.Util.CanDieOnError ()
-import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 
 spec :: Spec
 spec = describe "toReasonTree" do
@@ -58,23 +55,21 @@ spec = describe "toReasonTree" do
           preCommitHooksConfig = PreCommitHooksConfig True
           ciConfig = ContinuousIntegrationConfig True
           devContainerConfig = DevContainerConfig True
-          buildNix = buildNixFor rcWithFlakes projectName projectType
+          buildNix = buildNixFor projectName projectType
           haskellProjectType = Haskell $ HaskellOptions (GHCVersion 9 0 2) (HaskellProjectTypeBasic $ SetUpHaskellBuild True)
-      let nixPreCommitHookConfig = nixPreCommitHookConfigFor rcDefault projectType
+      let nixPreCommitHookConfig = nixPreCommitHookConfigFor projectType
       buildPlan <-
         BuildPlan
           <$> toBuildPlanFiles
-            ( configFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig False
-                ~: Envrc preCommitHooksConfig False
+            ( configFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig
+                ~: Envrc preCommitHooksConfig
                 ~: buildNix
-                ~: flakeNixFor rcWithFlakes projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
-                ~: defaultNixFor SrcDirCurrent projectName projectType
-                ~: nixShellFor rcDefault projectType preCommitHooksConfig (Just nixPreCommitHookConfig)
-                ~: nixShellCompatFor rcWithFlakes
-                ~: gitignoreFor rcDefault projectType preCommitHooksConfig
-                ~: Readme projectName projectType devContainerConfig Nothing False
+                ~: flakeNixFor projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
+                ~: NixShellCompat
+                ~: gitignoreFor projectType preCommitHooksConfig
+                ~: Readme projectName projectType devContainerConfig Nothing
                 ~: nixPreCommitHookConfig
-                ~: gitlabCIConfigFor ciConfig rcDefault projectType (Just nixPreCommitHookConfig)
+                ~: gitlabCIConfigFor ciConfig projectType (Just nixPreCommitHookConfig)
                 ~: devContainerDockerComposeFor devContainerConfig projectName
                 ~: devContainerDockerfileFor devContainerConfig
                 ~: devContainerJsonFor devContainerConfig projectName projectType
@@ -112,17 +107,13 @@ spec = describe "toReasonTree" do
           Node "app" [Node "Main.hs - The entrypoint of your haskell executable" []],
           Node "Cargo.lock - The locked dependencies of your rust project" [],
           Node "Cargo.toml - The configuration of your rust project" [],
-          Node "default.nix - This configures your reproducible project builds." [],
           Node "flake.nix - This configures what tools are available in your development environment and links in the pre-commit hooks." [],
           Node
             "nix"
             [ Node "build.nix - This configures your reproducible project builds." [],
-              Node "pre-commit-hooks.nix - This configures which pre-commit hooks are used." [],
-              Node "sources.json - This contains metadata about your nix dependencies." [],
-              Node "sources.nix - This is the interface between nix and the dependencies listed in sources.json." []
+              Node "pre-commit-hooks.nix - This configures which pre-commit hooks are used." []
             ],
           Node "README.md - This helpfully explains to you what each file (including itself) does!" [],
-          Node "shell.nix - This configures what tools are available in your development environment and links in the pre-commit hooks." [],
           Node "shell.nix - This enables you to use your development shell when Nix flakes aren't available." [],
           Node
             "src"

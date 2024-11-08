@@ -19,7 +19,7 @@ import Test.Hspec.Expectations.Pretty (shouldBe)
 import Text.RawString.QQ (r)
 
 spec :: Spec
-spec = describe ".nix-bootstrap.toml rendering" do
+spec = describe ".nix-bootstrap.dhall rendering" do
   it "renders correctly" do
     let projectName = Unsafe.fromJust $ mkProjectName "test-project"
     bootstrapContent
@@ -29,7 +29,6 @@ spec = describe ".nix-bootstrap.toml rendering" do
           (PreCommitHooksConfig True)
           (ContinuousIntegrationConfig True)
           (DevContainerConfig True)
-          False
       )
       >>= ( `shouldBe`
               Right
@@ -73,7 +72,6 @@ in  { projectName = "test-project"
     , setUpPreCommitHooks = True
     , setUpContinuousIntegration = True
     , setUpVSCodeDevContainer = True
-    , useNixFlakes = False
     }
 |]
           )

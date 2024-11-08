@@ -1,7 +1,6 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.Gitignore (gitignoreFor) where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig, unPreCommitHooksConfig)
 import Bootstrap.Data.ProjectType
@@ -426,14 +425,14 @@ ggRust =
 
 newtype GitignoreLine = GitignoreLine {unGitignoreLine :: Text} deriving stock (Eq)
 
-gitignoreFor :: RunConfig -> ProjectType -> PreCommitHooksConfig -> Gitignore
-gitignoreFor RunConfig {rcUseFlakes} projectType preCommitHooksConfig =
+gitignoreFor :: ProjectType -> PreCommitHooksConfig -> Gitignore
+gitignoreFor projectType preCommitHooksConfig =
   Gitignore . sort $ baseGroups <> flakeGroups <> preCommitHooksGroups <> projectTypeGroups
   where
     baseGroups :: [GitignoreGroup]
     baseGroups = [ggNix, ggOSSpecific]
     flakeGroups :: [GitignoreGroup]
-    flakeGroups = [ggDirenv | rcUseFlakes]
+    flakeGroups = [ggDirenv]
     preCommitHooksGroups :: [GitignoreGroup]
     preCommitHooksGroups = [ggPreCommitConfig | unPreCommitHooksConfig preCommitHooksConfig]
     projectTypeGroups :: [GitignoreGroup]

@@ -71,7 +71,6 @@
                     glab
                     gnused
                     gnutar
-                    niv
                     which
                   ]
                 );

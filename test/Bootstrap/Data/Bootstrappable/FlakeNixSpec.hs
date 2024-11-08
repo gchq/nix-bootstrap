@@ -18,14 +18,13 @@ import Bootstrap.Data.ProjectType
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.Util.RunConfig (rcWithFlakes)
 import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "flake.nix rendering" do
   let projectName = Unsafe.fromJust $ mkProjectName "test-project"
   it "renders correctly without pre-commit hooks" do
-    bootstrapContent (flakeNixFor rcWithFlakes projectName (Node NPM) (PreCommitHooksConfig False) Nothing Nothing)
+    bootstrapContent (flakeNixFor projectName (Node NPM) (PreCommitHooksConfig False) Nothing Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -56,7 +55,7 @@ spec = describe "flake.nix rendering" do
 |]
           )
   it "orders build inputs correctly when some use property access" do
-    bootstrapContent (flakeNixFor rcWithFlakes projectName (Node PNPm) (PreCommitHooksConfig False) Nothing Nothing)
+    bootstrapContent (flakeNixFor projectName (Node PNPm) (PreCommitHooksConfig False) Nothing Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -93,11 +92,10 @@ spec = describe "flake.nix rendering" do
   it "renders correctly with pre-commit hooks" do
     bootstrapContent
       ( flakeNixFor
-          rcWithFlakes
           projectName
           (Node NPM)
           (PreCommitHooksConfig True)
-          (Just . nixPreCommitHookConfigFor rcWithFlakes $ Node NPM)
+          (Just . nixPreCommitHookConfigFor $ Node NPM)
           Nothing
       )
       >>= ( `shouldBe`
@@ -148,12 +146,11 @@ spec = describe "flake.nix rendering" do
   it "renders correctly with a Go build" do
     bootstrapContent
       ( flakeNixFor
-          rcWithFlakes
           projectName
           (Go $ SetUpGoBuild True)
           (PreCommitHooksConfig True)
-          (Just . nixPreCommitHookConfigFor rcWithFlakes . Go $ SetUpGoBuild True)
-          (buildNixFor rcWithFlakes projectName (Go $ SetUpGoBuild True))
+          (Just . nixPreCommitHookConfigFor . Go $ SetUpGoBuild True)
+          (buildNixFor projectName (Go $ SetUpGoBuild True))
       )
       >>= ( `shouldBe`
               Right
@@ -205,7 +202,7 @@ spec = describe "flake.nix rendering" do
 |]
           )
   it "renders correctly with a Python project" do
-    bootstrapContent (flakeNixFor rcWithFlakes projectName (Python Python39) (PreCommitHooksConfig False) Nothing Nothing)
+    bootstrapContent (flakeNixFor projectName (Python Python39) (PreCommitHooksConfig False) Nothing Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -244,12 +241,11 @@ spec = describe "flake.nix rendering" do
   it "renders correctly with a Rust project" do
     bootstrapContent
       ( flakeNixFor
-          rcWithFlakes
           projectName
           Rust
           (PreCommitHooksConfig True)
           Nothing
-          (buildNixFor rcWithFlakes projectName Rust)
+          (buildNixFor projectName Rust)
       )
       >>= ( `shouldBe`
               Right

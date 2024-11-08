@@ -1,5 +1,5 @@
 -- | Copyright : (c) Crown Copyright GCHQ
-module Test.Util.RunConfig (rcDefault, rcWithFlakes) where
+module Test.Util.RunConfig (rcDefault) where
 
 import Bootstrap.Cli
   ( RunConfig
@@ -7,7 +7,6 @@ import Bootstrap.Cli
         rcAllowDirty,
         rcFromScratch,
         rcNonInteractive,
-        rcUseFlakes,
         rcWithDevContainer
       ),
   )
@@ -19,9 +18,5 @@ rcDefault =
     { rcAllowDirty = False,
       rcFromScratch = False,
       rcNonInteractive = False,
-      rcUseFlakes = False,
       rcWithDevContainer = Nothing
     }
-
-rcWithFlakes :: RunConfig
-rcWithFlakes = rcDefault {rcUseFlakes = True}

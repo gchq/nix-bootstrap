@@ -1,6 +1,6 @@
 -- | Description : Defines utilities for working with command-line tools
 -- Copyright : (c) Crown Copyright GCHQ
-module Bootstrap.Unix (alejandra, git, niv, runCommand, which, whoami) where
+module Bootstrap.Unix (alejandra, git, runCommand, which, whoami) where
 
 import Bootstrap.Monad (MonadBootstrap)
 import Bootstrap.Terminal (putErrorLn)
@@ -65,10 +65,6 @@ alejandra expr = do
               Nothing -> hoistEither (Left $ userError "hError was Nothing; should not happen")
         Nothing -> hoistEither (Left $ userError "hFormatted was Nothing; should not happen")
     Nothing -> hoistEither (Left $ userError "hExpr was Nothing; should not happen")
-
--- | Runs niv with the given args
-niv :: MonadIO m => [String] -> m (Either IOException String)
-niv = runCommand "niv"
 
 -- | Gets the path to the requested executable on the system using `which`
 which :: MonadIO m => String -> m (Either IOException FilePath)

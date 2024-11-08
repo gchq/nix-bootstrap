@@ -5,7 +5,6 @@ module Bootstrap.Data.Bootstrappable.GitlabCIConfig
   )
 where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable
       ( bootstrapContent,
@@ -30,8 +29,7 @@ import Bootstrap.Data.ProjectType
   )
 
 data GitlabCIConfig = GitlabCIConfig
-  { gitlabCIConfigUseFlakes :: Bool,
-    gitlabCIConfigProjectType :: ProjectType,
+  { gitlabCIConfigProjectType :: ProjectType,
     gitlabCIConfigPreCommitHooksConfig :: Maybe NixPreCommitHookConfig
   }
 
@@ -65,12 +63,8 @@ instance Bootstrappable GitlabCIConfig where
                  [ "",
                    "pre-commit-check:",
                    "  stage: build",
-                   "  script: \""
-                     <> ( if gitlabCIConfigUseFlakes
-                            then "nix build '.#runChecks'"
-                            else "nix-build nix/pre-commit-hooks.nix -A pureHooks --arg pre-commit-hooks-lib 'import (import nix/sources.nix {}).pre-commit-hooks'"
-                        )
-                     <> "\""
+                   "  script:",
+                   "    - nix build '.#runChecks'"
                  ]
                else []
            )
@@ -85,12 +79,8 @@ instance Bootstrappable GitlabCIConfig where
         [ "",
           "build:",
           "  stage: build",
-          "  script: \""
-            <> ( if gitlabCIConfigUseFlakes
-                   then "nix build"
-                   else "nix-build"
-               )
-            <> "\""
+          "  script:",
+          "    - nix build"
         ]
       elmSiteJob :: ElmOptions -> [Text]
       elmSiteJob ElmOptions {elmOptionElmMode} =
@@ -107,12 +97,7 @@ instance Bootstrappable GitlabCIConfig where
                    ]
              )
       commandInShell :: Text -> Text
-      commandInShell =
-        -- Uses single quotes - no escaping or use of single quotes allowed when
-        -- using this helper
-        if gitlabCIConfigUseFlakes
-          then ("    - nix develop -c " <>)
-          else \s -> "    - nix-shell --run '" <> s <> "'"
+      commandInShell = ("    - nix develop -c " <>)
       nodePackageManagerInstall :: NodePackageManager -> Text
       nodePackageManagerInstall = \case
         NPM -> "npm ci"
@@ -127,10 +112,9 @@ instance Bootstrappable GitlabCIConfig where
 
 gitlabCIConfigFor ::
   ContinuousIntegrationConfig ->
-  RunConfig ->
   ProjectType ->
   Maybe NixPreCommitHookConfig ->
   Maybe GitlabCIConfig
-gitlabCIConfigFor (ContinuousIntegrationConfig False) _ _ _ = Nothing
-gitlabCIConfigFor (ContinuousIntegrationConfig True) RunConfig {rcUseFlakes} t p =
-  Just $ GitlabCIConfig rcUseFlakes t p
+gitlabCIConfigFor (ContinuousIntegrationConfig False) _ _ = Nothing
+gitlabCIConfigFor (ContinuousIntegrationConfig True) t p =
+  Just $ GitlabCIConfig t p

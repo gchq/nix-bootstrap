@@ -12,7 +12,6 @@ module Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig
   )
 where
 
-import Bootstrap.Cli (RunConfig (RunConfig, rcUseFlakes))
 import Bootstrap.Data.Bootstrappable
   ( Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason),
     bootstrapContentNix,
@@ -40,11 +39,9 @@ import Bootstrap.Nix.Expr
     Literal (LBool, LString),
     Property (PCons, PIdent),
     nix,
-    nixargs,
     nixbinding,
     nixident,
     nixproperty,
-    (|*),
     (|++),
     (|:),
     (|=),
@@ -55,7 +52,6 @@ import Relude.Extra.Tuple (dup)
 data NixPreCommitHookConfig = NixPreCommitHookConfig
   { nixPreCommitHookConfigHooks :: [PreCommitHook],
     nixPreCommitHookConfigRequiresNixpkgs :: Bool,
-    nixPreCommitHookConfigUsingFlakeLib :: Bool,
     -- | A command used to run any impure hooks manually, defaults to "echo ok"
     nixPreCommitHookConfigImpureHookCommand :: Text
   }
@@ -69,20 +65,15 @@ instance IsNixExpr NixPreCommitHookConfig where
   toNixExpr NixPreCommitHookConfig {..} =
     FASet
       ( [nixident|pre-commit-hooks-lib|]
-          :| [[nixident|nixpkgs|] | nixPreCommitHookConfigRequiresNixpkgs]
-          <> [[nixident|system|] | nixPreCommitHookConfigUsingFlakeLib]
+          :| [nixident|system|] :
+          [[nixident|nixpkgs|] | nixPreCommitHookConfigRequiresNixpkgs]
       )
       |: ELetIn
         ( [nixbinding|# Function to make a set of pre-commit hooks|]
-            :| [ [nixproperty|makeHooks|]
-                   |= ( [nixargs|hooks:|]
-                          |: ( run
-                                 |* [nix|{
+            :| [ [nixbinding|makeHooks = hooks: pre-commit-hooks-lib.lib.${system}.run {
             inherit hooks;
             src = ../.;
-          }|]
-                             )
-                      ),
+          };|],
                  [nixbinding|# Hooks which don't depend on running in a dev environment|],
                  [nixproperty|pureHooks|] |= ESet False pureHooks,
                  [nixbinding|# Hooks which can run on pre-commit but not in CI|],
@@ -114,11 +105,6 @@ instance IsNixExpr NixPreCommitHookConfig where
       (pureHooks, impureHooks) =
         let hooksByCondition c = allHooks ^.. folded . filtered c . _2
          in (hooksByCondition fst, hooksByCondition (not . fst))
-      run :: Expr
-      run =
-        if nixPreCommitHookConfigUsingFlakeLib
-          then [nix|pre-commit-hooks-lib.lib.${system}.run|]
-          else [nix|pre-commit-hooks-lib.run|]
       mkToolsExpr :: Expr -> (PreCommitHookTool -> Bool) -> Expr
       mkToolsExpr parentSet condition =
         EGrouping . EWith parentSet $
@@ -127,16 +113,11 @@ instance IsNixExpr NixPreCommitHookConfig where
               ( fmap (EIdent . Identifier) . preCommitHookToolSubAttrName
                   <$> sortNub (filter condition (tool <$> nixPreCommitHookConfigHooks))
               )
-      libPackageSet :: Expr
-      libPackageSet =
-        if nixPreCommitHookConfigUsingFlakeLib
-          then [nix|pre-commit-hooks-lib.packages.${system}|]
-          else [nix|pre-commit-hooks-lib|]
-      defaultToolsExpr = mkToolsExpr libPackageSet preCommitHookToolIsFromHooksLib
+      defaultToolsExpr = mkToolsExpr [nix|pre-commit-hooks-lib.packages.${system}|] preCommitHookToolIsFromHooksLib
       nixpkgsToolsExpr = mkToolsExpr [nix|nixpkgs|] preCommitHookToolIsFromNixpkgs
 
-nixPreCommitHookConfigFor :: RunConfig -> ProjectType -> NixPreCommitHookConfig
-nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
+nixPreCommitHookConfigFor :: ProjectType -> NixPreCommitHookConfig
+nixPreCommitHookConfigFor projectType =
   let nixPreCommitHookConfigHooks =
         alejandra : case projectType of
           Minimal -> []
@@ -157,7 +138,7 @@ nixPreCommitHookConfigFor RunConfig {rcUseFlakes} projectType =
             Elm _ -> "elm-review"
             _ -> "echo ok"
           else "echo ok"
-   in NixPreCommitHookConfig {nixPreCommitHookConfigUsingFlakeLib = rcUseFlakes, ..}
+   in NixPreCommitHookConfig {..}
 
 data PreCommitHook = PreCommitHook
   { attrName :: Text,

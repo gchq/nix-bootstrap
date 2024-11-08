@@ -12,14 +12,8 @@ import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe ".envrc rendering" do
-  it "renders correctly without a shell hook" do
-    bootstrapContent (Envrc (PreCommitHooksConfig False) False)
-      >>= (`shouldBe` Right "use_nix\n")
-  it "renders correctly with a shell hook" do
-    bootstrapContent (Envrc (PreCommitHooksConfig True) False)
-      >>= (`shouldBe` Right (unlines ["use_nix", "eval \"$shellHook\""]))
-  it "render correctly using flakes without shell hook" do
-    bootstrapContent (Envrc (PreCommitHooksConfig False) True)
+  it "render correctly without a shell hook" do
+    bootstrapContent (Envrc $ PreCommitHooksConfig False)
       >>= ( `shouldBe`
               Right
                 [r|direnv version 2.23.0 || exit 1
@@ -43,11 +37,12 @@ if ! nix show-config 1>/dev/null 2>&1; then
   printf '\033[0m'
   exit 1
 fi
+
 use flake
 |]
           )
-  it "renders correctly using flakes with a shell hook" do
-    bootstrapContent (Envrc (PreCommitHooksConfig True) True)
+  it "renders correctly with a shell hook" do
+    bootstrapContent (Envrc $ PreCommitHooksConfig True)
       >>= ( `shouldBe`
               Right
                 [r|direnv version 2.23.0 || exit 1
@@ -71,6 +66,7 @@ if ! nix show-config 1>/dev/null 2>&1; then
   printf '\033[0m'
   exit 1
 fi
+
 use flake
 eval "$shellHook"
 |]

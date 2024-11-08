@@ -1,7 +1,6 @@
 -- | Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Data.Bootstrappable.Go.Modfile (GoModfile (GoModfile), goModfileFor) where
 
-import Bootstrap.Cli (RunConfig)
 import Bootstrap.Data.Bootstrappable (Bootstrappable (bootstrapContent, bootstrapName, bootstrapReason))
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
 import Bootstrap.Error (CanDieOnError (dieOnErrorWithPrefix))
@@ -25,11 +24,11 @@ instance Bootstrappable GoModfile where
           "go " <> goModfileGoVersion
         ]
 
-goModfileFor :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> ProjectName -> m GoModfile
-goModfileFor nixBinaryPaths rc projectName = do
+goModfileFor :: MonadBootstrap m => NixBinaryPaths -> ProjectName -> m GoModfile
+goModfileFor nixBinaryPaths projectName = do
   goVersion <-
     dieOnErrorWithPrefix "Could not get bootstrapped Go version"
       . ExceptT
-      $ getVersionOfNixpkgsAttribute nixBinaryPaths rc "go"
+      $ getVersionOfNixpkgsAttribute nixBinaryPaths "go"
   let majorMinor = toText $ subRegex (mkRegex "^([0-9]+\\.[0-9]+).*") goVersion "\\1"
   pure $ GoModfile projectName majorMinor

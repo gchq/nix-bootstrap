@@ -23,16 +23,12 @@ import Bootstrap.Data.ProjectType
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
-import Test.Util.RunConfig (rcDefault, rcWithFlakes)
 import Text.RawString.QQ (r)
 
 spec :: Spec
 spec = describe "build.nix rendering" do
-  it "renders nothing for a non-flake project" do
-    buildNixFor rcDefault projectName (Go $ SetUpGoBuild True)
-      `shouldBe` Nothing
   it "renders correctly for a Go project" do
-    case buildNixFor rcWithFlakes projectName (Go $ SetUpGoBuild True) of
+    case buildNixFor projectName (Go $ SetUpGoBuild True) of
       Just buildNix ->
         bootstrapContent buildNix
           >>= ( `shouldBe`
@@ -54,7 +50,6 @@ nixpkgs.buildGoModule {
 
   it "renders correctly for a Java project" do
     case buildNixFor
-      rcWithFlakes
       projectName
       ( Java $
           JavaOptions
@@ -133,7 +128,7 @@ in
               )
       Nothing -> fail "Gave nothing for a project which should've had a build.nix generated."
   it "renders correctly for a Rust project" do
-    case buildNixFor rcWithFlakes projectName Rust of
+    case buildNixFor projectName Rust of
       Just buildNix ->
         bootstrapContent buildNix
           >>= ( `shouldBe`
@@ -152,7 +147,6 @@ in
       Nothing -> fail "Gave nothing for a project which should've had a build.nix generated."
   it "renders correctly for a Haskell project" do
     case buildNixFor
-      rcWithFlakes
       projectName
       (Haskell $ HaskellOptions (GHCVersion 9 4 8) (HaskellProjectTypeBasic $ SetUpHaskellBuild True)) of
       Just buildNix ->
