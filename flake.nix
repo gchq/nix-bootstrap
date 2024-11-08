@@ -19,7 +19,7 @@
       url = github:edolstra/flake-compat;
     };
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs-src.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs-src.url = "github:NixOS/nixpkgs/nixos-24.05";
     pre-commit-hooks-lib = {
       inputs.flake-utils.follows = "flake-utils";
       url = "github:cachix/pre-commit-hooks.nix";
