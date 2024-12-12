@@ -109,10 +109,7 @@ spec = describe "flake.nix rendering" do
       url = github:edolstra/flake-compat;
     };
     flake-utils.url = "github:numtide/flake-utils";
-    pre-commit-hooks-lib = {
-      inputs.flake-utils.follows = "flake-utils";
-      url = "github:cachix/pre-commit-hooks.nix";
-    };
+    pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
@@ -163,10 +160,7 @@ spec = describe "flake.nix rendering" do
       url = github:edolstra/flake-compat;
     };
     flake-utils.url = "github:numtide/flake-utils";
-    pre-commit-hooks-lib = {
-      inputs.flake-utils.follows = "flake-utils";
-      url = "github:cachix/pre-commit-hooks.nix";
-    };
+    pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
@@ -258,10 +252,7 @@ spec = describe "flake.nix rendering" do
       url = github:edolstra/flake-compat;
     };
     flake-utils.url = "github:numtide/flake-utils";
-    pre-commit-hooks-lib = {
-      inputs.flake-utils.follows = "flake-utils";
-      url = "github:cachix/pre-commit-hooks.nix";
-    };
+    pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
