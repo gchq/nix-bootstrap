@@ -68,6 +68,7 @@
                 ++ (
                   with nixpkgs; [
                     coreutils
+                    dhall
                     glab
                     gnused
                     gnutar
