@@ -224,10 +224,7 @@ instance IsNixExpr FlakeNix where
                     };|],
                     [nixbinding|flake-utils.url = "github:numtide/flake-utils";|]
                   ]
-                    <> [ [nixbinding|pre-commit-hooks-lib = {
-                            inputs.flake-utils.follows = "flake-utils";
-                            url = "github:cachix/pre-commit-hooks.nix";
-                          };|]
+                    <> [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]
                          | usingHooks
                        ]
                     <> [machNixFlakeInput | isPython]
