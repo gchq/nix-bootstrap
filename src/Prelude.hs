@@ -16,7 +16,7 @@ import Relude hiding (putText, putTextLn, state)
 -- >>> clamp 5 10 1
 -- 5
 clamp ::
-  Ord a =>
+  (Ord a) =>
   -- | The minimum value
   a ->
   -- | The maximum value

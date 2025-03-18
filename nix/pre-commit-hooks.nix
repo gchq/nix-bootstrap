@@ -17,6 +17,7 @@
   pre-commit-hooks-lib,
   src,
   system,
+  vulnix,
 }: let
   # Function to make a set of pre-commit hooks
   makeHooks = hooks:
@@ -41,7 +42,6 @@
         "(${pre-commit-hooks-lib.packages.${system}.hpack}/bin/hpack)"
       }/bin/hpack-override";
     };
-    nix-linter.enable = true;
     ormolu.enable = true;
     prettier = {
       enable = true;
@@ -53,6 +53,7 @@
         pre-commit-hooks-lib.packages."${system}".shellcheck
       }/bin/shellcheck -x";
       types_or = ["shell"];
+      excludes = [".envrc"];
     };
   };
   # Hooks which can run on pre-commit but not in CI
@@ -85,7 +86,7 @@
       entry = "${
         nixpkgs.writeShellScriptBin
         "check-for-vulnerabilities"
-        "${nixpkgs.vulnix}/bin/vulnix -C -w vulnerability-whitelist.toml result/"
+        "${vulnix}/bin/vulnix -C -w vulnerability-whitelist.toml result/"
       }/bin/check-for-vulnerabilities";
       files = "nix-bootstrap";
       name = "check-for-vulnerabilities";
@@ -96,12 +97,11 @@ in {
   allHooks = makeHooks (builtins.removeAttrs (pureHooks // impureHooks) ["hpack"]);
   pureHooks = makeHooks pureHooks;
   tools =
-    [alejandra nixpkgs.vulnix]
+    [alejandra vulnix]
     ++ (with pre-commit-hooks-lib.packages.${system}; [
       hlint
       hpack
       hpack-dir
-      nix-linter
       ormolu
       prettier
       shellcheck

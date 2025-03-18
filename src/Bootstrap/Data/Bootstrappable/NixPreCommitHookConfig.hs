@@ -65,8 +65,8 @@ instance IsNixExpr NixPreCommitHookConfig where
   toNixExpr NixPreCommitHookConfig {..} =
     FASet
       ( [nixident|pre-commit-hooks-lib|]
-          :| [nixident|system|] :
-          [[nixident|nixpkgs|] | nixPreCommitHookConfigRequiresNixpkgs]
+          :| [nixident|system|]
+          : [[nixident|nixpkgs|] | nixPreCommitHookConfigRequiresNixpkgs]
       )
       |: ELetIn
         ( [nixbinding|# Function to make a set of pre-commit hooks|]
@@ -93,13 +93,14 @@ instance IsNixExpr NixPreCommitHookConfig where
     where
       allHooks :: [(Bool, Binding)]
       allHooks =
-        sort nixPreCommitHookConfigHooks
-          <&> \case
-            (_, Nothing) -> Nothing
-            (a, Just b) -> Just (a, b)
-            . bimap preCommitHookIsPure toBinding
-            . dup
-          & catMaybes
+        mapMaybe
+          ( \case
+              (_, Nothing) -> Nothing
+              (a, Just b) -> Just (a, b)
+              . bimap preCommitHookIsPure toBinding
+              . dup
+          )
+          (sort nixPreCommitHookConfigHooks)
       pureHooks :: [Binding]
       impureHooks :: [Binding]
       (pureHooks, impureHooks) =
@@ -109,10 +110,9 @@ instance IsNixExpr NixPreCommitHookConfig where
       mkToolsExpr parentSet condition =
         EGrouping . EWith parentSet $
           EList $
-            catMaybes
-              ( fmap (EIdent . Identifier) . preCommitHookToolSubAttrName
-                  <$> sortNub (filter condition (tool <$> nixPreCommitHookConfigHooks))
-              )
+            mapMaybe
+              (fmap (EIdent . Identifier) . preCommitHookToolSubAttrName)
+              (sortNub (filter condition (tool <$> nixPreCommitHookConfigHooks)))
       defaultToolsExpr = mkToolsExpr [nix|pre-commit-hooks-lib.packages.${system}|] preCommitHookToolIsFromHooksLib
       nixpkgsToolsExpr = mkToolsExpr [nix|nixpkgs|] preCommitHookToolIsFromNixpkgs
 
@@ -130,7 +130,7 @@ nixPreCommitHookConfigFor projectType =
           Python _ -> []
           Rust -> [cargoCheck, clippy, rustfmt]
       nixPreCommitHookConfigRequiresNixpkgs =
-        any preCommitHookToolIsFromNixpkgs (tool <$> nixPreCommitHookConfigHooks)
+        any (preCommitHookToolIsFromNixpkgs . tool) nixPreCommitHookConfigHooks
           || hpack `elem` nixPreCommitHookConfigHooks
       nixPreCommitHookConfigImpureHookCommand =
         if not (all preCommitHookIsPure nixPreCommitHookConfigHooks)

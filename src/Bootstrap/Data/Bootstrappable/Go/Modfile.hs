@@ -24,7 +24,7 @@ instance Bootstrappable GoModfile where
           "go " <> goModfileGoVersion
         ]
 
-goModfileFor :: MonadBootstrap m => NixBinaryPaths -> ProjectName -> m GoModfile
+goModfileFor :: (MonadBootstrap m) => NixBinaryPaths -> ProjectName -> m GoModfile
 goModfileFor nixBinaryPaths projectName = do
   goVersion <-
     dieOnErrorWithPrefix "Could not get bootstrapped Go version"

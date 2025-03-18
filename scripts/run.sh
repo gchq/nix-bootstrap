@@ -136,7 +136,6 @@ installNix() {
     printError "Nix is a prerequisite of nix-bootstrap; exiting."
     exit 1
   fi
-  resetFormatting
 }
 
 installDirenv() {

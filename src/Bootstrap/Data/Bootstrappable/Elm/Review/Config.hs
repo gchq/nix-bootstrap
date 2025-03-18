@@ -81,5 +81,5 @@ config =
 elmReviewConfigFor :: ProjectType -> Maybe ElmReviewConfig
 elmReviewConfigFor (Elm ElmOptions {..})
   | elmOptionProvideElmReview =
-    Just ElmReviewConfig
+      Just ElmReviewConfig
 elmReviewConfigFor _ = Nothing

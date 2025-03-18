@@ -91,7 +91,8 @@ instance Arbitrary Expr where
                     ),
                     ( 1,
                       EApplication
-                        <$> ( EApplication <$> subexprWhichCouldBeAList
+                        <$> ( EApplication
+                                <$> subexprWhichCouldBeAList
                                 <*> oneof [pure EListConcatOperator, pure EPathConcatOperator]
                             )
                         <*> subexprWhichCouldBeAList
@@ -229,7 +230,11 @@ spec = do
     describe "operator precedence" do
       it "(|.) has higher precedece than (|*)" do
         ( [nixargs|{ a, b, c, d, e }:|]
-            |: [nix|a|] |* [nix|b|] |. [nixproperty|.c|] |* [nix|d|] |. [nixproperty|.e|]
+            |: [nix|a|]
+            |* [nix|b|]
+            |. [nixproperty|.c|]
+            |* [nix|d|]
+            |. [nixproperty|.e|]
           )
           `shouldBe` EFunc
             (FASet ([nixident|a|] :| (Identifier <$> ["b", "c", "d", "e"])))

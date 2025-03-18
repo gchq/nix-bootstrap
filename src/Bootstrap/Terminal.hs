@@ -198,10 +198,10 @@ handleMultipleChoiceInput state onConfirmation goAgain = \case
   _ -> goAgain state
 
 -- | Removes the given number of lines from the terminal to allow rewriting
-scrubLines :: MonadScreen m => Int -> m ()
+scrubLines :: (MonadScreen m) => Int -> m ()
 scrubLines n = moveCursorUp n *> deleteLines n
 
-promptNonemptyText :: MonadBootstrap m => Maybe Text -> Text -> m Text
+promptNonemptyText :: (MonadBootstrap m) => Maybe Text -> Text -> m Text
 promptNonemptyText mDefault promptText = do
   let fullPromptText = case mDefault of
         Just def -> promptText <> " (" <> def <> "):"
@@ -214,13 +214,13 @@ promptNonemptyText mDefault promptText = do
       Nothing -> reprompt "Please enter a value." $ promptNonemptyText mDefault promptText
     else getConfirmation "entered" response id $ promptNonemptyText mDefault promptText
 
-promptYesNo :: MonadBootstrap m => Text -> m Bool
+promptYesNo :: (MonadBootstrap m) => Text -> m Bool
 promptYesNo = promptYesNoWithDefault Nothing
 
-promptYesNoWithCustomPrompt :: MonadBootstrap m => m Int -> m Bool
+promptYesNoWithCustomPrompt :: (MonadBootstrap m) => m Int -> m Bool
 promptYesNoWithCustomPrompt = promptYesNoWithCustomPromptAndDefault Nothing
 
-promptYesNoWithDefault :: MonadBootstrap m => Maybe Bool -> Text -> m Bool
+promptYesNoWithDefault :: (MonadBootstrap m) => Maybe Bool -> Text -> m Bool
 promptYesNoWithDefault mDefault promptText = promptYesNoWithCustomPromptAndDefault mDefault do
   withAttribute (foreground blue) $ putText promptText
   pure $ T.length promptText
@@ -229,7 +229,7 @@ promptYesNoWithDefault mDefault promptText = promptYesNoWithCustomPromptAndDefau
 -- that answer will be automatically "input".
 --
 -- The prompt should return its length in characters.
-promptYesNoWithCustomPromptAndDefault :: MonadBootstrap m => Maybe Bool -> m Int -> m Bool
+promptYesNoWithCustomPromptAndDefault :: (MonadBootstrap m) => Maybe Bool -> m Int -> m Bool
 promptYesNoWithCustomPromptAndDefault mDefault doPrompt = do
   let promptSuffix = " [yes|no]: "
   preSuffixPromptLength <- doPrompt
@@ -248,10 +248,10 @@ promptYesNoWithCustomPromptAndDefault mDefault doPrompt = do
           _ -> reprompt "Please answer yes or no." $ promptYesNoWithCustomPrompt doPrompt
           . T.toLower
 
-reprompt :: MonadBootstrap m => Text -> m a -> m a
+reprompt :: (MonadBootstrap m) => Text -> m a -> m a
 reprompt msg action = putErrorLn msg >> action
 
-getConfirmation :: MonadBootstrap m => Text -> a -> (a -> Text) -> m a -> m a
+getConfirmation :: (MonadBootstrap m) => Text -> a -> (a -> Text) -> m a -> m a
 getConfirmation verb response responseToText retryAction = do
   putText $ "You " <> verb <> " \""
   withAttributes [bold, foreground magenta] . putText $ responseToText response
@@ -272,7 +272,7 @@ getConfirmationMultiple choices choiceToText retryAction = do
     then pure choices
     else retryAction
 
-getFreeText :: MonadBootstrap m => CursorPos -> TextInputState -> m Text
+getFreeText :: (MonadBootstrap m) => CursorPos -> TextInputState -> m Text
 getFreeText minCursorPos state = do
   setCursorColumn $ minCursorPos + cursorPos state
   flush
@@ -282,9 +282,9 @@ getFreeText minCursorPos state = do
       case key of
         CharKey c
           | modifiers == mempty -> do
-            insertChars 1
-            putChar c
-            getFreeText minCursorPos $ handleCharEntry state c
+              insertChars 1
+              putChar c
+              getFreeText minCursorPos $ handleCharEntry state c
           | otherwise -> getFreeText minCursorPos state
         BackspaceKey ->
           if cursorPos state == 0
@@ -303,7 +303,7 @@ getFreeText minCursorPos state = do
         _ -> getFreeText minCursorPos state
     _ -> getFreeText minCursorPos state
 
-askIfReproducibleBuildRequired :: MonadBootstrap m => m Bool
+askIfReproducibleBuildRequired :: (MonadBootstrap m) => m Bool
 askIfReproducibleBuildRequired = promptYesNoWithCustomPrompt do
   let (part1, part2, part3) =
         ( "Would you like to set up a reproducible build for this project ",
@@ -315,13 +315,13 @@ askIfReproducibleBuildRequired = promptYesNoWithCustomPrompt do
   withAttribute (foreground blue) $ putText part3
   pure $ sum $ T.length <$> [part1, part2, part3]
 
-putErrorLn :: MonadBootstrap m => Text -> m ()
+putErrorLn :: (MonadBootstrap m) => Text -> m ()
 putErrorLn msg = withAttribute (foreground red) (putTextLn msg)
 
-withAttribute :: MonadBootstrap m => Attribute m -> m () -> m ()
+withAttribute :: (MonadBootstrap m) => Attribute m -> m () -> m ()
 withAttribute = withAttributes . one
 
-withAttributes :: MonadBootstrap m => [Attribute m] -> m () -> m ()
+withAttributes :: (MonadBootstrap m) => [Attribute m] -> m () -> m ()
 withAttributes attrs action = do
   traverse_ setAttribute attrs
   action

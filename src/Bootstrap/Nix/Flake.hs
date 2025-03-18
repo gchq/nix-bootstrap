@@ -30,7 +30,7 @@ import Control.Exception (IOException)
 import Control.Monad.Catch (MonadCatch, try)
 import System.Terminal (MonadPrinter (putTextLn))
 
-generateIntermediateFlake :: MonadBootstrap m => NixBinaryPaths -> RunConfig -> ProjectName -> m ()
+generateIntermediateFlake :: (MonadBootstrap m) => NixBinaryPaths -> RunConfig -> ProjectName -> m ()
 generateIntermediateFlake nixBinaryPaths RunConfig {rcNonInteractive} projectName =
   promptYesNoWithDefault
     (if rcNonInteractive then Just True else Nothing)

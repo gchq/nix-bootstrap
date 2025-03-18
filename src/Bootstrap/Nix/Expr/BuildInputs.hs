@@ -53,7 +53,7 @@ data BuildInputSpec projectType = BuildInputSpec
     bisNativeNixpkgsPackages :: [Expr]
   }
 
-buildInputsBindings :: HasProjectSuperType t => BuildInputSpec t -> [Binding]
+buildInputsBindings :: (HasProjectSuperType t) => BuildInputSpec t -> [Binding]
 buildInputsBindings spec@BuildInputSpec {bisNativeNixpkgsPackages} =
   catMaybes
     [ case buildInputGroupExprs of
@@ -76,7 +76,7 @@ buildInputsBindings spec@BuildInputSpec {bisNativeNixpkgsPackages} =
     buildInputGroupExprs :: [Expr]
     buildInputGroupExprs = groupToExpr <$> buildInputGroups
 
-buildInputGroupsFor :: HasProjectSuperType t => BuildInputSpec t -> [BuildInputGroup]
+buildInputGroupsFor :: (HasProjectSuperType t) => BuildInputSpec t -> [BuildInputGroup]
 buildInputGroupsFor BuildInputSpec {..} =
   catMaybes
     [ if null bisNixpkgsPackages then Nothing else Just (BIGNixpkgs bisNixpkgsPackages),

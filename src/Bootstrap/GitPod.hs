@@ -13,7 +13,7 @@ import Bootstrap.Unix (runCommand, whoami)
 
 -- | If running in GitPod, chowns the /nix directory to the gitpod
 -- user to prevent permissions errors.
-resetPermissionsInGitPod :: MonadBootstrap m => m ()
+resetPermissionsInGitPod :: (MonadBootstrap m) => m ()
 resetPermissionsInGitPod =
   whoami >>= \case
     Right "gitpod" -> do

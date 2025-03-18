@@ -57,7 +57,7 @@ data OverwriteStatus
   | NoContentChange
   deriving stock (Eq, Ord)
 
-getOverwriteStatus :: MonadIO m => FilePath -> Text -> m OverwriteStatus
+getOverwriteStatus :: (MonadIO m) => FilePath -> Text -> m OverwriteStatus
 getOverwriteStatus path newContents = liftIO do
   doesFileExist path >>= \case
     True ->
@@ -129,7 +129,7 @@ toReasonTree = mergeDuplicateNodes . go (Node "/" []) . buildPlanFiles
             ((mergeDuplicateNodes . Node path . sortOn (map toLower . rootLabel) . sconcat $ subForest <$> duplicates) :)
        in foldr mergeGroup [] . sortOn (map toLower . fst) $ toPairs groups
 
-confirmBuildPlan :: forall m. MonadBootstrap m => BuildPlan -> m (Maybe BuildPlan)
+confirmBuildPlan :: forall m. (MonadBootstrap m) => BuildPlan -> m (Maybe BuildPlan)
 confirmBuildPlan BuildPlan {..} = do
   let willOverwrite = filter ((== WillOverwrite) . overwriteStatus . snd) buildPlanFiles
       willWriteFromNew = filter ((== NothingToOverwrite) . overwriteStatus . snd) buildPlanFiles
@@ -170,7 +170,7 @@ confirmBuildPlan BuildPlan {..} = do
     showFiles :: NonEmpty (FilePath, BuildPlanFile) -> m ()
     showFiles = mapM_ (putTextLn . ("  - " <>)) . sort . toList . (toText . fst <$>)
 
-bootstrap :: MonadBootstrap m => BuildPlan -> m ()
+bootstrap :: (MonadBootstrap m) => BuildPlan -> m ()
 bootstrap BuildPlan {..} =
   forM_ buildPlanFiles \f@(buildPlanFilePath, _) -> do
     void
@@ -181,7 +181,7 @@ bootstrap BuildPlan {..} =
         r2 <- bootstrapFile (second contents f)
         pure (r1, r2)
 
-createParentDir :: MonadIO m => FilePath -> ExceptT Text m ()
+createParentDir :: (MonadIO m) => FilePath -> ExceptT Text m ()
 createParentDir path =
   let dir = takeDirectory path
    in ExceptT $
@@ -192,7 +192,7 @@ createParentDir path =
           )
           <$> liftIO (try $ createDirectoryIfMissing True dir)
 
-bootstrapFile :: MonadIO m => (FilePath, Text) -> ExceptT Text m ()
+bootstrapFile :: (MonadIO m) => (FilePath, Text) -> ExceptT Text m ()
 bootstrapFile (path, contents) =
   ExceptT $
     first

@@ -1,11 +1,11 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.36.1.
 --
 -- see: https://github.com/sol/hpack
 
 name:           nix-bootstrap
-version:        2.0.1.0
+version:        2.0.1.1
 author:         gchquser
 maintainer:     48051938+sd234678@users.noreply.github.com
 copyright:      Crown Copyright
@@ -107,35 +107,35 @@ library
       StrictData
   ghc-options: -Wall -Wcpp-undef -Widentities -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-import-lists -Wmissing-signatures -Wpartial-fields -Wredundant-constraints
   build-depends:
-      aeson ==2.1.2.1
+      aeson ==2.2.3.0
     , aeson-pretty ==0.8.10
-    , base ==4.17.2.1
+    , base ==4.19.2.0
     , blaze-html ==0.9.2.0
     , dhall ==1.42.1
-    , directory ==1.3.7.1
-    , exceptions ==0.10.5
+    , directory ==1.3.8.5
+    , exceptions ==0.10.7
     , extra ==1.7.16
-    , filepath ==1.4.2.2
+    , filepath ==1.4.301.0
     , lens ==5.2.3
-    , megaparsec ==9.5.0
-    , mtl ==2.2.2
+    , megaparsec ==9.7.0
+    , mtl ==2.3.1
     , parser-combinators ==1.3.0
-    , process ==1.6.18.0
+    , process ==1.6.25.0
     , raw-strings-qq ==1.1
     , regex-compat ==0.95.2.1
-    , relude ==1.2.1.0
-    , silently ==1.2.5.3
+    , relude ==1.2.2.0
+    , silently ==1.2.5.4
     , singletons ==3.0.3
-    , template-haskell ==2.19.0.0
+    , template-haskell ==2.21.0.0
     , terminal ==0.2.0.0
-    , th-abstraction ==0.5.0.0
-    , tomland ==1.3.3.2
+    , th-abstraction ==0.7.1.0
+    , tomland ==1.3.3.3
     , yaml ==0.11.11.2
   mixins:
       base hiding (Prelude)
+  default-language: Haskell2010
   if flag(prod)
     ghc-options: -O2 -Werror
-  default-language: Haskell2010
 
 executable app
   main-is: Main.hs
@@ -156,14 +156,14 @@ executable app
       StrictData
   ghc-options: -Wall -Wcpp-undef -Widentities -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-import-lists -Wmissing-signatures -Wpartial-fields -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base ==4.17.2.1
+      base ==4.19.2.0
     , nix-bootstrap
-    , relude ==1.2.1.0
+    , relude ==1.2.2.0
   mixins:
       base hiding (Prelude)
+  default-language: Haskell2010
   if flag(prod)
     ghc-options: -O2 -Werror
-  default-language: Haskell2010
 
 test-suite nix-bootstrap-test
   type: exitcode-stdio-1.0
@@ -230,19 +230,19 @@ test-suite nix-bootstrap-test
       StrictData
   ghc-options: -Wall -Wcpp-undef -Widentities -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-deriving-strategies -Wmissing-export-lists -Wmissing-import-lists -Wmissing-signatures -Wpartial-fields -Wredundant-constraints
   build-tool-depends:
-      hspec-discover:hspec-discover ==2.11.8
+      hspec-discover:hspec-discover ==2.11.10
   build-depends:
       QuickCheck ==2.14.3
-    , base ==4.17.2.1
+    , base ==4.19.2.0
     , dhall ==1.42.1
-    , hspec ==2.11.8
+    , hspec ==2.11.10
     , hspec-expectations-pretty-diff ==0.7.2.6
     , nix-bootstrap
     , raw-strings-qq ==1.1
-    , relude ==1.2.1.0
-    , tomland ==1.3.3.2
+    , relude ==1.2.2.0
+    , tomland ==1.3.3.3
   mixins:
       base hiding (Prelude)
+  default-language: Haskell2010
   if flag(prod)
     ghc-options: -O2 -Werror
-  default-language: Haskell2010

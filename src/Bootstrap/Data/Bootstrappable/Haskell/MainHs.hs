@@ -43,8 +43,10 @@ instance Bootstrappable MainHs where
     unitType <- [t|()|]
     pure . pure . bootstrapContentHaskell $
       haskellModule (ModName "Main") (one "main")
-        & haskellModuleImports ?~ one (HaskellImport (ModName "Lib") [lib])
-        & haskellModuleDecs ?~ SigD main (AppT (ConT io) unitType)
+        & haskellModuleImports
+        ?~ one (HaskellImport (ModName "Lib") [lib])
+          & haskellModuleDecs
+        ?~ SigD main (AppT (ConT io) unitType)
           :| [FunD main [Clause [] (NormalB $ VarE lib) []]]
 
 mainHsFor :: ProjectType -> Maybe MainHs

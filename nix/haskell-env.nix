@@ -13,7 +13,7 @@
 # limitations under the License.
 {nixpkgs}: let
   # haskell package set
-  baseHaskellPackages = nixpkgs.haskell.packages.ghc948;
+  baseHaskellPackages = nixpkgs.haskell.packages.ghc984;
 
   # dev tools
   haskellEnv = baseHaskellPackages.ghcWithPackages (
