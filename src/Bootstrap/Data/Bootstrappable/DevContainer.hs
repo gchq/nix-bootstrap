@@ -161,7 +161,8 @@ instance Bootstrappable DevContainerDockerCompose where
   bootstrapName = const ".devcontainer/docker-compose.yaml"
   bootstrapReason = const "The docker compose file from which the VSCode DevContainer's service is configured."
   bootstrapContent =
-    pure . Right
+    pure
+      . Right
       . unlines
       . foldr buildDockerCompose []
       . dropWhileEnd (T.all isSpace)

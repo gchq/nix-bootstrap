@@ -19,9 +19,12 @@
       url = github:edolstra/flake-compat;
     };
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs-src.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-src.url = "github:NixOS/nixpkgs?rev=b62d2a95c72fb068aecd374a7262b37ed92df82b";
+    # Needed to get non-broken vulnix
+    nixpkgs-src-previous.url = "github:NixOS/nixpkgs?rev=89172919243df199fe237ba0f776c3e3e3d72367";
     pre-commit-hooks-lib = {
-      inputs.flake-utils.follows = "flake-utils";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.nixpkgs.follows = "nixpkgs-src";
       url = "github:cachix/pre-commit-hooks.nix";
     };
   };
@@ -30,6 +33,7 @@
     self,
     flake-utils,
     nixpkgs-src,
+    nixpkgs-src-previous,
     pre-commit-hooks-lib,
     ...
   }:
@@ -51,6 +55,7 @@
           inherit nixpkgs pre-commit-hooks-lib system;
           inherit (nixpkgs) alejandra;
           src = ./.;
+          vulnix = nixpkgs-src-previous.legacyPackages.${system}.vulnix;
         };
         extraDevShellArgs = {
           inherit (pre-commit-hooks.allHooks) shellHook;

@@ -24,7 +24,7 @@ import System.Process
 --
 -- Shows an error message and exits with failure status (diverges)
 -- if git is not available on the system.
-git :: MonadBootstrap m => [String] -> m (Either IOException String)
+git :: (MonadBootstrap m) => [String] -> m (Either IOException String)
 git args =
   which "git" >>= \case
     Right g -> runCommand g args
@@ -34,7 +34,7 @@ git args =
       exitFailure
 
 -- | Runs alejandra against the given nix expression
-alejandra :: MonadIO m => String -> ExceptT IOException m String
+alejandra :: (MonadIO m) => String -> ExceptT IOException m String
 alejandra expr = do
   -- hExpr is the pipe from printf with the correctly sanitised (for terminal use)
   -- expression in it
@@ -47,7 +47,8 @@ alejandra expr = do
     Just hExpr' -> do
       -- hFormatted is stdout from alejandra
       (_, hFormatted, hError, _) <-
-        ExceptT . liftIO
+        ExceptT
+          . liftIO
           . try
           $ createProcess
             (proc "alejandra" [])
@@ -67,15 +68,15 @@ alejandra expr = do
     Nothing -> hoistEither (Left $ userError "hExpr was Nothing; should not happen")
 
 -- | Gets the path to the requested executable on the system using `which`
-which :: MonadIO m => String -> m (Either IOException FilePath)
+which :: (MonadIO m) => String -> m (Either IOException FilePath)
 which = fmap (fmap (dropWhileEnd isSpace)) . runCommand "which" . one
 
 -- | Gets the name of the current user using `whoami`
-whoami :: MonadIO m => m (Either IOException FilePath)
+whoami :: (MonadIO m) => m (Either IOException FilePath)
 whoami = (toString . T.strip . toText) <<$>> runCommand "whoami" []
 
 -- | Runs the given command, silencing (and capturing) output
-runCommand :: MonadIO m => FilePath -> [String] -> m (Either IOException String)
+runCommand :: (MonadIO m) => FilePath -> [String] -> m (Either IOException String)
 runCommand binaryPath args =
   liftIO
     . try

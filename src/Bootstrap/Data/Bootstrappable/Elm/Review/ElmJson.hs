@@ -75,5 +75,5 @@ instance ToJSON ElmReviewElmJson where
 elmReviewElmJsonFor :: ProjectType -> Maybe ElmReviewElmJson
 elmReviewElmJsonFor (Elm ElmOptions {..})
   | elmOptionProvideElmReview =
-    Just ElmReviewElmJson
+      Just ElmReviewElmJson
 elmReviewElmJsonFor _ = Nothing

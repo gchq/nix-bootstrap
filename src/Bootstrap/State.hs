@@ -70,5 +70,5 @@ newtype ChoiceInputState a = ChoiceInputState {chosenItem :: a}
 
 data MultipleChoiceInputState a = MultipleChoiceInputState {chosenItems :: Set a, cursorItem :: a}
 
-initialMultipleChoiceInputState :: Bounded a => MultipleChoiceInputState a
+initialMultipleChoiceInputState :: (Bounded a) => MultipleChoiceInputState a
 initialMultipleChoiceInputState = MultipleChoiceInputState Set.empty minBound

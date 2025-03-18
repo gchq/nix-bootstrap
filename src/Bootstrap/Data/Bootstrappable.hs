@@ -67,7 +67,7 @@ class Bootstrappable a where
 -- If given a Nothing value, it **must not** be bootstrapped; any attempts to do
 -- so will call `error`. This can be safely avoided by checking for a `Nothing`
 -- value using `bootstrapWithMaybe`.
-instance Bootstrappable a => Bootstrappable (Maybe a) where
+instance (Bootstrappable a) => Bootstrappable (Maybe a) where
   bootstrapWithMaybe (Just a) = Just (Just a)
   bootstrapWithMaybe Nothing = Nothing
   bootstrapName = maybe (error "Called bootstrapName on Nothing value") bootstrapName
@@ -115,7 +115,9 @@ bootstrapContentHaskell HaskellModule {..} =
         $ catMaybes
           [ T.intercalate "\n" . toList <$> _haskellModulePragmas,
             Just $
-              "module " <> modName <> " ("
+              "module "
+                <> modName
+                <> " ("
                 <> T.intercalate ", " (toList _haskellModuleExports)
                 <> ") where",
             formatImports <$> _haskellModuleImports,
@@ -182,7 +184,7 @@ bootstrapContentPrettyJson keysToPrioritise =
       defConfig {confCompare = keyOrder keysToPrioritise <> compare}
 
 -- | A helper function when the generated file should be YAML
-bootstrapContentYaml :: ToJSON a => a -> Text
+bootstrapContentYaml :: (ToJSON a) => a -> Text
 bootstrapContentYaml = decodeUtf8With lenientDecode . Yaml.encode
 
 makeLenses ''HaskellModule

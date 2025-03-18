@@ -254,7 +254,7 @@ mergeNestedLetExprs = \case
       PCons p1 p2 -> PCons (mergeNestedLetExprsP p1) (mergeNestedLetExprsP p2)
 
 -- | Writes out an `Expr` as Nix code, formatting it with alejandra
-writeExprFormatted :: MonadIO m => CommentsPolicy -> Expr -> m (Either IOException Text)
+writeExprFormatted :: (MonadIO m) => CommentsPolicy -> Expr -> m (Either IOException Text)
 writeExprFormatted cp = runExceptT . (fmap toText <$> alejandra . toString . writeExpr cp)
 
 -- | Like writeExpr, but strips out line comments,
@@ -566,7 +566,8 @@ parseIdentifier =
 -- | Parses a list of `Expr`s
 parseList :: Parser [Expr]
 parseList =
-  label "list" . between (space *> char '[') (char ']')
+  label "list"
+    . between (space *> char '[') (char ']')
     . many
     . lexeme
     $ (space *> parseE True)
@@ -629,7 +630,8 @@ parseLiteral atomic =
     parseMultilineStringLiteral =
       label "multiline string literal"
         . fmap (LMultilineString . T.concat . fmap mslpToText)
-        $ char '\'' *> char '\''
+        $ char '\''
+          *> char '\''
           *> manyTill
             ( choice
                 [ try parseMultilineStringLiteralEscape <?> "escape sequence",
@@ -898,7 +900,7 @@ nixident = mkParseQuoter "Identifier" (mkEitherParser parseIdentifier)
 nixproperty :: QuasiQuoter
 nixproperty = mkParseQuoter "Property" (mkEitherParser $ parseProperty False)
 
-mkParseQuoter :: forall a. Data a => String -> (Text -> Either Text a) -> QuasiQuoter
+mkParseQuoter :: forall a. (Data a) => String -> (Text -> Either Text a) -> QuasiQuoter
 mkParseQuoter typeName parserFunction =
   QuasiQuoter
     { quoteExp = liftDataWithText <=< parseOrThrow,

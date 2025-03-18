@@ -42,7 +42,8 @@ instance Bootstrappable LibHs where
     errorLine <- AppE (VarE errorFunc) <$> [|"todo: write the body of the lib function in src/Lib.hs"|]
     pure . pure . bootstrapContentHaskell $
       haskellModule (ModName "Lib") (one "lib")
-        & haskellModuleDecs ?~ SigD lib (AppT (ConT io) unitType)
+        & haskellModuleDecs
+        ?~ SigD lib (AppT (ConT io) unitType)
           :| [FunD lib [Clause [] (NormalB errorLine) []]]
 
 libHsFor :: ProjectType -> Maybe LibHs

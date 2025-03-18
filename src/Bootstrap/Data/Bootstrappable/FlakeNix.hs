@@ -232,62 +232,62 @@ instance IsNixExpr FlakeNix where
             [nixproperty|outputs|]
               |= FASet
                 ( [nixident|nixpkgs-src|]
-                    :| ( [nixident|flake-utils|] :
-                         [[nixident|mach-nix|] | isPython]
-                           <> [[nixident|pre-commit-hooks-lib|] | usingHooks]
-                           <> [[nixident|self|]]
-                           <> [[nixident|...|]]
+                    :| ( [nixident|flake-utils|]
+                           : [[nixident|mach-nix|] | isPython]
+                             <> [[nixident|pre-commit-hooks-lib|] | usingHooks]
+                             <> [[nixident|self|]]
+                             <> [[nixident|...|]]
                        )
                 )
-                |: [nix|flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux])|]
-                |* EGrouping
-                  ( [nixargs|system:|]
-                      |: ELetIn
-                        ( [nixbinding|nixpkgs = nixpkgs-src.legacyPackages.${system};|]
-                            :| [ [nixproperty|preCommitHooks|]
-                                   |= importPreCommitHooks
-                                     ImportPreCommitHooksArgs
-                                       { passNixpkgsThrough = flakeNixHooksRequireNixpkgs,
-                                         passSystemThrough = True
+              |: [nix|flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux])|]
+              |* EGrouping
+                ( [nixargs|system:|]
+                    |: ELetIn
+                      ( [nixbinding|nixpkgs = nixpkgs-src.legacyPackages.${system};|]
+                          :| [ [nixproperty|preCommitHooks|]
+                                 |= importPreCommitHooks
+                                   ImportPreCommitHooksArgs
+                                     { passNixpkgsThrough = flakeNixHooksRequireNixpkgs,
+                                       passSystemThrough = True
+                                     }
+                               | usingHooks
+                             ]
+                          <> flakeNixExtraBindings
+                      )
+                      ( ESet False $
+                          [[nixbinding|checks.pre-commit-check = preCommitHooks.pureHooks;|] | usingHooks]
+                            <> [ [nixbinding|devShell = self.devShells.${system}.default;|],
+                                 [nixproperty|devShells.default|]
+                                   |= mkShell
+                                     BuildInputSpec
+                                       { bisNixpkgsPackages = flakeNixNixpkgsBuildInputs,
+                                         bisOtherPackages = flakeNixOtherBuildInputs,
+                                         bisPreCommitHooksConfig = flakeNixPreCommitHooksConfig,
+                                         bisProjectType = flakeNixProjectType,
+                                         bisNativeNixpkgsPackages = flakeNixNixpkgsNativeBuildInputs
                                        }
-                                 | usingHooks
                                ]
-                            <> flakeNixExtraBindings
-                        )
-                        ( ESet False $
-                            [[nixbinding|checks.pre-commit-check = preCommitHooks.pureHooks;|] | usingHooks]
-                              <> [ [nixbinding|devShell = self.devShells.${system}.default;|],
-                                   [nixproperty|devShells.default|]
-                                     |= mkShell
-                                       BuildInputSpec
-                                         { bisNixpkgsPackages = flakeNixNixpkgsBuildInputs,
-                                           bisOtherPackages = flakeNixOtherBuildInputs,
-                                           bisPreCommitHooksConfig = flakeNixPreCommitHooksConfig,
-                                           bisProjectType = flakeNixProjectType,
-                                           bisNativeNixpkgsPackages = flakeNixNixpkgsNativeBuildInputs
-                                         }
-                                 ]
-                              <> case flakeNixBuildNix of
-                                Just buildNix ->
-                                  [ [nixbinding|defaultPackage = self.packages.${system}.default;|],
-                                    [nixproperty|packages.default|]
-                                      |= ( [nix|import|]
-                                             |* ELit (LPath . toText $ bootstrapName buildNix)
-                                             |* ESet
-                                               False
-                                               ( toList
-                                                   . unsafeSimplifyBindings
-                                                   . fmap toBuildRequirementBinding
-                                                   . sortRbeRequirements
-                                                   . rbeRequirements
-                                                   $ unBuildNix buildNix
-                                               )
-                                         )
-                                  ]
-                                    <> (if usingHooks then runChecksDerivation else [])
-                                Nothing -> if usingHooks then runChecksDerivation else []
-                        )
-                  )
+                            <> case flakeNixBuildNix of
+                              Just buildNix ->
+                                [ [nixbinding|defaultPackage = self.packages.${system}.default;|],
+                                  [nixproperty|packages.default|]
+                                    |= ( [nix|import|]
+                                           |* ELit (LPath . toText $ bootstrapName buildNix)
+                                           |* ESet
+                                             False
+                                             ( toList
+                                                 . unsafeSimplifyBindings
+                                                 . fmap toBuildRequirementBinding
+                                                 . sortRbeRequirements
+                                                 . rbeRequirements
+                                                 $ unBuildNix buildNix
+                                             )
+                                       )
+                                ]
+                                  <> (if usingHooks then runChecksDerivation else [])
+                              Nothing -> if usingHooks then runChecksDerivation else []
+                      )
+                )
           ]
     where
       toBuildRequirementBinding :: ReproducibleBuildRequirement -> Binding

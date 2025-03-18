@@ -21,7 +21,8 @@ machNixVersion = "3.5.0"
 -- | A binding which pulls mach-nix using builtins.fetchGit
 machNixLegacyNixBinding :: Binding
 machNixLegacyNixBinding =
-  [nixproperty|mach-nix|] |= [nix|import|]
+  [nixproperty|mach-nix|]
+    |= [nix|import|]
     |* EGrouping
       ( [nix|builtins.fetchGit|]
           |* ESet

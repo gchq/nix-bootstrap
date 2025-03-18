@@ -158,9 +158,9 @@ data VersionedConfig version where
   VersionedConfigV7 :: ConfigV3Plus 'V7 -> VersionedConfig 'V7
   VersionedConfigV8 :: ConfigV8 -> VersionedConfig 'V8
 
-deriving stock instance Eq (VersionedProjectType version) => Eq (VersionedConfig version)
+deriving stock instance (Eq (VersionedProjectType version)) => Eq (VersionedConfig version)
 
-deriving stock instance Show (VersionedProjectType version) => Show (VersionedConfig version)
+deriving stock instance (Show (VersionedProjectType version)) => Show (VersionedConfig version)
 
 instance Bootstrappable Config where
   bootstrapName = const configPath
@@ -225,7 +225,7 @@ instance Bootstrappable Config where
             | otherwise -> DCore.subExpressions replaceFullTypes e
           e@(DCore.Field u@(DCore.Union _) fieldSelection)
             | u == declared (inject @ProjectType) ->
-              Identity $ DCore.Field (DCore.Var "ProjectType") fieldSelection
+                Identity $ DCore.Field (DCore.Var "ProjectType") fieldSelection
             | otherwise -> DCore.subExpressions replaceFullTypes e
           e@(DCore.Union _)
             | e == declared (inject @ElmMode) -> Identity $ DCore.Var "ElmMode"
@@ -287,7 +287,7 @@ instance ToDhall (VersionedProjectType 'V8) where
 
 versionedProjectTypeFromDhall ::
   forall underlying version.
-  FromDhall underlying =>
+  (FromDhall underlying) =>
   Proxy underlying ->
   (underlying -> VersionedProjectType version) ->
   InputNormalizer ->
@@ -299,7 +299,7 @@ versionedProjectTypeFromDhall Proxy constructor normaliser =
 
 versionedProjectTypeToDhall ::
   forall underlying version.
-  ToDhall underlying =>
+  (ToDhall underlying) =>
   Proxy underlying ->
   (VersionedProjectType version -> underlying) ->
   InputNormalizer ->
@@ -326,7 +326,7 @@ instance Exception TomlDecodeException where
 -- | Parses the given text as a nix-bootstrap config file
 parseVersionedConfig ::
   forall m version.
-  MonadBootstrap m =>
+  (MonadBootstrap m) =>
   SConfigVersion version ->
   Text ->
   m (Either SomeException (VersionedConfig version))
@@ -343,7 +343,7 @@ parseVersionedConfig v s = case v of
   SV7 -> parseFor VersionedConfigV7
   SV8 -> parseFor VersionedConfigV8
   where
-    parseFor :: FromDhall config => (config -> versionedConfig) -> m (Either SomeException versionedConfig)
+    parseFor :: (FromDhall config) => (config -> versionedConfig) -> m (Either SomeException versionedConfig)
     parseFor constructor = handleAll (pure . Left) . fmap (Right . constructor) . liftIO $ input auto s
 
 -- | The second version of the config
@@ -369,19 +369,19 @@ data ConfigV3Plus (version :: ConfigVersion) = ConfigV3Plus
   }
   deriving stock (Generic)
 
-deriving stock instance Eq (VersionedProjectType version) => Eq (ConfigV3Plus version)
+deriving stock instance (Eq (VersionedProjectType version)) => Eq (ConfigV3Plus version)
 
-deriving stock instance Show (VersionedProjectType version) => Show (ConfigV3Plus version)
-
-deriving via
-  (Codec (Field (CamelCase <<< DropPrefix "_configV3")) (ConfigV3Plus version))
-  instance
-    FromDhall (VersionedProjectType version) => FromDhall (ConfigV3Plus version)
+deriving stock instance (Show (VersionedProjectType version)) => Show (ConfigV3Plus version)
 
 deriving via
   (Codec (Field (CamelCase <<< DropPrefix "_configV3")) (ConfigV3Plus version))
   instance
-    ToDhall (VersionedProjectType version) => ToDhall (ConfigV3Plus version)
+    (FromDhall (VersionedProjectType version)) => FromDhall (ConfigV3Plus version)
+
+deriving via
+  (Codec (Field (CamelCase <<< DropPrefix "_configV3")) (ConfigV3Plus version))
+  instance
+    (ToDhall (VersionedProjectType version)) => ToDhall (ConfigV3Plus version)
 
 -- | The eighth version of the config
 data ConfigV8 = ConfigV8
@@ -394,9 +394,9 @@ data ConfigV8 = ConfigV8
   deriving stock (Generic)
   deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV8")) ConfigV8
 
-deriving stock instance Eq (VersionedProjectType 'V8) => Eq ConfigV8
+deriving stock instance (Eq (VersionedProjectType 'V8)) => Eq ConfigV8
 
-deriving stock instance Show (VersionedProjectType 'V8) => Show ConfigV8
+deriving stock instance (Show (VersionedProjectType 'V8)) => Show ConfigV8
 
 -- | An exception thrown when a config specifies that flakes are not to be used;
 -- this is an exception because non-flake support has been withdrawn and migration
@@ -422,7 +422,7 @@ data LoadConfigResult
   | -- | There is no existing config
     LoadConfigResultNotFound
 
-deriving stock instance Show Config => Show LoadConfigResult
+deriving stock instance (Show Config) => Show LoadConfigResult
 
 makeLenses ''ConfigV8
 
@@ -431,12 +431,12 @@ _Current :: Iso' Config ConfigV8
 _Current = iso (\(VersionedConfigV8 c) -> c) VersionedConfigV8
 
 -- | Loads the config from the appropriate file
-loadConfig :: MonadBootstrap m => m LoadConfigResult
+loadConfig :: (MonadBootstrap m) => m LoadConfigResult
 loadConfig = loadConfig' @Current sing
 
 -- | Tries to load the specified config version, then tries previous versions
 -- until one is found to succeed (or none are).
-loadConfig' :: forall version m. MonadBootstrap m => SConfigVersion version -> m LoadConfigResult
+loadConfig' :: forall version m. (MonadBootstrap m) => SConfigVersion version -> m LoadConfigResult
 loadConfig' nextToTry = do
   ((Right <$> loadConfigAtVersion nextToTry) `catchAll` (pure . Left)) >>= \case
     Right Nothing -> pure LoadConfigResultNotFound
@@ -463,7 +463,7 @@ loadConfig' nextToTry = do
 -- * `IOException` if the file can't be loaded.
 -- * `NonFlakeConfigException` if the config was set up not to use flakes, as this is no longer supported.
 -- * `SomeException` if the config can't be loaded or parsed.
-loadConfigAtVersion :: MonadBootstrap m => SConfigVersion version -> m (Maybe Config)
+loadConfigAtVersion :: (MonadBootstrap m) => SConfigVersion version -> m (Maybe Config)
 loadConfigAtVersion v = do
   let path = case v of SV1 -> ".nix-bootstrap.toml"; _ -> configPath
   liftIO ((,) <$> doesFileExist ".nix-bootstrap.toml" <*> doesFileExist configPath) >>= \case
@@ -476,7 +476,7 @@ loadConfigAtVersion v = do
         =<< parseVersionedConfig v fileContents
   where
     showPath ::
-      MonadBootstrap m =>
+      (MonadBootstrap m) =>
       FilePath ->
       Either SomeException (VersionedConfig version) ->
       m (Either SomeException (VersionedConfig version))

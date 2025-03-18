@@ -228,7 +228,7 @@ nixBootstrap = withTerminal $ runTerminalT do
     CommandVersion -> do
       putTextLn $ "nix-bootstrap version " <> toText (showVersion version)
 
-performInitialChecks :: forall m. MonadBootstrap m => RunConfig -> m (CurrentDirectoryName, NixBinaryPaths)
+performInitialChecks :: forall m. (MonadBootstrap m) => RunConfig -> m (CurrentDirectoryName, NixBinaryPaths)
 performInitialChecks rc = do
   currentDirectoryName <- toText . takeFileName <$> liftIO getCurrentDirectory
   when (currentDirectoryName == "nix-bootstrap" || currentDirectoryName == "nix-bootstrap-hs") $
@@ -295,7 +295,7 @@ performInitialChecks rc = do
           putTextLn " to find out how to configure them."
           exitFailure
 
-offerToInitialiseGitRepo :: forall m. MonadBootstrap m => m ()
+offerToInitialiseGitRepo :: forall m. (MonadBootstrap m) => m ()
 offerToInitialiseGitRepo = do
   putErrorLn "No `.git` found relative to the current path."
   promptYesNo "Would you like to intialise git in the current directory?" >>= \case
@@ -308,7 +308,7 @@ offerToInitialiseGitRepo = do
       putTextLn "Okay, exiting."
       exitFailure
 
-showWelcomeMessage :: MonadBootstrap m => m ()
+showWelcomeMessage :: (MonadBootstrap m) => m ()
 showWelcomeMessage = do
   withAttributes [bold, foreground blue] $ putTextLn `mapM_` icon
   putLn
@@ -316,7 +316,7 @@ showWelcomeMessage = do
   putTextLn "It is expected to be run in an empty git repository."
 
 -- | Asks the user to enter a project name
-promptProjectName :: MonadBootstrap m => CurrentDirectoryName -> m ProjectName
+promptProjectName :: (MonadBootstrap m) => CurrentDirectoryName -> m ProjectName
 promptProjectName cdn@(CurrentDirectoryName currentDirectoryName) =
   promptNonemptyText (Just currentDirectoryName) "Please enter a project name"
     >>= ( \case
@@ -328,13 +328,13 @@ promptProjectName cdn@(CurrentDirectoryName currentDirectoryName) =
       . mkProjectName
 
 -- | Asks the user to decide whether they'd like to have pre-commit hooks set up
-promptPreCommitHooksConfig :: MonadBootstrap m => m PreCommitHooksConfig
+promptPreCommitHooksConfig :: (MonadBootstrap m) => m PreCommitHooksConfig
 promptPreCommitHooksConfig =
   PreCommitHooksConfig
     <$> promptYesNo "Would you like pre-commit hooks to be included in what nix-bootstrap sets up?"
 
 promptBuildConfig ::
-  MonadBootstrap m =>
+  (MonadBootstrap m) =>
   NixBinaryPaths ->
   RunConfig ->
   ProjectName ->
@@ -356,7 +356,7 @@ promptBuildConfig
         <$> promptYesNo "Would you like to set up CI with GitLab CI?"
     makeBuildPlan MakeBuildPlanArgs {..}
 
-promptProjectType :: forall m. MonadBootstrap m => NixBinaryPaths -> DevContainerConfig -> m ProjectType
+promptProjectType :: forall m. (MonadBootstrap m) => NixBinaryPaths -> DevContainerConfig -> m ProjectType
 promptProjectType nixBinaryPaths devContainerConfig = do
   superType <- promptChoice "Select a project type:" universeNonEmpty projectSuperTypeName
   case superType of
@@ -416,7 +416,7 @@ data MakeBuildPlanArgs = MakeBuildPlanArgs
     mbpRunConfig :: RunConfig
   }
 
-makeBuildPlan :: forall m. MonadBootstrap m => MakeBuildPlanArgs -> m BuildPlan
+makeBuildPlan :: forall m. (MonadBootstrap m) => MakeBuildPlanArgs -> m BuildPlan
 makeBuildPlan MakeBuildPlanArgs {..} = do
   initialBuildPlanMap <- mkInitialBuildPlanMap
   readme <- readmeWithBuildPlan . BuildPlan $ toPairs initialBuildPlanMap
@@ -488,12 +488,12 @@ makeBuildPlan MakeBuildPlanArgs {..} = do
       snd . Unsafe.fromJust
         <$> toBuildPlanFile initialReadme {readmeMBuildPlan = Just initialPlan}
 
-showCompletionMessage :: MonadBootstrap m => m ()
+showCompletionMessage :: (MonadBootstrap m) => m ()
 showCompletionMessage = do
   putLn
   putTextLn "All steps have finished successfully."
   putTextLn "Once complete, you will be advised to run direnv allow if you're using direnv."
   withAttributes [bold, foreground green] $ putTextLn "nix-bootstrap complete!"
 
-trackAllFilesInGit :: MonadBootstrap m => m ()
+trackAllFilesInGit :: (MonadBootstrap m) => m ()
 trackAllFilesInGit = void $ git ["add", "-N", "."]

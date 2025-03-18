@@ -28,7 +28,8 @@ import Bootstrap.Nix.Expr
 -- nixpkgs being in scope.
 haskellPackagesExpr :: HaskellOptions -> Expr
 haskellPackagesExpr HaskellOptions {..} =
-  basePackageSet |. [nixproperty|override|]
+  basePackageSet
+    |. [nixproperty|override|]
     |* ESet
       False
       [ [nixproperty|overrides|]

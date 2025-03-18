@@ -22,7 +22,7 @@ data InProgressDuration = Quick | LongRunning
 
 runWithProgressMsg ::
   forall e m a.
-  MonadBootstrap m =>
+  (MonadBootstrap m) =>
   InProgressDuration ->
   Text ->
   ExceptT e m a ->
@@ -46,16 +46,16 @@ class CanDieOnError m where
   dieOnError :: (e -> Text) -> ExceptT e m a -> m a
 
   -- | Convenience function to print exceptions unmodified when dying
-  dieOnError' :: Exception e => ExceptT e m a -> m a
+  dieOnError' :: (Exception e) => ExceptT e m a -> m a
   dieOnError' = dieOnError (toText . displayException)
 
   -- | Convenience function to print exceptions unmodified but with a prefix when dying.
   --
   -- Adds a colon and space to the end of the prefix.
-  dieOnErrorWithPrefix :: Exception e => Text -> ExceptT e m a -> m a
+  dieOnErrorWithPrefix :: (Exception e) => Text -> ExceptT e m a -> m a
   dieOnErrorWithPrefix prefix = dieOnError (((prefix <> ": ") <>) . toText . displayException)
 
-instance MonadBootstrap m => CanDieOnError m where
+instance (MonadBootstrap m) => CanDieOnError m where
   dieOnError displayError action =
     runExceptT action >>= \case
       Left e -> putErrorLn (displayError e) >> exitFailure

@@ -59,18 +59,18 @@ data NixBinaryPaths = NixBinaryPaths
     nixInstantiatePath :: FilePath
   }
 
-runNix :: MonadIO m => NixBinaryPaths -> [String] -> m (Either IOException String)
+runNix :: (MonadIO m) => NixBinaryPaths -> [String] -> m (Either IOException String)
 runNix NixBinaryPaths {nixPath} = runCommand nixPath
 
 -- | Gets the path to the nix binary on the system using `which`
-getNixBinaryPaths :: MonadIO m => ExceptT IOException m NixBinaryPaths
+getNixBinaryPaths :: (MonadIO m) => ExceptT IOException m NixBinaryPaths
 getNixBinaryPaths = do
   nixPath <- ExceptT $ which "nix"
   nixEnvPath <- ExceptT $ which "nix-env"
   nixInstantiatePath <- ExceptT $ which "nix-instantiate"
   pure $ NixBinaryPaths {..}
 
-getNixConfig :: MonadIO m => NixBinaryPaths -> ExceptT IOException m (HashMap Text Text)
+getNixConfig :: (MonadIO m) => NixBinaryPaths -> ExceptT IOException m (HashMap Text Text)
 getNixConfig nixBinaryPaths = do
   configLines <-
     lines . toText
@@ -97,7 +97,7 @@ getNixConfig nixBinaryPaths = do
           else acc
       _ -> acc
 
-getNixVersion :: MonadIO m => NixBinaryPaths -> ExceptT IOException m MajorVersion
+getNixVersion :: (MonadIO m) => NixBinaryPaths -> ExceptT IOException m MajorVersion
 getNixVersion NixBinaryPaths {nixEnvPath} = do
   versionString <- ExceptT (runCommand nixEnvPath ["--version"])
   case matchRegex (mkRegex "([.0-9]+)") versionString of
@@ -109,7 +109,7 @@ getNixVersion NixBinaryPaths {nixEnvPath} = do
 -- | Encloses the expression in single quotes and evaluates it, giving back stdout in a `Right` value.
 --
 -- Gives a `Left` value if the command execution fails
-evaluateNixExpression :: MonadIO m => NixBinaryPaths -> Expr -> m (Either IOException String)
+evaluateNixExpression :: (MonadIO m) => NixBinaryPaths -> Expr -> m (Either IOException String)
 evaluateNixExpression NixBinaryPaths {..} expr =
   liftIO
     . try
@@ -123,7 +123,7 @@ evaluateNixExpression NixBinaryPaths {..} expr =
 --
 -- >>> getVersionOfNixpkgsAttribute (NixBinaryPaths {..}) (RunConfig {..}) "go"
 -- "1.17.7"
-getVersionOfNixpkgsAttribute :: MonadBootstrap m => NixBinaryPaths -> Text -> m (Either IOException String)
+getVersionOfNixpkgsAttribute :: (MonadBootstrap m) => NixBinaryPaths -> Text -> m (Either IOException String)
 getVersionOfNixpkgsAttribute nixBinaryPaths attrName = do
   resetPermissionsInGitPod
   runWithProgressMsg LongRunning ("Getting version of " <> attrName <> " in the pinned version of nixpkgs") . ExceptT $
@@ -147,7 +147,7 @@ extractNixVersionString nixVersionValue =
     "\\1"
 
 -- | Gets the available GHC versions in the pinned nixpkgs.
-getAvailableGHCVersions :: MonadBootstrap m => NixBinaryPaths -> m (Set GHCVersion)
+getAvailableGHCVersions :: (MonadBootstrap m) => NixBinaryPaths -> m (Set GHCVersion)
 getAvailableGHCVersions nixBinaryPaths =
   dieOnError
     (("Could not get list of available GHC versions: " <>) . toText . displayException)
@@ -168,8 +168,8 @@ getAvailableGHCVersions nixBinaryPaths =
               pure
                 . Right
                 . fromList
-                . catMaybes
-                $ parseMaybe parseGHCVersion <$> attrs
+                . mapMaybe (parseMaybe parseGHCVersion)
+                $ attrs
   where
     parseAttributes :: Parsec Void String [String]
     parseAttributes = between (char '[') (char ']') $ Text.Megaparsec.many do

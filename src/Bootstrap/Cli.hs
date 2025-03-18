@@ -45,7 +45,7 @@ data RunConfig = RunConfig
     rcWithDevContainer :: Maybe DevContainerConfig
   }
 
-parseCommand :: MonadIO m => m Command
+parseCommand :: (MonadIO m) => m Command
 parseCommand = do
   args <- getArgs
   let (options, _, errors) = getOpt Permute cliOptions args
@@ -76,10 +76,10 @@ data Flag
   | WithDevContainer
   deriving stock (Eq)
 
-allowDirtyFlagName :: IsString s => s
+allowDirtyFlagName :: (IsString s) => s
 allowDirtyFlagName = "allow-dirty"
 
-fromScratchFlagName :: IsString s => s
+fromScratchFlagName :: (IsString s) => s
 fromScratchFlagName = "from-scratch"
 
 cliOptions :: [OptDescr Flag]
@@ -94,7 +94,7 @@ cliOptions =
     GetOpt.Option [] ["with-devcontainer"] (NoArg WithDevContainer) "Make sure nix-bootstrap sets up a VSCode DevContainer."
   ]
 
-showHelp :: MonadBootstrap m => [ErrorMessage] -> m ()
+showHelp :: (MonadBootstrap m) => [ErrorMessage] -> m ()
 showHelp errors = do
   mapM_ (putErrorLn . ("Error: " <>) . unErrorMessage) errors
   withAttributes [bold, foreground blue] $ putTextLn "Usage: nix-bootstrap [OPTION]..."

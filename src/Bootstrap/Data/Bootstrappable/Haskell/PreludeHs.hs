@@ -29,8 +29,10 @@ instance Bootstrappable PreludeHs where
   bootstrapContent PreludeHs =
     pure . pure . bootstrapContentHaskell $
       haskellModule (ModName "Prelude") (one "module Relude")
-        & haskellModulePragmas ?~ one "{-# OPTIONS_GHC -Wno-missing-import-lists #-}"
-        & haskellModuleImports ?~ one (HaskellImportAll (ModName "Relude"))
+        & haskellModulePragmas
+        ?~ one "{-# OPTIONS_GHC -Wno-missing-import-lists #-}"
+          & haskellModuleImports
+        ?~ one (HaskellImportAll (ModName "Relude"))
 
 preludeHsFor :: ProjectType -> Maybe PreludeHs
 preludeHsFor = \case

@@ -134,7 +134,7 @@ hdep name = case M.lookup name dependencies of
   Nothing -> error $ "Could not find " <> name <> " in dependency map in Bootstrap.Data.HaskellDependency"
 
 getHaskellDependencyVersions ::
-  MonadIO m =>
+  (MonadIO m) =>
   NixBinaryPaths ->
   HaskellOptions ->
   [HaskellDependency 'VersionUnknown] ->
