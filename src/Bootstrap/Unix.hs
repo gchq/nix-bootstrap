@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Description : Defines utilities for working with command-line tools
 -- Copyright : (c) Crown Copyright GCHQ
 module Bootstrap.Unix (alejandra, git, runCommand, which, whoami) where
@@ -6,8 +8,6 @@ import Bootstrap.Monad (MonadBootstrap)
 import Bootstrap.Terminal (putErrorLn)
 import Control.Exception (IOException)
 import Control.Monad.Catch (try)
-import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
 import qualified Data.Text as T
 import GHC.IO.Exception (userError)
 import GHC.IO.Handle (hGetContents)
@@ -19,6 +19,7 @@ import System.Process
     proc,
     readProcess,
   )
+import qualified System.Which as Which
 
 -- | Finds and runs git, returning the result of the command with the given args.
 --
@@ -27,9 +28,8 @@ import System.Process
 git :: (MonadBootstrap m) => [String] -> m (Either IOException String)
 git args =
   which "git" >>= \case
-    Right g -> runCommand g args
-    Left e -> do
-      putErrorLn . toText $ displayException e
+    Just g -> runCommand g args
+    Nothing -> do
       putErrorLn "Git does not appear to be installed. Please install it and then re-run nix-bootstrap."
       exitFailure
 
@@ -51,7 +51,7 @@ alejandra expr = do
           . liftIO
           . try
           $ createProcess
-            (proc "alejandra" [])
+            (proc $(Which.staticWhich "alejandra") [])
               { std_err = CreatePipe,
                 std_in = UseHandle hExpr',
                 std_out = CreatePipe
@@ -68,8 +68,8 @@ alejandra expr = do
     Nothing -> hoistEither (Left $ userError "hExpr was Nothing; should not happen")
 
 -- | Gets the path to the requested executable on the system using `which`
-which :: (MonadIO m) => String -> m (Either IOException FilePath)
-which = fmap (fmap (dropWhileEnd isSpace)) . runCommand "which" . one
+which :: (MonadIO m) => FilePath -> m (Maybe FilePath)
+which = liftIO . Which.which
 
 -- | Gets the name of the current user using `whoami`
 whoami :: (MonadIO m) => m (Either IOException FilePath)

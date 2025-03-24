@@ -16,15 +16,13 @@
   nixpkgs,
 }: let
   src = ../.;
-  nix-bootstrap-unstripped = nixpkgs.haskell.lib.overrideCabal (baseHaskellPackages.callCabal2nix "nix-bootstrap" src {}) (
-    _: {
-      configureFlags = ["-fprod"];
-      preBuild = ''
-        sed -i 's:proc "alejandra":proc "${nixpkgs.alejandra.outPath}/bin/alejandra":g' src/Bootstrap/Unix.hs
-        sed -i 's:runCommand "which":runCommand "${nixpkgs.which.outPath}/bin/which":g' src/Bootstrap/Unix.hs
-      '';
-    }
-  );
+  nix-bootstrap-unstripped = (nixpkgs.haskell.lib.overrideCabal (baseHaskellPackages.callCabal2nix "nix-bootstrap" src {})
+    (
+      _: {
+        configureFlags = ["-fprod"];
+      }
+    ))
+  .overrideAttrs (_: prev: {buildInputs = (prev.buildInputs or []) ++ [nixpkgs.alejandra];});
 in {
   nix-bootstrap = nixpkgs.stdenv.mkDerivation {
     inherit src;
@@ -35,7 +33,6 @@ in {
       gmp
       libffi
       ncurses
-      which
       zlib
     ];
     installPhase = ''

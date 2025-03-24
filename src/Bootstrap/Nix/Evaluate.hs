@@ -63,11 +63,11 @@ runNix :: (MonadIO m) => NixBinaryPaths -> [String] -> m (Either IOException Str
 runNix NixBinaryPaths {nixPath} = runCommand nixPath
 
 -- | Gets the path to the nix binary on the system using `which`
-getNixBinaryPaths :: (MonadIO m) => ExceptT IOException m NixBinaryPaths
+getNixBinaryPaths :: (MonadIO m) => MaybeT m NixBinaryPaths
 getNixBinaryPaths = do
-  nixPath <- ExceptT $ which "nix"
-  nixEnvPath <- ExceptT $ which "nix-env"
-  nixInstantiatePath <- ExceptT $ which "nix-instantiate"
+  nixPath <- MaybeT $ which "nix"
+  nixEnvPath <- MaybeT $ which "nix-env"
+  nixInstantiatePath <- MaybeT $ which "nix-instantiate"
   pure $ NixBinaryPaths {..}
 
 getNixConfig :: (MonadIO m) => NixBinaryPaths -> ExceptT IOException m (HashMap Text Text)

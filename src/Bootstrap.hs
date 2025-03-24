@@ -233,15 +233,14 @@ performInitialChecks rc = do
   currentDirectoryName <- toText . takeFileName <$> liftIO getCurrentDirectory
   when (currentDirectoryName == "nix-bootstrap" || currentDirectoryName == "nix-bootstrap-hs") $
     putErrorLn "In nix-bootstrap directory; exiting. (Test in another directory.)" >> exitFailure
-  runExceptT getNixBinaryPaths >>= \case
-    Left e -> do
-      putErrorLn . toText $ displayException e
+  runMaybeT getNixBinaryPaths >>= \case
+    Nothing -> do
       putErrorLn "Could not get the nix binary path. If it's not installed, please install it by running the following command:"
       putLn
       putText "  "
       withAttribute underlined $ putTextLn "sh <(curl -L https://nixos.org/nix/install) --daemon"
       exitFailure
-    Right nixBinaryPaths -> do
+    Just nixBinaryPaths -> do
       inGitRepo <- liftIO $ doesPathExist ".git"
       if inGitRepo
         then checkWorkingStateIsClean rc
