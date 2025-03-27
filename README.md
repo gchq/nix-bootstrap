@@ -41,7 +41,7 @@ The following symbols are used throughout this page to indicate support status:
 |                    Java                    |      ✅ <br>With maven, google-java-format, and optionally minishift.       | ✅ <br>With the official Java, and optionally the Lombok, extensions installed. |    ✅     |               ✅                | 🟠 <br>Only supports Spring applications. Support is currently considered _experimental_. |
 | Minimal (With no project-specific tooling) |                                     ✅                                      |                                       ✅                                        |    ✅     |               🟠                |                                            ❌                                             |
 |                   NodeJS                   |     ✅ <br>With latest stable node, AWS CLI, and optionally PNPm/Yarn.      |                                       ✅                                        |    ✅     |               ✅                |                                            ❌                                             |
-|                   Python                   |                       ✅ <br>With Python version 3.9                        |                ✅ <br>With the official Python VSCode extension.                |    ✅     |               🟠                |                                            ❌                                             |
+|                   Python                   |                     ❌<br>No longer supported (see #6)                      |                                       ❌                                        |    ❌     |               ❌                |                                            ❌                                             |
 |                    Rust                    |                                     ✅                                      |                ✅ <br>With the official rust-analyzer extension.                |    ✅     |               ✅                |                                            ✅                                             |
 
 <a id="footnote1"><sup>1</sup></a> Marked as fully supported if any non-nix pre-commit hooks are added.
@@ -57,7 +57,7 @@ See the Pre-Commit Hooks table below for details.
 |          Java          |              ✅               | ✅ <br>google-java-format |             ❌             |       ❌       |
 |        Minimal         |              ✅               |            ❌             |             ❌             |       ❌       |
 |         NodeJS         |              ✅               |      ✅ <br>prettier      |             ❌             |       ❌       |
-|         Python         |              ✅               |            ❌             |             ❌             |       ❌       |
+|         Python         |              ❌               |            ❌             |             ❌             |       ❌       |
 |          Rust          |              ✅               |       ✅<br>rustfmt       | ✅<br>cargo check + clippy |       ❌       |
 
 <a id="footnote2"><sup>2</sup></a> [`alejandra`](https://github.com/kamadorueda/alejandra) is set up to format nix files.

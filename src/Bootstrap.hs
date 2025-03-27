@@ -96,6 +96,7 @@ import Bootstrap.Data.ProjectType
     ElmMode (ElmModeBare, ElmModeNode),
     ElmModeSimple (ElmModeSimpleBare, ElmModeSimpleNode),
     ElmOptions (ElmOptions, elmOptionElmMode, elmOptionProvideElmReview),
+    HasProjectSuperType (projectSuperType),
     HaskellOptions (HaskellOptions),
     InstallLombok (InstallLombok),
     InstallMinishift (InstallMinishift),
@@ -415,8 +416,15 @@ data MakeBuildPlanArgs = MakeBuildPlanArgs
     mbpRunConfig :: RunConfig
   }
 
-makeBuildPlan :: forall m. (MonadBootstrap m) => MakeBuildPlanArgs -> m BuildPlan
-makeBuildPlan MakeBuildPlanArgs {..} = do
+makeBuildPlan :: (MonadBootstrap m) => MakeBuildPlanArgs -> m BuildPlan
+makeBuildPlan mbp = case projectSuperType $ mbpProjectType mbp of
+  PSTPython -> do
+    putErrorLn "nix-bootstrap no longer supports Python. Please see https://github.com/gchq/nix-bootstrap/issues/6 for details."
+    exitFailure
+  _ -> makeNonPythonBuildPlan mbp
+
+makeNonPythonBuildPlan :: forall m. (MonadBootstrap m) => MakeBuildPlanArgs -> m BuildPlan
+makeNonPythonBuildPlan MakeBuildPlanArgs {..} = do
   initialBuildPlanMap <- mkInitialBuildPlanMap
   readme <- readmeWithBuildPlan . BuildPlan $ toPairs initialBuildPlanMap
   pure . BuildPlan . toPairs $ alter (const $ pure readme) (bootstrapName initialReadme) initialBuildPlanMap
