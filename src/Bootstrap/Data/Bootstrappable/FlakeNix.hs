@@ -107,7 +107,7 @@ flakeNixFor
     Just
       FlakeNix
         { flakeNixExtraBindings = extraBindingsFor flakeNixProjectType,
-          flakeNixNixpkgsBuildInputs = nixpkgsBuildInputsFor flakeNixProjectType,
+          flakeNixNixpkgsBuildInputs = nixpkgsBuildInputsFor flakeNixPreCommitHooksConfig flakeNixProjectType,
           flakeNixOtherBuildInputs = otherBuildInputsFor flakeNixProjectType,
           flakeNixNixpkgsNativeBuildInputs = nixpkgsNativeBuildInputsFor flakeNixProjectType,
           flakeNixHooksRequireNixpkgs = maybe False nixPreCommitHookConfigRequiresNixpkgs nixPreCommitHookConfig,
@@ -141,8 +141,8 @@ flakeNixFor
               . EWith [nix|pkgs|]
               . EList
               . fmap EIdent
-      nixpkgsBuildInputsFor :: ProjectType -> [Expr]
-      nixpkgsBuildInputsFor =
+      nixpkgsBuildInputsFor :: PreCommitHooksConfig -> ProjectType -> [Expr]
+      nixpkgsBuildInputsFor preCommitHooksConfig =
         sortBy compareBuildInputs . \case
           Minimal -> []
           Elm elmOptions ->
@@ -153,7 +153,7 @@ flakeNixFor
               <> case elmOptionElmMode elmOptions of
                 ElmModeBare -> []
                 ElmModeNode packageManager -> [nix|nodejs|] : nodePackageManager packageManager
-          Haskell (HaskellOptions _ _) -> []
+          Haskell (HaskellOptions _ _) -> [[nix|hpack|] | not $ unPreCommitHooksConfig preCommitHooksConfig]
           Node packageManager ->
             [[nix|awscli2|], [nix|nodejs|]] <> nodePackageManager packageManager
           Go _ -> [[nix|go|]]
