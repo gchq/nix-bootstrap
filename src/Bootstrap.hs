@@ -44,7 +44,6 @@ import Bootstrap.Data.Bootstrappable.Haskell.PackageYaml (packageYamlFor)
 import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs (preludeHsFor)
 import Bootstrap.Data.Bootstrappable.HaskellPackagesNix (haskellPackagesNixFor)
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
-import Bootstrap.Data.Bootstrappable.NixShellCompat (NixShellCompat (NixShellCompat))
 import Bootstrap.Data.Bootstrappable.Python.Requirements (Requirements (Requirements))
 import Bootstrap.Data.Bootstrappable.Readme
   ( Readme
@@ -462,7 +461,6 @@ makeNonPythonBuildPlan MakeBuildPlanArgs {..} = do
               ~: initialReadme
               ~: buildNix
               ~: flakeNixFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig buildNix
-              ~: NixShellCompat
               ~: nixPreCommitHookConfig
               ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpProjectType nixPreCommitHookConfig
               ~: devContainerDockerComposeFor mbpDevContainerConfig mbpProjectName

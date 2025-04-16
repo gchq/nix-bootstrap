@@ -218,10 +218,6 @@ instance IsNixExpr FlakeNix where
               |= ESet
                 False
                 ( [ [nixbinding|nixpkgs-src.url = "github:NixOS/nixpkgs";|],
-                    [nixbinding|flake-compat = {
-                      flake = false;
-                      url = github:edolstra/flake-compat;
-                    };|],
                     [nixbinding|flake-utils.url = "github:numtide/flake-utils";|]
                   ]
                     <> [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]

@@ -14,16 +14,11 @@
 {
   description = "Development infrastructure for nix-bootstrap";
   inputs = {
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs-src.url = "github:NixOS/nixpkgs?rev=b62d2a95c72fb068aecd374a7262b37ed92df82b";
     # Needed to get non-broken vulnix
     nixpkgs-src-previous.url = "github:NixOS/nixpkgs?rev=89172919243df199fe237ba0f776c3e3e3d72367";
     pre-commit-hooks-lib = {
-      inputs.flake-compat.follows = "flake-compat";
       inputs.nixpkgs.follows = "nixpkgs-src";
       url = "github:cachix/pre-commit-hooks.nix";
     };

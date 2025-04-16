@@ -27,10 +27,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
@@ -58,10 +54,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
@@ -100,10 +92,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
@@ -151,10 +139,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
@@ -206,10 +190,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
@@ -248,10 +228,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
@@ -296,10 +272,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
     mach-nix.url = "github:DavHau/mach-nix?ref=3.5.0";
   };
@@ -340,10 +312,6 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-compat = {
-      flake = false;
-      url = github:edolstra/flake-compat;
-    };
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };

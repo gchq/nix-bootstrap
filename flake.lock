@@ -86,7 +86,7 @@
     },
     "pre-commit-hooks-lib": {
       "inputs": {
-        "flake-compat": ["flake-compat"],
+        "flake-compat": "flake-compat",
         "gitignore": "gitignore",
         "nixpkgs": ["nixpkgs-src"]
       },
@@ -106,7 +106,6 @@
     },
     "root": {
       "inputs": {
-        "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "nixpkgs-src": "nixpkgs-src",
         "nixpkgs-src-previous": "nixpkgs-src-previous",

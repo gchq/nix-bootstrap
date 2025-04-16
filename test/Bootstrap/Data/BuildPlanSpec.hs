@@ -18,7 +18,6 @@ import Bootstrap.Data.Bootstrappable.Haskell.PreludeHs
   ( preludeHsFor,
   )
 import Bootstrap.Data.Bootstrappable.NixPreCommitHookConfig (nixPreCommitHookConfigFor)
-import Bootstrap.Data.Bootstrappable.NixShellCompat (NixShellCompat (NixShellCompat))
 import Bootstrap.Data.Bootstrappable.Readme (Readme (Readme))
 import Bootstrap.Data.Bootstrappable.Rust.CargoLock (cargoLockFor)
 import Bootstrap.Data.Bootstrappable.Rust.CargoToml (cargoTomlFor)
@@ -65,7 +64,6 @@ spec = describe "toReasonTree" do
                 ~: Envrc preCommitHooksConfig
                 ~: buildNix
                 ~: flakeNixFor projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
-                ~: NixShellCompat
                 ~: gitignoreFor projectType preCommitHooksConfig
                 ~: Readme projectName projectType devContainerConfig Nothing
                 ~: nixPreCommitHookConfig
@@ -114,7 +112,6 @@ spec = describe "toReasonTree" do
               Node "pre-commit-hooks.nix - This configures which pre-commit hooks are used." []
             ],
           Node "README.md - This helpfully explains to you what each file (including itself) does!" [],
-          Node "shell.nix - This enables you to use your development shell when Nix flakes aren't available." [],
           Node
             "src"
             [ Node "Lib.hs - The entrypoint of your haskell library" [],
