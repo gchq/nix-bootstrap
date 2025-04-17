@@ -559,7 +559,7 @@ parseIdentifier =
       [ string "...",
         do
           firstChar <- letterChar <|> char '_'
-          rest <- many $ alphaNumChar <|> char '_' <|> char '-'
+          rest <- many $ alphaNumChar <|> char '_' <|> char '-' <|> char '\''
           pure . toText $ firstChar : rest
       ]
 
@@ -790,6 +790,7 @@ isMostlyCorrectlyScoped' scope = \case
     | i `elem` scope -> pass
     | i == Identifier "builtins" -> pass
     | i == Identifier "fetchTarball" -> pass
+    | i == Identifier "or" -> pass
     | otherwise -> Left (one i)
   EImport -> pass
   ELetIn (toList -> bindings) e ->

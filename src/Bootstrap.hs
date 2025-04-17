@@ -57,6 +57,7 @@ import Bootstrap.Data.Bootstrappable.Readme
 import Bootstrap.Data.Bootstrappable.Rust.CargoLock (cargoLockFor)
 import Bootstrap.Data.Bootstrappable.Rust.CargoToml (cargoTomlFor)
 import Bootstrap.Data.Bootstrappable.Rust.MainRs (mainRsFor)
+import Bootstrap.Data.Bootstrappable.SystemsNix (SystemsNix (SystemsNix))
 import Bootstrap.Data.Bootstrappable.VSCodeExtensions (vsCodeExtensionsFileFor)
 import Bootstrap.Data.Bootstrappable.VSCodeSettings (vsCodeSettingsFor)
 import Bootstrap.Data.BuildPlan
@@ -457,6 +458,7 @@ makeNonPythonBuildPlan MakeBuildPlanArgs {..} = do
         <$> toBuildPlanFiles
           ( configFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig mbpContinuousIntegrationConfig mbpDevContainerConfig
               ~: Envrc mbpPreCommitHooksConfig
+              ~: SystemsNix
               ~: gitignoreFor mbpProjectType mbpPreCommitHooksConfig
               ~: initialReadme
               ~: buildNix

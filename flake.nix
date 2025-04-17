@@ -14,7 +14,6 @@
 {
   description = "Development infrastructure for nix-bootstrap";
   inputs = {
-    flake-utils.url = "github:numtide/flake-utils";
     nixpkgs-src.url = "github:NixOS/nixpkgs?rev=b62d2a95c72fb068aecd374a7262b37ed92df82b";
     # Needed to get non-broken vulnix
     nixpkgs-src-previous.url = "github:NixOS/nixpkgs?rev=89172919243df199fe237ba0f776c3e3e3d72367";
@@ -26,13 +25,16 @@
 
   outputs = {
     self,
-    flake-utils,
     nixpkgs-src,
     nixpkgs-src-previous,
     pre-commit-hooks-lib,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (
       system: let
         nixpkgs = nixpkgs-src.legacyPackages.${system};
         inherit

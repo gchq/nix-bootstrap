@@ -27,15 +27,17 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
     in {
       devShell = self.devShells.${system}.default;
@@ -54,15 +56,17 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
     in {
       devShell = self.devShells.${system}.default;
@@ -92,17 +96,19 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     pre-commit-hooks-lib,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
       preCommitHooks = import nix/pre-commit-hooks.nix {
         inherit pre-commit-hooks-lib system;
@@ -139,17 +145,19 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     pre-commit-hooks-lib,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
       preCommitHooks = import nix/pre-commit-hooks.nix {
         inherit pre-commit-hooks-lib nixpkgs system;
@@ -190,15 +198,17 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
       haskellPackages = import nix/haskell-packages.nix {
         inherit nixpkgs;
@@ -228,17 +238,19 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     pre-commit-hooks-lib,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
       preCommitHooks = import nix/pre-commit-hooks.nix {
         inherit pre-commit-hooks-lib system;
@@ -272,17 +284,19 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
     mach-nix.url = "github:DavHau/mach-nix?ref=3.5.0";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     mach-nix,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
       pythonPackages = mach-nix.lib.${system}.mkPython rec {
         requirements = builtins.readFile ./requirements.txt;
@@ -312,17 +326,19 @@ spec = describe "flake.nix rendering" do
   description = "Development infrastructure for test-project";
   inputs = {
     nixpkgs-src.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
     nixpkgs-src,
-    flake-utils,
     pre-commit-hooks-lib,
     self,
     ...
-  }:
-    flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux]) (system: let
+  }: let
+    systemsHelpers = import nix/systems.nix;
+    allSystems = nixpkgs-src.lib.platforms.all;
+    supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];
+  in
+    systemsHelpers.forEachSystem supportedSystems (system: let
       nixpkgs = nixpkgs-src.legacyPackages.${system};
       preCommitHooks = import nix/pre-commit-hooks.nix {
         inherit pre-commit-hooks-lib system;

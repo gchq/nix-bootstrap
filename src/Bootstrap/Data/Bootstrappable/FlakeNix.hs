@@ -217,9 +217,7 @@ instance IsNixExpr FlakeNix where
             [nixproperty|inputs|]
               |= ESet
                 False
-                ( [ [nixbinding|nixpkgs-src.url = "github:NixOS/nixpkgs";|],
-                    [nixbinding|flake-utils.url = "github:numtide/flake-utils";|]
-                  ]
+                ( [[nixbinding|nixpkgs-src.url = "github:NixOS/nixpkgs";|]]
                     <> [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]
                          | usingHooks
                        ]
@@ -228,60 +226,66 @@ instance IsNixExpr FlakeNix where
             [nixproperty|outputs|]
               |= FASet
                 ( [nixident|nixpkgs-src|]
-                    :| ( [nixident|flake-utils|]
-                           : [[nixident|mach-nix|] | isPython]
-                             <> [[nixident|pre-commit-hooks-lib|] | usingHooks]
-                             <> [[nixident|self|]]
-                             <> [[nixident|...|]]
+                    :| ( [[nixident|mach-nix|] | isPython]
+                           <> [[nixident|pre-commit-hooks-lib|] | usingHooks]
+                           <> [[nixident|self|]]
+                           <> [[nixident|...|]]
                        )
                 )
-              |: [nix|flake-utils.lib.eachSystem (with flake-utils.lib.system; [x86_64-linux aarch64-linux])|]
-              |* EGrouping
-                ( [nixargs|system:|]
-                    |: ELetIn
-                      ( [nixbinding|nixpkgs = nixpkgs-src.legacyPackages.${system};|]
-                          :| [ [nixproperty|preCommitHooks|]
-                                 |= importPreCommitHooks
-                                   ImportPreCommitHooksArgs
-                                     { passNixpkgsThrough = flakeNixHooksRequireNixpkgs,
-                                       passSystemThrough = True
-                                     }
-                               | usingHooks
-                             ]
-                          <> flakeNixExtraBindings
-                      )
-                      ( ESet False $
-                          [[nixbinding|checks.pre-commit-check = preCommitHooks.pureHooks;|] | usingHooks]
-                            <> [ [nixbinding|devShell = self.devShells.${system}.default;|],
-                                 [nixproperty|devShells.default|]
-                                   |= mkShell
-                                     BuildInputSpec
-                                       { bisNixpkgsPackages = flakeNixNixpkgsBuildInputs,
-                                         bisOtherPackages = flakeNixOtherBuildInputs,
-                                         bisPreCommitHooksConfig = flakeNixPreCommitHooksConfig,
-                                         bisProjectType = flakeNixProjectType,
-                                         bisNativeNixpkgsPackages = flakeNixNixpkgsNativeBuildInputs
-                                       }
-                               ]
-                            <> case flakeNixBuildNix of
-                              Just buildNix ->
-                                [ [nixbinding|defaultPackage = self.packages.${system}.default;|],
-                                  [nixproperty|packages.default|]
-                                    |= ( [nix|import|]
-                                           |* ELit (LPath . toText $ bootstrapName buildNix)
-                                           |* ESet
-                                             False
-                                             ( toList
-                                                 . unsafeSimplifyBindings
-                                                 . fmap toBuildRequirementBinding
-                                                 . sortRbeRequirements
-                                                 . rbeRequirements
-                                                 $ unBuildNix buildNix
+              |: ELetIn
+                ( [nixbinding|systemsHelpers = import nix/systems.nix;|]
+                    :| [ [nixbinding|allSystems = nixpkgs-src.lib.platforms.all;|],
+                         [nixbinding|supportedSystems = with systemsHelpers.system allSystems; [x86_64-linux aarch64-linux];|]
+                       ]
+                )
+                ( [nix|systemsHelpers.forEachSystem supportedSystems|]
+                    |* EGrouping
+                      ( [nixargs|system:|]
+                          |: ELetIn
+                            ( [nixbinding|nixpkgs = nixpkgs-src.legacyPackages.${system};|]
+                                :| [ [nixproperty|preCommitHooks|]
+                                       |= importPreCommitHooks
+                                         ImportPreCommitHooksArgs
+                                           { passNixpkgsThrough = flakeNixHooksRequireNixpkgs,
+                                             passSystemThrough = True
+                                           }
+                                     | usingHooks
+                                   ]
+                                <> flakeNixExtraBindings
+                            )
+                            ( ESet False $
+                                [[nixbinding|checks.pre-commit-check = preCommitHooks.pureHooks;|] | usingHooks]
+                                  <> [ [nixbinding|devShell = self.devShells.${system}.default;|],
+                                       [nixproperty|devShells.default|]
+                                         |= mkShell
+                                           BuildInputSpec
+                                             { bisNixpkgsPackages = flakeNixNixpkgsBuildInputs,
+                                               bisOtherPackages = flakeNixOtherBuildInputs,
+                                               bisPreCommitHooksConfig = flakeNixPreCommitHooksConfig,
+                                               bisProjectType = flakeNixProjectType,
+                                               bisNativeNixpkgsPackages = flakeNixNixpkgsNativeBuildInputs
+                                             }
+                                     ]
+                                  <> case flakeNixBuildNix of
+                                    Just buildNix ->
+                                      [ [nixbinding|defaultPackage = self.packages.${system}.default;|],
+                                        [nixproperty|packages.default|]
+                                          |= ( [nix|import|]
+                                                 |* ELit (LPath . toText $ bootstrapName buildNix)
+                                                 |* ESet
+                                                   False
+                                                   ( toList
+                                                       . unsafeSimplifyBindings
+                                                       . fmap toBuildRequirementBinding
+                                                       . sortRbeRequirements
+                                                       . rbeRequirements
+                                                       $ unBuildNix buildNix
+                                                   )
                                              )
-                                       )
-                                ]
-                                  <> (if usingHooks then runChecksDerivation else [])
-                              Nothing -> if usingHooks then runChecksDerivation else []
+                                      ]
+                                        <> (if usingHooks then runChecksDerivation else [])
+                                    Nothing -> if usingHooks then runChecksDerivation else []
+                            )
                       )
                 )
           ]
