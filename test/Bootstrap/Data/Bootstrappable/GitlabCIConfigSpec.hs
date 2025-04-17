@@ -99,7 +99,7 @@ check-dev-environment-and-run-impure-hooks:
 pre-commit-check:
   stage: build
   script:
-    - nix build '.#runChecks'
+    - nix flake check
 
 build-site:
   stage: build
@@ -130,7 +130,7 @@ check-dev-environment-and-run-impure-hooks:
 pre-commit-check:
   stage: build
   script:
-    - nix build '.#runChecks'
+    - nix flake check
 
 build-site:
   stage: build
@@ -185,7 +185,7 @@ check-dev-environment:
 pre-commit-check:
   stage: build
   script:
-    - nix build '.#runChecks'
+    - nix flake check
 
 build:
   stage: build
@@ -240,7 +240,7 @@ check-dev-environment:
 pre-commit-check:
   stage: build
   script:
-    - nix build '.#runChecks'
+    - nix flake check
 
 build:
   stage: build
@@ -271,6 +271,6 @@ check-dev-environment:
 pre-commit-check:
   stage: build
   script:
-    - nix build '.#runChecks'
+    - nix flake check
 |]
           )

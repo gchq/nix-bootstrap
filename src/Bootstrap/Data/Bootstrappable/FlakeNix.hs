@@ -283,8 +283,7 @@ instance IsNixExpr FlakeNix where
                                                    )
                                              )
                                       ]
-                                        <> (if usingHooks then runChecksDerivation else [])
-                                    Nothing -> if usingHooks then runChecksDerivation else []
+                                    Nothing -> []
                             )
                       )
                 )
@@ -299,12 +298,3 @@ instance IsNixExpr FlakeNix where
           RBRHaskellPackages -> buildRequirementBindingInherit RBRHaskellPackages
       buildRequirementBindingInherit :: ReproducibleBuildRequirement -> Binding
       buildRequirementBindingInherit = BInherit . one . reproducibleBuildRequirementIdentifier
-      runChecksDerivation :: [Binding]
-      runChecksDerivation =
-        [ [nixbinding|# runChecks is a hack required to allow checks to run on a single system|],
-          [nixbinding|# when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)|],
-          [nixbinding|# Building it is the single-system equivalent of running "nix flake check".|],
-          [nixbinding|packages.runChecks = nixpkgs.runCommand "run-checks" {
-            currentSystemChecks = builtins.attrValues self.checks.${system};
-          } "echo $currentSystemChecks; touch $out";|]
-        ]

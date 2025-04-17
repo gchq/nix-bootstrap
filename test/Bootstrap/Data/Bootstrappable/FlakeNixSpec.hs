@@ -120,12 +120,6 @@ spec = describe "flake.nix rendering" do
         buildInputs = preCommitHooks.tools ++ (with nixpkgs; [awscli2 nodejs]);
         inherit (preCommitHooks.allHooks) shellHook;
       };
-      # runChecks is a hack required to allow checks to run on a single system
-      # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
-      # Building it is the single-system equivalent of running "nix flake check".
-      packages.runChecks = nixpkgs.runCommand "run-checks" {
-        currentSystemChecks = builtins.attrValues self.checks.${system};
-      } "echo $currentSystemChecks; touch $out";
     });
 }
 |]
@@ -173,12 +167,6 @@ spec = describe "flake.nix rendering" do
       packages.default = import nix/build.nix {
         inherit nixpkgs;
       };
-      # runChecks is a hack required to allow checks to run on a single system
-      # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
-      # Building it is the single-system equivalent of running "nix flake check".
-      packages.runChecks = nixpkgs.runCommand "run-checks" {
-        currentSystemChecks = builtins.attrValues self.checks.${system};
-      } "echo $currentSystemChecks; touch $out";
     });
 }
 |]
@@ -266,12 +254,6 @@ spec = describe "flake.nix rendering" do
         buildInputs = [haskellEnv] ++ preCommitHooks.tools;
         inherit (preCommitHooks.allHooks) shellHook;
       };
-      # runChecks is a hack required to allow checks to run on a single system
-      # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
-      # Building it is the single-system equivalent of running "nix flake check".
-      packages.runChecks = nixpkgs.runCommand "run-checks" {
-        currentSystemChecks = builtins.attrValues self.checks.${system};
-      } "echo $currentSystemChecks; touch $out";
     });
 }
 |]
@@ -362,12 +344,6 @@ spec = describe "flake.nix rendering" do
       packages.default = import nix/build.nix {
         inherit nixpkgs;
       };
-      # runChecks is a hack required to allow checks to run on a single system
-      # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
-      # Building it is the single-system equivalent of running "nix flake check".
-      packages.runChecks = nixpkgs.runCommand "run-checks" {
-        currentSystemChecks = builtins.attrValues self.checks.${system};
-      } "echo $currentSystemChecks; touch $out";
     });
 }
 |]

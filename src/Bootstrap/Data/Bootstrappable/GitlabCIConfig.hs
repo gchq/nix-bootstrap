@@ -64,7 +64,7 @@ instance Bootstrappable GitlabCIConfig where
                    "pre-commit-check:",
                    "  stage: build",
                    "  script:",
-                   "    - nix build '.#runChecks'"
+                   "    - nix flake check"
                  ]
                else []
            )
