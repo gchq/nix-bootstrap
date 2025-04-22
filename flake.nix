@@ -59,8 +59,6 @@
         };
       in {
         checks = {pre-commit-check = pre-commit-hooks.pureHooks;};
-        defaultPackage = self.packages.${system}.default;
-        devShell = self.devShells.${system}.default;
         devShells = {
           default = nixpkgs.mkShell ({
               buildInputs =
@@ -84,16 +82,8 @@
           default = nix-bootstrap;
           inherit nix-bootstrap;
           # To be used as tools in CI
-          ciPackages = {
-            inherit buildBinaryCache;
-            inherit (nixpkgs) vulnix;
-          };
-          # runChecks is a hack required to allow checks to run on a single system
-          # when using Import from Deviation (https://discourse.nixos.org/t/nix-flake-check-for-current-system-only/18366)
-          # Building it is the single-system equivalent of running "nix flake check".
-          runChecks = nixpkgs.runCommand "run-checks" {
-            currentSystemChecks = builtins.attrValues self.checks.${system};
-          } "echo $currentSystemChecks; touch $out";
+          ciPackages_buildBinaryCache = buildBinaryCache;
+          ciPackages_vulnix = nixpkgs.vulnix;
         };
       }
     );

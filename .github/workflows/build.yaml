@@ -31,8 +31,8 @@ jobs:
           (git fetch --all && git diff "$(git describe --tags --abbrev=0)" -- package.yaml | grep version) ||
           (echo "You must bump the nix-bootstrap version number in package.yaml!" && exit 1)
       - name: Run pre-commit hooks
-        run: nix build '.#runChecks'
+        run: nix flake check
       - name: Build nix-bootstrap
         run: nix build
       - name: Check for vulnerabilities
-        run: nix run .\#ciPackages.vulnix -- -C -w vulnerability-whitelist.toml result/
+        run: nix run .\#ciPackages_vulnix -- -C -w vulnerability-whitelist.toml result/

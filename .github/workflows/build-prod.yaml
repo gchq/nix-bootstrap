@@ -37,13 +37,13 @@ jobs:
       - name: Get new version number
         run: echo "version_number=$(grep -E '^version' package.yaml | cut -d' ' -f2)" >> $GITHUB_ENV
       - name: Run pre-commit hooks
-        run: nix build '.#runChecks'
+        run: nix flake check
       - name: Build nix-bootstrap
         run: nix build
       - name: Check for vulnerabilities
-        run: nix run .\#ciPackages.vulnix -- -C -w vulnerability-whitelist.toml result/
+        run: nix run .\#ciPackages_vulnix -- -C -w vulnerability-whitelist.toml result/
       - name: Build release artefact
-        run: nix run .\#ciPackages.buildBinaryCache
+        run: nix run .\#ciPackages_buildBinaryCache
       - uses: actions/upload-artifact@v4
         with:
           name: "release-${{ env.version_number }}"
