@@ -132,16 +132,14 @@ This section is for people who want to contribute to the nix-bootstrap tool.
 4. [Hook direnv into your shell](https://direnv.net/docs/hook.html)
 5. Clone [the nix-bootstrap repository](https://github.com/gchq/nix-bootstrap)
 6. Run `direnv allow` in the cloned directory
-7. Run `setUpHaskellLanguageServer` to ensure cabal and the HLS build correctly
 
 #### Building nix-bootstrap with Cabal
 
 You'll probably want to run your builds with Cabal during development as it builds incrementally by module.
 
-1. After a fresh clone, run `setUpHaskellLanguageServer`. This gets around [a bug in Cabal](https://github.com/haskell/cabal/issues/7641).
-2. During development, run builds with `cabal build -O0`. The `-O0` (optimisation zero) flag speeds up the compilation
+1. During development, run builds with `cabal build -O0`. The `-O0` (optimisation zero) flag speeds up the compilation
    process at the expense of not optimising the code for quicker run times.
-3. You can run tests with `cabal test --test-show-details=streaming -O0`
+2. You can run tests with `cabal test --test-show-details=streaming -O0`
 
 #### Building nix-bootstrap with Nix
 
