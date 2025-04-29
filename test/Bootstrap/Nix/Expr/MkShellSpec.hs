@@ -23,6 +23,9 @@ spec = do
     it "gives no shell hook when one isn't needed" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) Minimal [])
         `shouldBe` [nix|nixpkgs.mkShell {
+  buildInputs = [
+    # Insert any dependencies that should exist in the dev shell environment here
+  ];
 }|]
     it "gives a proper shell hook for projects with pre-commit hooks" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig True) Minimal [])
@@ -33,6 +36,9 @@ spec = do
     it "gives a proper shell hook for Rust projects" do
       mkShell (BuildInputSpec [] [] (PreCommitHooksConfig False) Rust [])
         `shouldBe` [nix|nixpkgs.mkShell {
+  buildInputs = [
+    # Insert any dependencies that should exist in the dev shell environment here
+  ];
   shellHook = ''
     export RUST_SRC_PATH=${nixpkgs.rustPlatform.rustLibSrc}
   '';

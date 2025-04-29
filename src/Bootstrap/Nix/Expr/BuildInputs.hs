@@ -16,6 +16,7 @@ import Bootstrap.Nix.Expr
     Expr (EGrouping, EList, EWith),
     IsNixExpr (toNixExpr),
     nix,
+    nixbinding,
     nixproperty,
     (|++),
     (|=),
@@ -57,7 +58,11 @@ buildInputsBindings :: (HasProjectSuperType t) => BuildInputSpec t -> [Binding]
 buildInputsBindings spec@BuildInputSpec {bisNativeNixpkgsPackages} =
   catMaybes
     [ case buildInputGroupExprs of
-        [] -> Nothing
+        [] ->
+          Just
+            [nixbinding|buildInputs = [
+            # Insert any dependencies that should exist in the dev shell environment here
+          ];|]
         [buildInputGroupExpr1] ->
           Just $ [nixproperty|buildInputs|] |= buildInputGroupExpr1
         (buildInputGroupExpr1 : otherBuildInputGroupExprs) ->
