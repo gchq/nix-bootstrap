@@ -44,10 +44,9 @@
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
+        "id": "nixpkgs",
         "rev": "b62d2a95c72fb068aecd374a7262b37ed92df82b",
-        "type": "github"
+        "type": "indirect"
       }
     },
     "nixpkgs-src-previous": {

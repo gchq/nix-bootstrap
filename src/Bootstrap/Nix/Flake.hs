@@ -63,7 +63,7 @@ intermediateFlake projectName =
     False
     [ [nixproperty|description|] |= ELit (LString ("Development infrastructure for " <> unProjectName projectName)),
       [nixbinding|inputs = {
-        nixpkgs-src.url = "github:NixOS/nixpkgs";
+        nixpkgs-src.url = "nixpkgs";
       };|],
       [nixbinding|outputs = _: {};|]
     ]
