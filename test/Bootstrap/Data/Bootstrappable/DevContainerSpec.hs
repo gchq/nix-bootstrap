@@ -26,7 +26,7 @@ spec = describe "devcontainer rendering" do
       bootstrapContent (devContainerDockerfileFor devContainerConfig)
         >>= ( `shouldBe`
                 Right
-                  [r|FROM ubuntu:22.04 as base
+                  [r|FROM ubuntu:24.04 as base
 
 # Set shell and check for pipe fails
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -54,7 +54,7 @@ ENV NIX_PATH=/home/vscode/.nix-defexpr/channels:/nix/var/nix/profiles/per-user/r
 ENV NIX_CONF_DIR /etc
 RUN curl -L https://nixos.org/nix/install | NIX_INSTALLER_NO_MODIFY_PROFILE=1 sh
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV NIX_CONF_DIR /etc
 

@@ -31,7 +31,7 @@ instance Bootstrappable DevContainerDockerfile where
       . pure
       . Right
       . unlines
-      $ [ "FROM ubuntu:22.04 as base",
+      $ [ "FROM ubuntu:24.04 as base",
           "",
           "# Set shell and check for pipe fails",
           "SHELL [\"/bin/bash\", \"-o\", \"pipefail\", \"-c\"]",
@@ -59,7 +59,7 @@ instance Bootstrappable DevContainerDockerfile where
           "ENV NIX_CONF_DIR /etc",
           "RUN curl -L https://nixos.org/nix/install | NIX_INSTALLER_NO_MODIFY_PROFILE=1 sh",
           "",
-          "FROM ubuntu:22.04",
+          "FROM ubuntu:24.04",
           "",
           "ENV NIX_CONF_DIR /etc",
           "",
