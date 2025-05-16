@@ -14,6 +14,6 @@ spec = describe ".vscode/settings.json rendering" do
       >>= ( `shouldBe`
               Right
                 ( unlines
-                    ["{", "    \"nixEnvSelector.nixFile\": \"${workspaceRoot}/shell.nix\"", "}"]
+                    ["{", "    \"nixEnvSelector.nixFile\": \"${workspaceRoot}/flake.nix\",", "    \"nixEnvSelector.useFlakes\": true", "}"]
                 )
           )

@@ -22,7 +22,9 @@ instance ToJSON VSCodeSettings where
   toJSON =
     const $
       Aeson.object
-        ["nixEnvSelector.nixFile" .= Aeson.String "${workspaceRoot}/shell.nix"]
+        [ "nixEnvSelector.nixFile" .= Aeson.String "${workspaceRoot}/flake.nix",
+          "nixEnvSelector.useFlakes" .= Aeson.Bool True
+        ]
 
 vsCodeSettingsFor :: DevContainerConfig -> Maybe VSCodeSettings
 vsCodeSettingsFor (DevContainerConfig True) = Just VSCodeSettings
