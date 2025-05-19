@@ -26,7 +26,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
   };
   outputs = {
     nixpkgs-src,
@@ -55,7 +55,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
   };
   outputs = {
     nixpkgs-src,
@@ -95,7 +95,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
@@ -138,7 +138,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
@@ -185,7 +185,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
   };
   outputs = {
     nixpkgs-src,
@@ -225,7 +225,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {
@@ -265,7 +265,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
     mach-nix.url = "github:DavHau/mach-nix?ref=3.5.0";
   };
   outputs = {
@@ -307,7 +307,7 @@ spec = describe "flake.nix rendering" do
                 [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "github:NixOS/nixpkgs";
+    nixpkgs-src.url = "nixpkgs";
     pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";
   };
   outputs = {

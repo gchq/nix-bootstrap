@@ -217,7 +217,7 @@ instance IsNixExpr FlakeNix where
             [nixproperty|inputs|]
               |= ESet
                 False
-                ( [[nixbinding|nixpkgs-src.url = "github:NixOS/nixpkgs";|]]
+                ( [[nixbinding|nixpkgs-src.url = "nixpkgs";|]]
                     <> [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]
                          | usingHooks
                        ]
