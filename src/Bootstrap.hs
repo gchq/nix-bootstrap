@@ -121,7 +121,7 @@ import Bootstrap.Data.ProjectType
     projectSuperTypeName,
     promptHaskellProjectType,
   )
-import Bootstrap.Data.Target (Target(TargetDefault))
+import Bootstrap.Data.Target (Target (TargetDefault))
 import Bootstrap.Data.Version (MajorVersion (MajorVersion), displayMajorVersion)
 import Bootstrap.Error (CanDieOnError (dieOnError', dieOnErrorWithPrefix))
 import Bootstrap.GitPod (resetPermissionsInGitPod)
