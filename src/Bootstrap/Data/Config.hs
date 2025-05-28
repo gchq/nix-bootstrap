@@ -20,6 +20,7 @@ module Bootstrap.Data.Config
     configSetUpPreCommitHooks,
     configSetUpContinuousIntegration,
     configSetUpVSCodeDevContainer,
+    configTarget,
 
     -- * Exceptions
     NonFlakeConfigException,
@@ -28,20 +29,21 @@ where
 
 import Bootstrap.Data.Config.Internal
   ( Config,
-    ConfigV8 (ConfigV8),
+    ConfigV9 (ConfigV9),
     LoadConfigResult
       ( LoadConfigResultError,
         LoadConfigResultFound,
         LoadConfigResultNotFound
       ),
     NonFlakeConfigException,
-    VersionedConfig (VersionedConfigV8),
-    VersionedProjectType (VPT8),
-    configV8ProjectName,
-    configV8ProjectType,
-    configV8SetUpContinuousIntegration,
-    configV8SetUpPreCommitHooks,
-    configV8SetUpVSCodeDevContainer,
+    VersionedConfig (VersionedConfigV9),
+    VersionedProjectType (VPT9),
+    configV9ProjectName,
+    configV9ProjectType,
+    configV9SetUpContinuousIntegration,
+    configV9SetUpPreCommitHooks,
+    configV9SetUpVSCodeDevContainer,
+    configV9Target,
     loadConfig,
     _Current,
   )
@@ -53,8 +55,9 @@ import Bootstrap.Data.DevContainer (DevContainerConfig)
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig)
 import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType (ProjectType)
+import Bootstrap.Data.Target (Target)
 
-makeConfigLenses 'ConfigV8
+makeConfigLenses 'ConfigV9
 
 -- | Initialise a new `Config` from scratch
 configFor ::
@@ -63,7 +66,8 @@ configFor ::
   PreCommitHooksConfig ->
   ContinuousIntegrationConfig ->
   DevContainerConfig ->
+  Target ->
   Config
-configFor a1 a2 a3 a4 a5 =
-  VersionedConfigV8 $
-    ConfigV8 a1 (VPT8 a2) a3 a4 a5
+configFor a1 a2 a3 a4 a5 a6 =
+  VersionedConfigV9 $
+    ConfigV9 a1 (VPT9 a2) a3 a4 a5 a6

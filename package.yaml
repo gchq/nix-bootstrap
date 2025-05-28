@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 name: nix-bootstrap
-version: 2.2.7.0
+version: 2.3.0.0
 author: gchquser
 maintainer: 48051938+sd234678@users.noreply.github.com
 copyright: Crown Copyright

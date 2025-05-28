@@ -13,6 +13,7 @@ import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig)
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType (NodePackageManager (PNPm), ProjectType (Node))
 import Bootstrap.Data.ProjectTypeSpec ()
+import Bootstrap.Data.Target (Target (TargetDefault))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
@@ -29,6 +30,7 @@ spec = describe ".nix-bootstrap.dhall rendering" do
           (PreCommitHooksConfig True)
           (ContinuousIntegrationConfig True)
           (DevContainerConfig True)
+          TargetDefault
       )
       >>= ( `shouldBe`
               Right
@@ -71,6 +73,7 @@ in  { projectName = "test-project"
     , setUpPreCommitHooks = True
     , setUpContinuousIntegration = True
     , setUpVSCodeDevContainer = True
+    , target = {=}
     }
 |]
           )

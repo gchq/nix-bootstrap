@@ -39,6 +39,7 @@ import Bootstrap.Data.HList (HList (HNil), (~:))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), ProjectType (Go, Haskell, Rust), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild))
+import Bootstrap.Data.Target (Target (TargetDefault))
 import Data.Tree (Tree (Node))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
@@ -60,10 +61,10 @@ spec = describe "toReasonTree" do
       buildPlan <-
         BuildPlan
           <$> toBuildPlanFiles
-            ( configFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig
+            ( configFor projectName projectType preCommitHooksConfig ciConfig devContainerConfig TargetDefault
                 ~: Envrc preCommitHooksConfig
                 ~: buildNix
-                ~: flakeNixFor projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) buildNix
+                ~: flakeNixFor projectName projectType preCommitHooksConfig (Just nixPreCommitHookConfig) TargetDefault buildNix
                 ~: gitignoreFor projectType preCommitHooksConfig
                 ~: Readme projectName projectType devContainerConfig Nothing
                 ~: nixPreCommitHookConfig

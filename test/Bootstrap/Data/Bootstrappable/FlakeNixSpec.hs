@@ -11,6 +11,7 @@ import Bootstrap.Data.GHCVersion (GHCVersion (GHCVersion))
 import Bootstrap.Data.PreCommitHook (PreCommitHooksConfig (PreCommitHooksConfig))
 import Bootstrap.Data.ProjectName (mkProjectName)
 import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions), HaskellProjectType (HaskellProjectTypeBasic), NodePackageManager (NPM, PNPm), ProjectType (Go, Haskell, Node, Python, Rust), PythonVersion (Python39), SetUpGoBuild (SetUpGoBuild), SetUpHaskellBuild (SetUpHaskellBuild))
+import Bootstrap.Data.Target (Target (TargetDefault))
 import qualified Relude.Unsafe as Unsafe
 import Test.Hspec (Spec, describe, it)
 import Test.Hspec.Expectations.Pretty (shouldBe)
@@ -20,7 +21,7 @@ spec :: Spec
 spec = describe "flake.nix rendering" do
   let projectName = Unsafe.fromJust $ mkProjectName "test-project"
   it "renders correctly without pre-commit hooks" do
-    bootstrapContent (flakeNixFor projectName (Node NPM) (PreCommitHooksConfig False) Nothing Nothing)
+    bootstrapContent (flakeNixFor projectName (Node NPM) (PreCommitHooksConfig False) Nothing TargetDefault Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -49,7 +50,7 @@ spec = describe "flake.nix rendering" do
 |]
           )
   it "orders build inputs correctly when some use property access" do
-    bootstrapContent (flakeNixFor projectName (Node PNPm) (PreCommitHooksConfig False) Nothing Nothing)
+    bootstrapContent (flakeNixFor projectName (Node PNPm) (PreCommitHooksConfig False) Nothing TargetDefault Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -88,6 +89,7 @@ spec = describe "flake.nix rendering" do
           (Node NPM)
           (PreCommitHooksConfig True)
           (Just . nixPreCommitHookConfigFor $ Node NPM)
+          TargetDefault
           Nothing
       )
       >>= ( `shouldBe`
@@ -131,6 +133,7 @@ spec = describe "flake.nix rendering" do
           (Go $ SetUpGoBuild True)
           (PreCommitHooksConfig True)
           (Just . nixPreCommitHookConfigFor . Go $ SetUpGoBuild True)
+          TargetDefault
           (buildNixFor projectName (Go $ SetUpGoBuild True))
       )
       >>= ( `shouldBe`
@@ -178,6 +181,7 @@ spec = describe "flake.nix rendering" do
           (Haskell . HaskellOptions (GHCVersion 9 0 2) . HaskellProjectTypeBasic $ SetUpHaskellBuild False)
           (PreCommitHooksConfig False)
           Nothing
+          TargetDefault
           Nothing
       )
       >>= ( `shouldBe`
@@ -218,6 +222,7 @@ spec = describe "flake.nix rendering" do
           (Haskell . HaskellOptions (GHCVersion 9 0 2) . HaskellProjectTypeBasic $ SetUpHaskellBuild False)
           (PreCommitHooksConfig True)
           Nothing
+          TargetDefault
           Nothing
       )
       >>= ( `shouldBe`
@@ -259,7 +264,7 @@ spec = describe "flake.nix rendering" do
 |]
           )
   it "renders correctly with a Python project" do
-    bootstrapContent (flakeNixFor projectName (Python Python39) (PreCommitHooksConfig False) Nothing Nothing)
+    bootstrapContent (flakeNixFor projectName (Python Python39) (PreCommitHooksConfig False) Nothing TargetDefault Nothing)
       >>= ( `shouldBe`
               Right
                 [r|{
@@ -300,6 +305,7 @@ spec = describe "flake.nix rendering" do
           Rust
           (PreCommitHooksConfig True)
           Nothing
+          TargetDefault
           (buildNixFor projectName Rust)
       )
       >>= ( `shouldBe`

@@ -81,6 +81,7 @@ import Bootstrap.Data.Config
     configSetUpContinuousIntegration,
     configSetUpPreCommitHooks,
     configSetUpVSCodeDevContainer,
+    configTarget,
     loadConfig,
   )
 import Bootstrap.Data.ContinuousIntegration
@@ -120,6 +121,7 @@ import Bootstrap.Data.ProjectType
     projectSuperTypeName,
     promptHaskellProjectType,
   )
+import Bootstrap.Data.Target (Target(TargetDefault))
 import Bootstrap.Data.Version (MajorVersion (MajorVersion), displayMajorVersion)
 import Bootstrap.Error (CanDieOnError (dieOnError', dieOnErrorWithPrefix))
 import Bootstrap.GitPod (resetPermissionsInGitPod)
@@ -193,8 +195,9 @@ nixBootstrap = withTerminal $ runTerminalT do
             then do
               projectName <- promptProjectName currentDirectoryName
               preCommitHooksConfig <- promptPreCommitHooksConfig
-              generateIntermediateFlake nixBinaryPaths runConfig projectName
-              promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig
+              let target = TargetDefault
+              generateIntermediateFlake nixBinaryPaths runConfig projectName target
+              promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig target
             else case mConfig of
               Just cfg -> do
                 withAttributes [bold, foreground yellow] . putTextLn $
@@ -209,13 +212,15 @@ nixBootstrap = withTerminal $ runTerminalT do
                       mbpPreCommitHooksConfig = cfg ^. configSetUpPreCommitHooks,
                       mbpContinuousIntegrationConfig = cfg ^. configSetUpContinuousIntegration,
                       mbpDevContainerConfig = cfg ^. configSetUpVSCodeDevContainer,
+                      mbpTarget = cfg ^. configTarget,
                       mbpRunConfig = runConfig
                     }
               Nothing -> do
                 projectName <- promptProjectName currentDirectoryName
                 preCommitHooksConfig <- promptPreCommitHooksConfig
-                generateIntermediateFlake nixBinaryPaths runConfig projectName
-                promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig
+                let target = TargetDefault
+                generateIntermediateFlake nixBinaryPaths runConfig projectName target
+                promptBuildConfig nixBinaryPaths runConfig projectName preCommitHooksConfig target
         confirmBuildPlan buildPlan >>= \case
           Just confirmedBuildPlan -> do
             bootstrap confirmedBuildPlan
@@ -339,12 +344,14 @@ promptBuildConfig ::
   RunConfig ->
   ProjectName ->
   PreCommitHooksConfig ->
+  Target ->
   m BuildPlan
 promptBuildConfig
   mbpNixBinaryPaths
   mbpRunConfig@RunConfig {rcWithDevContainer}
   mbpProjectName
-  mbpPreCommitHooksConfig = do
+  mbpPreCommitHooksConfig
+  mbpTarget = do
     mbpDevContainerConfig <-
       DevContainerConfig
         <$> promptYesNoWithDefault
@@ -413,6 +420,7 @@ data MakeBuildPlanArgs = MakeBuildPlanArgs
     mbpPreCommitHooksConfig :: PreCommitHooksConfig,
     mbpContinuousIntegrationConfig :: ContinuousIntegrationConfig,
     mbpDevContainerConfig :: DevContainerConfig,
+    mbpTarget :: Target,
     mbpRunConfig :: RunConfig
   }
 
@@ -456,13 +464,19 @@ makeNonPythonBuildPlan MakeBuildPlanArgs {..} = do
         _ -> pure Nothing
       fromList
         <$> toBuildPlanFiles
-          ( configFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig mbpContinuousIntegrationConfig mbpDevContainerConfig
+          ( configFor
+              mbpProjectName
+              mbpProjectType
+              mbpPreCommitHooksConfig
+              mbpContinuousIntegrationConfig
+              mbpDevContainerConfig
+              mbpTarget
               ~: Envrc mbpPreCommitHooksConfig
               ~: SystemsNix
               ~: gitignoreFor mbpProjectType mbpPreCommitHooksConfig
               ~: initialReadme
               ~: buildNix
-              ~: flakeNixFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig buildNix
+              ~: flakeNixFor mbpProjectName mbpProjectType mbpPreCommitHooksConfig nixPreCommitHookConfig mbpTarget buildNix
               ~: nixPreCommitHookConfig
               ~: gitlabCIConfigFor mbpContinuousIntegrationConfig mbpProjectType nixPreCommitHookConfig
               ~: devContainerDockerComposeFor mbpDevContainerConfig mbpProjectName

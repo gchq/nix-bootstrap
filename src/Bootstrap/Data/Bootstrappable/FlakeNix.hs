@@ -38,6 +38,7 @@ import Bootstrap.Data.ProjectType
         Rust
       ),
   )
+import Bootstrap.Data.Target (Target)
 import Bootstrap.Nix.Expr
   ( Binding (BInherit),
     Expr (EApplication, EFunc, EGrouping, EIdent, ELetIn, EList, ELit, EPropertyAccess, ESet, EWith),
@@ -56,6 +57,7 @@ import Bootstrap.Nix.Expr
     (|=),
   )
 import Bootstrap.Nix.Expr.BuildInputs (BuildInputSpec (bisNativeNixpkgsPackages, bisOtherPackages))
+import Bootstrap.Nix.Expr.FlakeInputs (nixpkgsSrcInputBinding)
 import Bootstrap.Nix.Expr.MkShell
   ( BuildInputSpec
       ( BuildInputSpec,
@@ -73,6 +75,7 @@ data FlakeNix = FlakeNix
   { flakeNixPreCommitHooksConfig :: PreCommitHooksConfig,
     flakeNixProjectName :: ProjectName,
     flakeNixProjectType :: ProjectType,
+    flakeNixTarget :: Target,
     flakeNixExtraBindings :: [Binding],
     flakeNixNixpkgsBuildInputs :: [Expr],
     flakeNixOtherBuildInputs :: [Expr],
@@ -96,6 +99,7 @@ flakeNixFor ::
   ProjectType ->
   PreCommitHooksConfig ->
   Maybe NixPreCommitHookConfig ->
+  Target ->
   Maybe BuildNix ->
   Maybe FlakeNix
 flakeNixFor
@@ -103,6 +107,7 @@ flakeNixFor
   flakeNixProjectType
   flakeNixPreCommitHooksConfig
   nixPreCommitHookConfig
+  flakeNixTarget
   flakeNixBuildNix =
     Just
       FlakeNix
@@ -217,11 +222,11 @@ instance IsNixExpr FlakeNix where
             [nixproperty|inputs|]
               |= ESet
                 False
-                ( [[nixbinding|nixpkgs-src.url = "nixpkgs";|]]
-                    <> [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]
-                         | usingHooks
-                       ]
-                    <> [machNixFlakeInput | isPython]
+                ( nixpkgsSrcInputBinding flakeNixTarget
+                    : [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]
+                        | usingHooks
+                      ]
+                      <> [machNixFlakeInput | isPython]
                 ),
             [nixproperty|outputs|]
               |= FASet

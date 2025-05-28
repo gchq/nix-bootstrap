@@ -59,6 +59,7 @@ import Bootstrap.Data.ProjectType
     migrateProjectTypeFromV5,
     migrateProjectTypeFromV6,
   )
+import Bootstrap.Data.Target (Target (TargetDefault))
 import Bootstrap.Monad (MonadBootstrap)
 import Control.Lens (Iso', iso, makeLenses)
 import Control.Monad.Catch (MonadThrow (throwM), catchAll, handleAll)
@@ -103,6 +104,7 @@ data ConfigVersion
   | V6
   | V7
   | V8
+  | V9
 
 -- | Singled `ConfigVersion`
 data SConfigVersion (configVersion :: ConfigVersion) where
@@ -114,6 +116,7 @@ data SConfigVersion (configVersion :: ConfigVersion) where
   SV6 :: SConfigVersion 'V6
   SV7 :: SConfigVersion 'V7
   SV8 :: SConfigVersion 'V8
+  SV9 :: SConfigVersion 'V9
 
 type instance Sing = SConfigVersion
 
@@ -128,6 +131,7 @@ instance SingKind ConfigVersion where
     SV6 -> V6
     SV7 -> V7
     SV8 -> V8
+    SV9 -> V9
   toSing = \case
     V1 -> SomeSing SV1
     V2 -> SomeSing SV2
@@ -137,12 +141,13 @@ instance SingKind ConfigVersion where
     V6 -> SomeSing SV6
     V7 -> SomeSing SV7
     V8 -> SomeSing SV8
+    V9 -> SomeSing SV9
 
 -- | The most recent version of the config
-type Current = 'V8
+type Current = 'V9
 
 instance SingI Current where
-  sing = SV8
+  sing = SV9
 
 -- | nix-bootstrap's configuration
 type Config = VersionedConfig Current
@@ -157,6 +162,7 @@ data VersionedConfig version where
   VersionedConfigV6 :: ConfigV3Plus 'V6 -> VersionedConfig 'V6
   VersionedConfigV7 :: ConfigV3Plus 'V7 -> VersionedConfig 'V7
   VersionedConfigV8 :: ConfigV8 -> VersionedConfig 'V8
+  VersionedConfigV9 :: ConfigV9 -> VersionedConfig 'V9
 
 deriving stock instance (Eq (VersionedProjectType version)) => Eq (VersionedConfig version)
 
@@ -237,7 +243,7 @@ instance ToDhall Config where
   injectWith inputNormaliser =
     let innerEncoder = injectWith inputNormaliser
      in Encoder
-          { embed = \(VersionedConfigV8 c) -> embed innerEncoder c,
+          { embed = \(VersionedConfigV9 c) -> embed innerEncoder c,
             declared = declared innerEncoder
           }
 
@@ -248,6 +254,7 @@ data VersionedProjectType (version :: ConfigVersion) where
   VPT6 :: ProjectTypeV6 -> VersionedProjectType 'V6
   VPT7 :: ProjectType -> VersionedProjectType 'V7
   VPT8 :: ProjectType -> VersionedProjectType 'V8
+  VPT9 :: ProjectType -> VersionedProjectType 'V9
 
 instance FromDhall (VersionedProjectType 'V3) where
   autoWith = versionedProjectTypeFromDhall (Proxy @ProjectTypeV3) VPT3
@@ -267,6 +274,9 @@ instance FromDhall (VersionedProjectType 'V7) where
 instance FromDhall (VersionedProjectType 'V8) where
   autoWith = versionedProjectTypeFromDhall (Proxy @ProjectType) VPT8
 
+instance FromDhall (VersionedProjectType 'V9) where
+  autoWith = versionedProjectTypeFromDhall (Proxy @ProjectType) VPT9
+
 instance ToDhall (VersionedProjectType 'V3) where
   injectWith = versionedProjectTypeToDhall (Proxy @ProjectTypeV3) (\(VPT3 x) -> x)
 
@@ -284,6 +294,9 @@ instance ToDhall (VersionedProjectType 'V7) where
 
 instance ToDhall (VersionedProjectType 'V8) where
   injectWith = versionedProjectTypeToDhall (Proxy @ProjectType) (\(VPT8 x) -> x)
+
+instance ToDhall (VersionedProjectType 'V9) where
+  injectWith = versionedProjectTypeToDhall (Proxy @ProjectType) (\(VPT9 x) -> x)
 
 versionedProjectTypeFromDhall ::
   forall underlying version.
@@ -310,7 +323,7 @@ versionedProjectTypeToDhall Proxy unwrap normaliser =
     Encoder {..} = injectWith @underlying normaliser
 
 _VersionedProjectType :: Iso' (VersionedProjectType Current) ProjectType
-_VersionedProjectType = iso (\(VPT8 x) -> x) VPT8
+_VersionedProjectType = iso (\(VPT9 x) -> x) VPT9
 
 -- | The location of a bootstrapped config file
 configPath :: FilePath
@@ -342,6 +355,7 @@ parseVersionedConfig v s = case v of
   SV6 -> parseFor VersionedConfigV6
   SV7 -> parseFor VersionedConfigV7
   SV8 -> parseFor VersionedConfigV8
+  SV9 -> parseFor VersionedConfigV9
   where
     parseFor :: (FromDhall config) => (config -> versionedConfig) -> m (Either SomeException versionedConfig)
     parseFor constructor = handleAll (pure . Left) . fmap (Right . constructor) . liftIO $ input auto s
@@ -398,6 +412,22 @@ deriving stock instance (Eq (VersionedProjectType 'V8)) => Eq ConfigV8
 
 deriving stock instance (Show (VersionedProjectType 'V8)) => Show ConfigV8
 
+-- | The ninth version of the config
+data ConfigV9 = ConfigV9
+  { _configV9ProjectName :: ProjectName,
+    _configV9ProjectType :: VersionedProjectType 'V9,
+    _configV9SetUpPreCommitHooks :: PreCommitHooksConfig,
+    _configV9SetUpContinuousIntegration :: ContinuousIntegrationConfig,
+    _configV9SetUpVSCodeDevContainer :: DevContainerConfig,
+    _configV9Target :: Target
+  }
+  deriving stock (Generic)
+  deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV9")) ConfigV9
+
+deriving stock instance (Eq (VersionedProjectType 'V9)) => Eq ConfigV9
+
+deriving stock instance (Show (VersionedProjectType 'V9)) => Show ConfigV9
+
 -- | An exception thrown when a config specifies that flakes are not to be used;
 -- this is an exception because non-flake support has been withdrawn and migration
 -- to flakes is not automatic.
@@ -424,11 +454,11 @@ data LoadConfigResult
 
 deriving stock instance (Show Config) => Show LoadConfigResult
 
-makeLenses ''ConfigV8
+makeLenses ''ConfigV9
 
 -- | Isomorphism to the current config version
-_Current :: Iso' Config ConfigV8
-_Current = iso (\(VersionedConfigV8 c) -> c) VersionedConfigV8
+_Current :: Iso' Config ConfigV9
+_Current = iso (\(VersionedConfigV9 c) -> c) VersionedConfigV9
 
 -- | Loads the config from the appropriate file
 loadConfig :: (MonadBootstrap m) => m LoadConfigResult
@@ -447,6 +477,7 @@ loadConfig' nextToTry = do
     tryPreviousConfigVersion e v = case fromException e of
       Just NonFlakeConfigException -> pure $ LoadConfigResultError e
       Nothing -> case v of
+        SV9 -> loadConfig' SV8
         SV8 -> loadConfig' SV7
         SV7 -> loadConfig' SV6
         SV6 -> loadConfig' SV5
@@ -494,24 +525,26 @@ upgradeConfig _ =
     upgradeConfig' = \case
       VersionedConfigV1 s ->
         ( stateUseFlakes s,
-          VersionedConfigV8
-            ConfigV8
-              { _configV8ProjectName = stateProjectName s,
-                _configV8ProjectType = VPT8 . migrateProjectTypeFromV2 $ stateProjectType s,
-                _configV8SetUpPreCommitHooks = statePreCommitHooksConfig s,
-                _configV8SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
-                _configV8SetUpVSCodeDevContainer = stateDevContainerConfig s
+          VersionedConfigV9
+            ConfigV9
+              { _configV9ProjectName = stateProjectName s,
+                _configV9ProjectType = VPT9 . migrateProjectTypeFromV2 $ stateProjectType s,
+                _configV9SetUpPreCommitHooks = statePreCommitHooksConfig s,
+                _configV9SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
+                _configV9SetUpVSCodeDevContainer = stateDevContainerConfig s,
+                _configV9Target = TargetDefault
               }
         )
       VersionedConfigV2 ConfigV2 {..} ->
         ( _configV2UseNixFlakes,
-          VersionedConfigV8
-            ConfigV8
-              { _configV8ProjectName = _configV2ProjectName,
-                _configV8ProjectType = VPT8 $ migrateProjectTypeFromV2 _configV2ProjectType,
-                _configV8SetUpPreCommitHooks = _configV2SetUpPreCommitHooks,
-                _configV8SetUpContinuousIntegration = _configV2SetUpContinuousIntegration,
-                _configV8SetUpVSCodeDevContainer = _configV2SetUpVSCodeDevContainer
+          VersionedConfigV9
+            ConfigV9
+              { _configV9ProjectName = _configV2ProjectName,
+                _configV9ProjectType = VPT9 $ migrateProjectTypeFromV2 _configV2ProjectType,
+                _configV9SetUpPreCommitHooks = _configV2SetUpPreCommitHooks,
+                _configV9SetUpContinuousIntegration = _configV2SetUpContinuousIntegration,
+                _configV9SetUpVSCodeDevContainer = _configV2SetUpVSCodeDevContainer,
+                _configV9Target = TargetDefault
               }
         )
       (VersionedConfigV3 c) -> migrateFromV3Plus c (\(VPT3 x) -> x) migrateProjectTypeFromV3
@@ -519,17 +552,31 @@ upgradeConfig _ =
       (VersionedConfigV5 c) -> migrateFromV3Plus c (\(VPT5 x) -> x) migrateProjectTypeFromV5
       (VersionedConfigV6 c) -> migrateFromV3Plus c (\(VPT6 x) -> x) migrateProjectTypeFromV6
       (VersionedConfigV7 c) -> migrateFromV3Plus c (\(VPT7 x) -> x) id
-      c@(VersionedConfigV8 _) -> (True, c)
+      (VersionedConfigV8 ConfigV8 {..}) ->
+        ( True,
+          VersionedConfigV9
+            ( ConfigV9
+                { _configV9ProjectName = _configV8ProjectName,
+                  _configV9ProjectType = let VPT8 pt = _configV8ProjectType in VPT9 pt,
+                  _configV9SetUpPreCommitHooks = _configV8SetUpPreCommitHooks,
+                  _configV9SetUpContinuousIntegration = _configV8SetUpContinuousIntegration,
+                  _configV9SetUpVSCodeDevContainer = _configV8SetUpVSCodeDevContainer,
+                  _configV9Target = TargetDefault
+                }
+            )
+        )
+      c@(VersionedConfigV9 _) -> (True, c)
     migrateFromV3Plus ConfigV3Plus {..} deconstruct migrate =
       let oldProjectType = deconstruct _configV3ProjectType
        in ( _configV3UseNixFlakes,
-            VersionedConfigV8
-              ( ConfigV8
-                  { _configV8ProjectName = _configV3ProjectName,
-                    _configV8ProjectType = VPT8 $ migrate oldProjectType,
-                    _configV8SetUpPreCommitHooks = _configV3SetUpPreCommitHooks,
-                    _configV8SetUpContinuousIntegration = _configV3SetUpContinuousIntegration,
-                    _configV8SetUpVSCodeDevContainer = _configV3SetUpVSCodeDevContainer
+            VersionedConfigV9
+              ( ConfigV9
+                  { _configV9ProjectName = _configV3ProjectName,
+                    _configV9ProjectType = VPT9 $ migrate oldProjectType,
+                    _configV9SetUpPreCommitHooks = _configV3SetUpPreCommitHooks,
+                    _configV9SetUpContinuousIntegration = _configV3SetUpContinuousIntegration,
+                    _configV9SetUpVSCodeDevContainer = _configV3SetUpVSCodeDevContainer,
+                    _configV9Target = TargetDefault
                   }
               )
           )

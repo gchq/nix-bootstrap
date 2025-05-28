@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           nix-bootstrap
-version:        2.2.7.0
+version:        2.3.0.0
 author:         gchquser
 maintainer:     48051938+sd234678@users.noreply.github.com
 copyright:      Crown Copyright
@@ -65,6 +65,7 @@ library
       Bootstrap.Data.PreCommitHook
       Bootstrap.Data.ProjectName
       Bootstrap.Data.ProjectType
+      Bootstrap.Data.Target
       Bootstrap.Data.Version
       Bootstrap.Data.VSCodeExtension
       Bootstrap.Error
@@ -74,6 +75,7 @@ library
       Bootstrap.Nix.Evaluate
       Bootstrap.Nix.Expr
       Bootstrap.Nix.Expr.BuildInputs
+      Bootstrap.Nix.Expr.FlakeInputs
       Bootstrap.Nix.Expr.Haskell
       Bootstrap.Nix.Expr.MkShell
       Bootstrap.Nix.Expr.Nixpkgs

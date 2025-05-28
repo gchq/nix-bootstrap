@@ -4,6 +4,7 @@
 module Bootstrap.Nix.FlakeSpec (spec) where
 
 import Bootstrap.Data.ProjectName (mkProjectName)
+import Bootstrap.Data.Target (Target (TargetDefault))
 import Bootstrap.Nix.Expr (CommentsPolicy (ShowComments), writeExprFormatted)
 import Bootstrap.Nix.Flake (intermediateFlake)
 import qualified Relude.Unsafe as Unsafe
@@ -14,7 +15,7 @@ import Text.RawString.QQ (r)
 spec :: Spec
 spec = describe "intermediateFlake" do
   it "correctly writes the intermediate flake" do
-    e <- writeExprFormatted ShowComments (intermediateFlake $ Unsafe.fromJust $ mkProjectName "test-project")
+    e <- writeExprFormatted ShowComments (intermediateFlake (Unsafe.fromJust $ mkProjectName "test-project") TargetDefault)
     e
       `shouldBe` Right
         [r|{
