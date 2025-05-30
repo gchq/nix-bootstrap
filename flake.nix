@@ -14,8 +14,7 @@
 {
   description = "Development infrastructure for nix-bootstrap";
   inputs = {
-    nixpkgs-src.url = "nixpkgs/b62d2a95c72fb068aecd374a7262b37ed92df82b";
-    # Needed to get non-broken vulnix
+    nixpkgs-src.url = "nixpkgs/25.05";
     nixpkgs-src-previous.url = "github:NixOS/nixpkgs?rev=89172919243df199fe237ba0f776c3e3e3d72367";
     pre-commit-hooks-lib = {
       inputs.nixpkgs.follows = "nixpkgs-src";
@@ -50,9 +49,8 @@
         '';
         pre-commit-hooks = import nix/pre-commit-hooks.nix {
           inherit nixpkgs pre-commit-hooks-lib system;
-          inherit (nixpkgs) alejandra;
+          inherit (nixpkgs) alejandra vulnix;
           src = ./.;
-          vulnix = nixpkgs-src-previous.legacyPackages.${system}.vulnix;
         };
         extraDevShellArgs = {
           inherit (pre-commit-hooks.allHooks) shellHook;

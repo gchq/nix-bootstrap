@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 name: nix-bootstrap
-version: 2.3.0.2
+version: 2.3.0.3
 author: gchquser
 maintainer: 48051938+sd234678@users.noreply.github.com
 copyright: Crown Copyright
@@ -62,24 +62,24 @@ library:
     - aeson-pretty == 0.8.10
     - blaze-html == 0.9.2.0
     - directory == 1.3.8.5
-    - dhall == 1.42.1
+    - dhall == 1.42.2
     - exceptions == 0.10.7
     - extra == 1.7.16
     - filepath == 1.4.301.0
-    - lens == 5.2.3
+    - lens == 5.3.4
     - megaparsec == 9.7.0
     - mtl == 2.3.1
     - parser-combinators == 1.3.0
     - process == 1.6.25.0
     - raw-strings-qq == 1.1
-    - regex-compat == 0.95.2.1
+    - regex-compat == 0.95.2.2
     - silently == 1.2.5.4
-    - singletons == 3.0.3
+    - singletons == 3.0.4
     - template-haskell == 2.21.0.0
     - terminal == 0.2.0.0
     - th-abstraction == 0.7.1.0
     - tomland == 1.3.3.3
-    - which == 0.2.0.2
+    - which == 0.2.0.3
     - yaml == 0.11.11.2
 executables:
   app:
@@ -97,12 +97,12 @@ tests:
     main: Spec.hs
     source-dirs: test
     dependencies:
-      - dhall == 1.42.1
-      - hspec == 2.11.10
+      - dhall == 1.42.2
+      - hspec == 2.11.12
       - hspec-expectations-pretty-diff == 0.7.2.6
       - nix-bootstrap
       - QuickCheck == 2.14.3
       - raw-strings-qq == 1.1
       - tomland == 1.3.3.3
     build-tools:
-      - hspec-discover == 2.11.10
+      - hspec-discover == 2.11.12
