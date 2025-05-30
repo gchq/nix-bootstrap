@@ -130,7 +130,7 @@ instance Arbitrary Binding where
       [ BInherit <$> listOf1 arbitrary,
         BInheritFrom <$> arbitrary <*> listOf1 arbitrary,
         BLineComment . unLineCommentContents <$> arbitrary,
-        BNameValue <$> (PIdent <$> arbitrary) <*> arbitrary
+        (BNameValue . PIdent <$> arbitrary) <*> arbitrary
       ]
 
 instance Arbitrary Identifier where
@@ -252,7 +252,10 @@ spec = do
                 )
             )
       it "(|=) has higher precedece than (|*) and (|.)" do
-        [nixproperty|a|] |= [nix|b|] |* [nix|c|] |. [nixproperty|.d|]
+        [nixproperty|a|]
+          |= [nix|b|]
+          |* [nix|c|]
+          |. [nixproperty|.d|]
           `shouldBe` [nixbinding|a = b c.d;|]
     describe "Identifier" do
       it "correctly parses the special \"...\" identifier" do
