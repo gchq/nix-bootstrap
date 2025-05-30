@@ -56,7 +56,9 @@ library
       Bootstrap.Data.BuildPlan
       Bootstrap.Data.Config
       Bootstrap.Data.Config.Internal
+      Bootstrap.Data.Config.Internal.CurrentVersion
       Bootstrap.Data.Config.Internal.TH
+      Bootstrap.Data.Config.Internal.THHelpers
       Bootstrap.Data.ContinuousIntegration
       Bootstrap.Data.DevContainer
       Bootstrap.Data.GHCVersion

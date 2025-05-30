@@ -34,6 +34,11 @@ import Bootstrap.Data.Bootstrappable.BootstrapState
       ),
     bootstrapStateCodec,
   )
+import Bootstrap.Data.Config.Internal.CurrentVersion
+  ( currentVersionNumber,
+    versionUniverse,
+  )
+import Bootstrap.Data.Config.Internal.THHelpers (isoForName)
 import Bootstrap.Data.ContinuousIntegration
   ( ContinuousIntegrationConfig,
   )
@@ -61,8 +66,8 @@ import Bootstrap.Data.ProjectType
   )
 import Bootstrap.Data.Target (Target (TargetDefault))
 import Bootstrap.Monad (MonadBootstrap)
-import Control.Lens (Iso', iso, makeLenses)
-import Control.Monad.Catch (MonadThrow (throwM), catchAll, handleAll)
+import Control.Lens (Iso', makeLenses)
+import Control.Monad.Catch (MonadCatch, MonadThrow (throwM), catchAll, handleAll)
 import Data.Singletons
   ( Sing,
     SingI (sing),
@@ -89,65 +94,105 @@ import Dhall.Deriving
     type (<<<),
   )
 import Dhall.Src (Src)
+import qualified Language.Haskell.TH as TH
 import System.Directory (doesFileExist)
 import System.Terminal (MonadPrinter (putTextLn))
 import Text.Show (Show (show))
 import qualified Toml as TOML
 
--- | The version of `Config` being used
-data ConfigVersion
-  = V1
-  | V2
-  | V3
-  | V4
-  | V5
-  | V6
-  | V7
-  | V8
-  | V9
+{-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Adding a new config version?
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
--- | Singled `ConfigVersion`
-data SConfigVersion (configVersion :: ConfigVersion) where
-  SV1 :: SConfigVersion 'V1
-  SV2 :: SConfigVersion 'V2
-  SV3 :: SConfigVersion 'V3
-  SV4 :: SConfigVersion 'V4
-  SV5 :: SConfigVersion 'V5
-  SV6 :: SConfigVersion 'V6
-  SV7 :: SConfigVersion 'V7
-  SV8 :: SConfigVersion 'V8
-  SV9 :: SConfigVersion 'V9
+The first thing to do is update currentVersionNumber in Bootstrap.Data.Config.Internal.CurrentVersion.
+Then come back here and start following the compiler errors.
+-}
+
+{- data ConfigVersion = V1 | V2 | ...
+
+   Creates constructors up to (including) `currentVersionNumber` -}
+$( TH.newName "ConfigVersion" >>= \decName ->
+     one
+       <$> TH.dataD_doc
+         (pure [])
+         decName
+         []
+         Nothing
+         (versionUniverse <&> \n -> ((`TH.NormalC` []) <$> TH.newName ('V' : Prelude.show n), Nothing, []))
+         []
+         (Just "The version of `Config` being used")
+ )
+
+-- Singled `ConfigVersion`
+$( TH.newName "SConfigVersion" >>= \decName -> do
+     let makeCon n = do
+           conName <- TH.newName ("SV" <> Prelude.show n)
+           Just unsingled <- TH.lookupValueName ('V' : Prelude.show n)
+           TH.gadtC [conName] [] (pure $ TH.AppT (TH.ConT decName) (TH.PromotedT unsingled))
+     one
+       <$> TH.dataD_doc
+         (pure [])
+         decName
+         [TH.newName "configVersion" <&> \name -> TH.KindedTV name TH.BndrReq (TH.ConT ''ConfigVersion)]
+         Nothing
+         (versionUniverse <&> \n -> (makeCon n, Nothing, []))
+         []
+         (Just "Singled `ConfigVersion`")
+ )
 
 type instance Sing = SConfigVersion
 
-instance SingKind ConfigVersion where
-  type Demote ConfigVersion = ConfigVersion
-  fromSing = \case
-    SV1 -> V1
-    SV2 -> V2
-    SV3 -> V3
-    SV4 -> V4
-    SV5 -> V5
-    SV6 -> V6
-    SV7 -> V7
-    SV8 -> V8
-    SV9 -> V9
-  toSing = \case
-    V1 -> SomeSing SV1
-    V2 -> SomeSing SV2
-    V3 -> SomeSing SV3
-    V4 -> SomeSing SV4
-    V5 -> SomeSing SV5
-    V6 -> SomeSing SV6
-    V7 -> SomeSing SV7
-    V8 -> SomeSing SV8
-    V9 -> SomeSing SV9
+-- Instance of SingKind ConfigVersion
+$( do
+     Just fromSingName <- TH.lookupValueName "fromSing"
+     Just toSingName <- TH.lookupValueName "toSing"
+     one
+       <$> TH.instanceD
+         (pure [])
+         [t|SingKind ConfigVersion|]
+         [ TH.tySynInstD (TH.tySynEqn Nothing [t|Demote ConfigVersion|] [t|ConfigVersion|]),
+           TH.funD fromSingName $
+             versionUniverse <&> \n ->
+               do
+                 Just sv <- TH.lookupValueName $ "SV" <> Prelude.show n
+                 Just v <- TH.lookupValueName $ "V" <> Prelude.show n
+                 pure $ TH.Clause [TH.ConP sv [] []] (TH.NormalB $ TH.ConE v) [],
+           TH.funD
+             toSingName
+             $ versionUniverse <&> \n -> do
+               Just someSing <- TH.lookupValueName "SomeSing"
+               Just sv <- TH.lookupValueName $ "SV" <> Prelude.show n
+               Just v <- TH.lookupValueName $ "V" <> Prelude.show n
+               pure $ TH.Clause [TH.ConP v [] []] (TH.NormalB $ TH.ConE someSing `TH.AppE` TH.ConE sv) []
+         ]
+ )
 
--- | The most recent version of the config
-type Current = 'V9
+-- Type synonym for Vx, where x is `currentVersionNumber`
+$( TH.newName "Current" >>= \decName ->
+     one
+       <$> TH.withDecDoc
+         "The most recent version of the config"
+         ( TH.tySynD
+             decName
+             []
+             do
+               Just current <- TH.lookupValueName $ 'V' : Prelude.show currentVersionNumber
+               pure $ TH.PromotedT current
+         )
+ )
 
-instance SingI Current where
-  sing = SV9
+-- Instance of SingI for the current config version
+$( one
+     <$> TH.instanceD
+       (pure [])
+       [t|SingI Current|]
+       [ do
+           Just singName <- TH.lookupValueName "sing"
+           Just svCurrent <- TH.lookupValueName $ "SV" <> Prelude.show currentVersionNumber
+           TH.funD singName [pure $ TH.Clause [] (TH.NormalB $ TH.ConE svCurrent) []]
+       ]
+ )
 
 -- | nix-bootstrap's configuration
 type Config = VersionedConfig Current
@@ -322,8 +367,15 @@ versionedProjectTypeToDhall Proxy unwrap normaliser =
   where
     Encoder {..} = injectWith @underlying normaliser
 
+{- iso (\(VPT9 x) -> x) VPT9
+   (or whatever the current version is)
+-}
 _VersionedProjectType :: Iso' (VersionedProjectType Current) ProjectType
-_VersionedProjectType = iso (\(VPT9 x) -> x) VPT9
+_VersionedProjectType =
+  $( do
+       Just vptCurrentName <- TH.lookupValueName $ "VPT" <> Prelude.show currentVersionNumber
+       isoForName vptCurrentName
+   )
 
 -- | The location of a bootstrapped config file
 configPath :: FilePath
@@ -335,30 +387,6 @@ newtype TomlDecodeException = TomlDecodeException {unTomlDecodeException :: [TOM
 
 instance Exception TomlDecodeException where
   displayException = toString . TOML.prettyTomlDecodeErrors . unTomlDecodeException
-
--- | Parses the given text as a nix-bootstrap config file
-parseVersionedConfig ::
-  forall m version.
-  (MonadBootstrap m) =>
-  SConfigVersion version ->
-  Text ->
-  m (Either SomeException (VersionedConfig version))
-parseVersionedConfig v s = case v of
-  SV1 ->
-    pure
-      . bimap (SomeException . TomlDecodeException) VersionedConfigV1
-      $ TOML.decode bootstrapStateCodec s
-  SV2 -> parseFor VersionedConfigV2
-  SV3 -> parseFor VersionedConfigV3
-  SV4 -> parseFor VersionedConfigV4
-  SV5 -> parseFor VersionedConfigV5
-  SV6 -> parseFor VersionedConfigV6
-  SV7 -> parseFor VersionedConfigV7
-  SV8 -> parseFor VersionedConfigV8
-  SV9 -> parseFor VersionedConfigV9
-  where
-    parseFor :: (FromDhall config) => (config -> versionedConfig) -> m (Either SomeException versionedConfig)
-    parseFor constructor = handleAll (pure . Left) . fmap (Right . constructor) . liftIO $ input auto s
 
 -- | The second version of the config
 data ConfigV2 = ConfigV2
@@ -428,6 +456,46 @@ deriving stock instance (Eq (VersionedProjectType 'V9)) => Eq ConfigV9
 
 deriving stock instance (Show (VersionedProjectType 'V9)) => Show ConfigV9
 
+-- | Used by parseVersionConfig to parse when the version is known statically
+parseVersionedConfigFor ::
+  (FromDhall config, MonadCatch m, MonadIO m) =>
+  (config -> versionedConfig) ->
+  Text ->
+  m (Either SomeException versionedConfig)
+parseVersionedConfigFor constructor contents = handleAll (pure . Left) . fmap (Right . constructor) . liftIO $ input auto contents
+
+-- | Parses the given text as a nix-bootstrap config file
+parseVersionedConfig ::
+  forall m version.
+  (MonadBootstrap m) =>
+  SConfigVersion version ->
+  Text ->
+  m (Either SomeException (VersionedConfig version))
+parseVersionedConfig v contents =
+  $( TH.caseE [|v|] $
+       ( do
+           pat <- [p|SV1|]
+           body <-
+             TH.NormalB
+               <$> [|
+                 pure
+                   . bimap (SomeException . TomlDecodeException) VersionedConfigV1
+                   $ TOML.decode bootstrapStateCodec contents
+                 |]
+           pure $ TH.Match pat body []
+       )
+         : ( [2 .. currentVersionNumber] <&> \n -> do
+               Just svName <- TH.lookupValueName $ "SV" <> Prelude.show n
+               Just vcName <- TH.lookupValueName $ "VersionedConfigV" <> Prelude.show n
+               body <-
+                 TH.NormalB
+                   <$> TH.appE
+                     (TH.appE [|parseVersionedConfigFor|] (pure $ TH.ConE vcName))
+                     [|contents|]
+               pure $ TH.Match (TH.ConP svName [] []) body []
+           )
+   )
+
 -- | An exception thrown when a config specifies that flakes are not to be used;
 -- this is an exception because non-flake support has been withdrawn and migration
 -- to flakes is not automatic.
@@ -454,11 +522,23 @@ data LoadConfigResult
 
 deriving stock instance (Show Config) => Show LoadConfigResult
 
-makeLenses ''ConfigV9
+$( do
+     Just nameToMakeLensesFor <- TH.lookupTypeName $ "ConfigV" <> Prelude.show currentVersionNumber
+     makeLenses nameToMakeLensesFor
+ )
 
--- | Isomorphism to the current config version
-_Current :: Iso' Config ConfigV9
-_Current = iso (\(VersionedConfigV9 c) -> c) VersionedConfigV9
+{- _Current :: Iso' Config ConfigV9
+   _Current = iso (\(VersionedConfigV9 c) -> c) VersionedConfigV9
+   (or whatever the current version is)
+-}
+$( do
+     decName <- TH.newName "_Current"
+     Just configVxTypeName <- TH.lookupTypeName $ "ConfigV" <> Prelude.show currentVersionNumber
+     Just versionedConfigName <- TH.lookupValueName $ "VersionedConfigV" <> Prelude.show currentVersionNumber
+     sigD <- TH.sigD decName $ [t|Iso' Config|] `TH.appT` TH.conT configVxTypeName
+     funD <- TH.funD_doc decName [TH.clause [] (TH.NormalB <$> isoForName versionedConfigName) []] (Just "Isomorphism to the current config version") []
+     pure [sigD, funD]
+ )
 
 -- | Loads the config from the appropriate file
 loadConfig :: (MonadBootstrap m) => m LoadConfigResult
@@ -472,20 +552,22 @@ loadConfig' nextToTry = do
     Right Nothing -> pure LoadConfigResultNotFound
     Right (Just c) -> pure $ LoadConfigResultFound c
     Left e -> tryPreviousConfigVersion e nextToTry
-  where
-    tryPreviousConfigVersion :: SomeException -> SConfigVersion v -> m LoadConfigResult
-    tryPreviousConfigVersion e v = case fromException e of
-      Just NonFlakeConfigException -> pure $ LoadConfigResultError e
-      Nothing -> case v of
-        SV9 -> loadConfig' SV8
-        SV8 -> loadConfig' SV7
-        SV7 -> loadConfig' SV6
-        SV6 -> loadConfig' SV5
-        SV5 -> loadConfig' SV4
-        SV4 -> loadConfig' SV3
-        SV3 -> loadConfig' SV2
-        SV2 -> loadConfig' SV1
-        SV1 -> pure $ LoadConfigResultError e
+
+tryPreviousConfigVersion :: (MonadBootstrap m) => SomeException -> SConfigVersion v -> m LoadConfigResult
+tryPreviousConfigVersion e v = case fromException e of
+  Just NonFlakeConfigException -> pure $ LoadConfigResultError e
+  Nothing ->
+    $( TH.caseE [|v|] $
+         (TH.Match <$> [p|SV1|] <*> (TH.NormalB <$> [|pure $ LoadConfigResultError e|]) <*> pure [])
+           : ( [2 .. currentVersionNumber] <&> \n -> do
+                 Just svName <- TH.lookupValueName $ "SV" <> Prelude.show n
+                 Just previousSvName <- TH.lookupValueName $ "SV" <> Prelude.show (n - 1)
+                 body <-
+                   TH.NormalB
+                     <$> TH.appE [|loadConfig'|] (pure $ TH.ConE previousSvName)
+                 pure $ TH.Match (TH.ConP svName [] []) body []
+             )
+     )
 
 -- | Loads and parses the config at the specified version.
 --
