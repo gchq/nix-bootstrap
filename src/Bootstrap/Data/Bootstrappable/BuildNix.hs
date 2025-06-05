@@ -12,7 +12,7 @@ import Bootstrap.Data.Bootstrappable
 import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeServer),
     JavaOptions (JavaOptions),
     ProjectType
       ( Elm,
@@ -78,6 +78,8 @@ buildExprFor srcDir projectName = \case
   Minimal -> Nothing
   Elm _ -> Nothing
   Haskell (HaskellOptions _ (HaskellProjectTypeBasic (SetUpHaskellBuild True))) ->
+    Just . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
+  Haskell (HaskellOptions _ (HaskellProjectTypeServer (SetUpHaskellBuild True))) ->
     Just . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
   Haskell _ -> Nothing
   Node _ -> Nothing

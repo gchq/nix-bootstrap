@@ -7,19 +7,29 @@ let ElmMode = < Bare | Node : NodePackageManager >
 
 let ElmOptions = { elmMode : ElmMode, provideElmReview : Bool }
 
+let HaskellProjectType = < ReplOnly | Basic : Bool | Server : Bool >
+
+let HaskellOptions =
+      { ghcVersion : { major : Natural, minor : Natural, patch : Natural }
+      , haskellProjectType : HaskellProjectType
+      }
+
 let JavaOptions =
       { installMinishift : Bool
       , installLombok : Bool
       , setUpJavaBuild : < SetUpJavaBuild : Text | NoJavaBuild >
+      , jdk : < OpenJDK | GraalVM >
       }
 
 let ProjectType =
       < Minimal
       | Elm : ElmOptions
+      | Haskell : HaskellOptions
       | Node : NodePackageManager
       | Go : Bool
       | Java : JavaOptions
       | Python
+      | Rust
       >
 
 in  { projectName = "nix-bootstrap"
@@ -27,5 +37,5 @@ in  { projectName = "nix-bootstrap"
     , setUpPreCommitHooks = True
     , setUpContinuousIntegration = True
     , setUpVSCodeDevContainer = True
-    , useNixFlakes = True
+    , target = {=}
     }

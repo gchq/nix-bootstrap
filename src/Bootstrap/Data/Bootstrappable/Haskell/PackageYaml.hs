@@ -16,10 +16,10 @@ import Bootstrap.Data.HaskellDependency
   ( HaskellDependency,
     VersionKnown (VersionKnown),
     getHaskellDependencyVersions,
-    hdep,
+    hdeps,
   )
 import Bootstrap.Data.ProjectName (ProjectName (unProjectName))
-import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions, haskellOptionsHaskellProjectType), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly), ProjectType (Haskell))
+import Bootstrap.Data.ProjectType (HaskellOptions (HaskellOptions, haskellOptionsHaskellProjectType), HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly, HaskellProjectTypeServer), ProjectType (Haskell))
 import Bootstrap.Nix.Evaluate (NixBinaryPaths)
 import Data.Aeson (ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
@@ -32,20 +32,44 @@ instance Bootstrappable PackageYaml where
   bootstrapName = const "package.yaml"
   bootstrapReason = const "The configuration of your haskell project"
   bootstrapContent (PackageYaml nbps n opts@HaskellOptions {haskellOptionsHaskellProjectType}) = runExceptT do
-    dependencies <- ExceptT
-      . firstF (("Could not get haskell dependency versions: " <>) . displayException)
-      . getHaskellDependencyVersions nbps opts
-      $ case haskellOptionsHaskellProjectType of
+    let getDependencies deps =
+          ExceptT
+            . firstF (("Could not get haskell dependency versions: " <>) . displayException)
+            $ getHaskellDependencyVersions nbps opts deps
+    globalDeps <- getDependencies $
+      case haskellOptionsHaskellProjectType of
         HaskellProjectTypeReplOnly -> []
-        HaskellProjectTypeBasic _ -> [$(hdep "base"), $(hdep "relude")]
-    pure . bootstrapContentYaml $ PackageYamlWithDependencies n dependencies
+        HaskellProjectTypeBasic _ -> $(hdeps ["base", "relude"])
+        HaskellProjectTypeServer _ -> $(hdeps ["base", "relude"])
+    libraryDeps <- getDependencies $
+      case haskellOptionsHaskellProjectType of
+        HaskellProjectTypeReplOnly -> []
+        HaskellProjectTypeBasic _ -> []
+        HaskellProjectTypeServer _ -> $(hdeps ["aeson", "servant-server"])
+    executableDeps <- getDependencies $
+      case haskellOptionsHaskellProjectType of
+        HaskellProjectTypeReplOnly -> []
+        HaskellProjectTypeBasic _ -> []
+        HaskellProjectTypeServer _ -> $(hdeps ["warp"])
+    pure . bootstrapContentYaml $
+      PackageYamlWithDependencies
+        { packageYamlWithDependendenciesProjectName = n,
+          packageYamlWithDependenciesGlobalDependencies = globalDeps,
+          packageYamlWithDependenciesLibraryDependencies = libraryDeps,
+          packageYamlWithDependenciesExecutableDependencies = executableDeps
+        }
 
-data PackageYamlWithDependencies = PackageYamlWithDependencies ProjectName [HaskellDependency 'VersionKnown]
+data PackageYamlWithDependencies = PackageYamlWithDependencies
+  { packageYamlWithDependendenciesProjectName :: ProjectName,
+    packageYamlWithDependenciesGlobalDependencies :: [HaskellDependency 'VersionKnown],
+    packageYamlWithDependenciesLibraryDependencies :: [HaskellDependency 'VersionKnown],
+    packageYamlWithDependenciesExecutableDependencies :: [HaskellDependency 'VersionKnown]
+  }
 
 instance ToJSON PackageYamlWithDependencies where
-  toJSON (PackageYamlWithDependencies n deps) =
+  toJSON (PackageYamlWithDependencies {..}) =
     Aeson.object
-      [ ("name", Aeson.String $ unProjectName n),
+      [ ("name", Aeson.String $ unProjectName packageYamlWithDependendenciesProjectName),
         ("version", "0.1.0.0"),
         ( "default-extensions",
           Aeson.Array $
@@ -61,7 +85,7 @@ instance ToJSON PackageYamlWithDependencies where
               ]
         ),
         ( "dependencies",
-          Aeson.Array . fromList $ toJSON <$> deps
+          Aeson.Array . fromList $ toJSON <$> packageYamlWithDependenciesGlobalDependencies
         ),
         ( "flags",
           Aeson.object
@@ -103,7 +127,9 @@ instance ToJSON PackageYamlWithDependencies where
         ( "library",
           Aeson.object
             [ ("source-dirs", "src"),
-              ("dependencies", Aeson.Array mempty)
+              ( "dependencies",
+                Aeson.Array . fromList $ toJSON <$> packageYamlWithDependenciesLibraryDependencies
+              )
             ]
         ),
         ( "executables",
@@ -116,7 +142,12 @@ instance ToJSON PackageYamlWithDependencies where
                       Aeson.Array $
                         fromList ["-O2", "-threaded", "-rtsopts", "-with-rtsopts=-N"]
                     ),
-                    ("dependencies", Aeson.String $ unProjectName n)
+                    ( "dependencies",
+                      Aeson.Array
+                        . fromList
+                        . ((Aeson.String $ unProjectName packageYamlWithDependendenciesProjectName) :)
+                        $ toJSON <$> packageYamlWithDependenciesExecutableDependencies
+                    )
                   ]
               )
             ]
@@ -128,4 +159,5 @@ packageYamlFor nbps projectName = \case
   Haskell haskellOptions@(HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
     HaskellProjectTypeBasic _ -> Just $ PackageYaml nbps projectName haskellOptions
+    HaskellProjectTypeServer _ -> Just $ PackageYaml nbps projectName haskellOptions
   _ -> Nothing

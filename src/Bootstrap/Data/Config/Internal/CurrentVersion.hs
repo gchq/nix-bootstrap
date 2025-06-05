@@ -5,7 +5,7 @@ module Bootstrap.Data.Config.Internal.CurrentVersion (currentVersionNumber, vers
 
 -- | The most recent version of the config
 currentVersionNumber :: Int
-currentVersionNumber = 9
+currentVersionNumber = 10
 
 versionUniverse :: [Int]
 versionUniverse = [1 .. currentVersionNumber]

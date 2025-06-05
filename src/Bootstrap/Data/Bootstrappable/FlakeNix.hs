@@ -22,7 +22,7 @@ import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
     ElmOptions (elmOptionElmMode),
     HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly, HaskellProjectTypeServer),
     InstallMinishift (unInstallMinishift),
     JavaOptions (JavaOptions),
     JdkPackage (GraalVM, OpenJDK),
@@ -130,6 +130,7 @@ flakeNixFor
                 ( case haskellProjectType of
                     HaskellProjectTypeReplOnly -> [[nixident|cabal-install|]]
                     HaskellProjectTypeBasic _ -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
+                    HaskellProjectTypeServer _ -> [[nixident|cabal-install|], [nixident|haskell-language-server|]]
                 )
           ]
         Node _ -> []

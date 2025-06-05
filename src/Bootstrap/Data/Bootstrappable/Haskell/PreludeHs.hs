@@ -15,7 +15,7 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly, HaskellProjectTypeServer),
     ProjectType (Haskell),
   )
 import Control.Lens ((?~))
@@ -39,4 +39,5 @@ preludeHsFor = \case
   Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
     HaskellProjectTypeBasic _ -> Just PreludeHs
+    HaskellProjectTypeServer _ -> Just PreludeHs
   _ -> Nothing

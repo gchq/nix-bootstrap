@@ -43,7 +43,7 @@ let ElmMode = < Bare | Node : NodePackageManager >
 
 let ElmOptions = { elmMode : ElmMode, provideElmReview : Bool }
 
-let HaskellProjectType = < ReplOnly | Basic : Bool >
+let HaskellProjectType = < ReplOnly | Basic : Bool | Server : Bool >
 
 let HaskellOptions =
       { ghcVersion : { major : Natural, minor : Natural, patch : Natural }

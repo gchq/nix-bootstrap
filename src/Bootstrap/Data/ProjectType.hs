@@ -46,6 +46,8 @@ module Bootstrap.Data.ProjectType
     migrateProjectTypeFromV5,
     ProjectTypeV6 (..),
     migrateProjectTypeFromV6,
+    ProjectTypeV7To9 (..),
+    migrateProjectTypeFromV7To9,
   )
 where
 
@@ -100,7 +102,8 @@ instance HasProjectSuperType ProjectSuperType where
 data ProjectType
   = Minimal
   | Elm ElmOptions
-  | Haskell HaskellOptions
+  | -- Changed with V10 (previously used HaskellOptionsV5To9)
+    Haskell HaskellOptions
   | Node NodePackageManager
   | Go SetUpGoBuild
   | Java JavaOptions
@@ -148,6 +151,7 @@ instance TextFunction HaskellOptionsDhallFields where
     "haskellOptionsGHCVersion" -> "ghcVersion"
     _anythingElse
       | "haskellOptionsV4" `T.isPrefixOf` _anythingElse -> textFunction @(CamelCase <<< DropPrefix "haskellOptionsV4") _anythingElse
+      | "haskellOptionsV5To9" `T.isPrefixOf` _anythingElse -> textFunction @(CamelCase <<< DropPrefix "haskellOptionsV5To9") _anythingElse
       | otherwise -> textFunction @(CamelCase <<< DropPrefix "haskellOptions") _anythingElse
 
 data HaskellOptionsV4 = HaskellOptionsV4
@@ -156,6 +160,13 @@ data HaskellOptionsV4 = HaskellOptionsV4
   }
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Field HaskellOptionsDhallFields) HaskellOptionsV4
+
+data HaskellOptionsV5To9 = HaskellOptionsV5To9
+  { haskellOptionsV5To9GHCVersion :: GHCVersion,
+    haskellOptionsV5To9HaskellProjectType :: HaskellProjectTypeV5To9
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Field HaskellOptionsDhallFields) HaskellOptionsV5To9
 
 data HaskellOptions = HaskellOptions
   { haskellOptionsGHCVersion :: GHCVersion,
@@ -170,21 +181,30 @@ data HaskellProjectTypeV4
   deriving stock (Bounded, Enum, Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "HaskellProjectTypeV4")) HaskellProjectTypeV4
 
+data HaskellProjectTypeV5To9
+  = HaskellProjectTypeV5To9ReplOnly
+  | HaskellProjectTypeV5To9Basic SetUpHaskellBuild
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "HaskellProjectTypeV5To9")) HaskellProjectTypeV5To9
+
 data HaskellProjectType
   = HaskellProjectTypeReplOnly
   | HaskellProjectTypeBasic SetUpHaskellBuild
+  | HaskellProjectTypeServer SetUpHaskellBuild
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Constructor (DropPrefix "HaskellProjectType")) HaskellProjectType
 
 data HaskellProjectTypeSimple
   = HaskellProjectTypeSimpleReplOnly
   | HaskellProjectTypeSimpleBasic
+  | HaskellProjectTypeSimpleServer
   deriving stock (Bounded, Enum, Eq, Generic, Show)
 
 haskellProjectTypeSimpleName :: HaskellProjectTypeSimple -> Text
 haskellProjectTypeSimpleName = \case
   HaskellProjectTypeSimpleReplOnly -> "REPL only"
   HaskellProjectTypeSimpleBasic -> "Basic Library + Executable"
+  HaskellProjectTypeSimpleServer -> "Basic RESTful HTTP Server"
 
 newtype SetUpHaskellBuild = SetUpHaskellBuild {unSetUpHaskellBuild :: Bool}
   deriving newtype (Bounded, Enum, FromDhall, ToDhall)
@@ -199,6 +219,7 @@ promptHaskellProjectType =
     >>= \case
       HaskellProjectTypeSimpleReplOnly -> pure HaskellProjectTypeReplOnly
       HaskellProjectTypeSimpleBasic -> HaskellProjectTypeBasic . SetUpHaskellBuild <$> askIfReproducibleBuildRequired
+      HaskellProjectTypeSimpleServer -> HaskellProjectTypeServer . SetUpHaskellBuild <$> askIfReproducibleBuildRequired
 
 data NodePackageManager = NPM | PNPm | Yarn
   deriving stock (Bounded, Enum, Eq, Generic, Show)
@@ -504,3 +525,26 @@ migrateProjectTypeFromV6 = \case
   PTV6Java x -> Java $ migrateJavaOptionsFromV2 x
   PTV6Python x -> Python x
   PTV6Rust -> Rust
+
+data ProjectTypeV7To9
+  = PTV7To9Minimal
+  | PTV7To9Elm ElmOptions
+  | PTV7To9Haskell HaskellOptions
+  | PTV7To9Node NodePackageManager
+  | PTV7To9Go SetUpGoBuild
+  | PTV7To9Java JavaOptions
+  | PTV7To9Python PythonVersion
+  | PTV7To9Rust
+  deriving stock (Eq, Generic, Show)
+  deriving (FromDhall, ToDhall) via Codec (Constructor AsIs) ProjectTypeV7To9
+
+migrateProjectTypeFromV7To9 :: ProjectTypeV7To9 -> ProjectType
+migrateProjectTypeFromV7To9 = \case
+  PTV7To9Minimal -> Minimal
+  PTV7To9Elm x -> Elm x
+  PTV7To9Haskell x -> Haskell x
+  PTV7To9Node x -> Node x
+  PTV7To9Go x -> Go x
+  PTV7To9Java x -> Java x
+  PTV7To9Python x -> Python x
+  PTV7To9Rust -> Rust

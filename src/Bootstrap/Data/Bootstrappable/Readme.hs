@@ -20,7 +20,7 @@ import Bootstrap.Data.ProjectType
   ( ElmMode (ElmModeBare, ElmModeNode),
     ElmOptions (ElmOptions, elmOptionElmMode, elmOptionProvideElmReview),
     HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly, HaskellProjectTypeServer),
     ProjectType (Elm, Go, Haskell, Python),
     SetUpGoBuild (SetUpGoBuild),
     SetUpHaskellBuild (SetUpHaskellBuild),
@@ -176,22 +176,25 @@ instance Bootstrappable Readme where
                               "This will produce a `dist` directory with a built web app."
                             ]
                       )
-               Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
-                 HaskellProjectTypeReplOnly ->
-                   [ "",
-                     "## Using the Repl",
-                     "",
-                     "You can use the provided Haskell repl by running `cabal repl` in the dev shell."
-                   ]
-                 HaskellProjectTypeBasic (SetUpHaskellBuild withBuild) ->
-                   [ "",
-                     "## Using your project",
-                     "",
-                     "1. Generate a cabal file by running `hpack`",
-                     "2. `cabal build` will build your application",
-                     "3. `cabal run app` will run your application. **Note:** this will initially fail until you replace the body of the `lib` function in `src/Lib.hs`."
-                   ]
-                     <> if withBuild then buildingForProduction else []
+               Haskell (HaskellOptions _ haskellProjectType) ->
+                 let cabalInstructions withBuild =
+                       [ "",
+                         "## Using your project",
+                         "",
+                         "1. Generate a cabal file by running `hpack`",
+                         "2. `cabal build` will build your application",
+                         "3. `cabal run app` will run your application. **Note:** this will initially fail until you replace the body of the `lib` function in `src/Lib.hs`."
+                       ]
+                         <> if withBuild then buildingForProduction else []
+                  in case haskellProjectType of
+                       HaskellProjectTypeReplOnly ->
+                         [ "",
+                           "## Using the Repl",
+                           "",
+                           "You can use the provided Haskell repl by running `cabal repl` in the dev shell."
+                         ]
+                       HaskellProjectTypeBasic (SetUpHaskellBuild withBuild) -> cabalInstructions withBuild
+                       HaskellProjectTypeServer (SetUpHaskellBuild withBuild) -> cabalInstructions withBuild
                Go (SetUpGoBuild True) -> buildingForProduction
                Python _ ->
                  [ "",

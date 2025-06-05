@@ -9,7 +9,8 @@ import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions, haskellOptionsGHCVersion, haskellOptionsHaskellProjectType),
     HaskellProjectType
       ( HaskellProjectTypeBasic,
-        HaskellProjectTypeReplOnly
+        HaskellProjectTypeReplOnly,
+        HaskellProjectTypeServer
       ),
   )
 import Bootstrap.Nix.Expr
@@ -37,13 +38,15 @@ haskellPackagesExpr HaskellOptions {..} =
                  |: ( [nixargs|super:|]
                         |: ESet
                           False
-                          ( ( case haskellOptionsHaskellProjectType of
-                                HaskellProjectTypeReplOnly -> []
-                                HaskellProjectTypeBasic _ ->
-                                  [ [nixbinding|# The override of pretty-simple below may be needed to circumvent a bug in nixpkgs.|],
-                                    [nixbinding|# If the devshell builds successfully without it, feel free to remove it.|],
-                                    [nixbinding|pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };|]
-                                  ]
+                          ( ( let overridePrettySimple =
+                                    [ [nixbinding|# The override of pretty-simple below may be needed to circumvent a bug in nixpkgs.|],
+                                      [nixbinding|# If the devshell builds successfully without it, feel free to remove it.|],
+                                      [nixbinding|pretty-simple = super.pretty-simple.overrideAttrs { doCheck = false; };|]
+                                    ]
+                               in case haskellOptionsHaskellProjectType of
+                                    HaskellProjectTypeReplOnly -> []
+                                    HaskellProjectTypeBasic _ -> overridePrettySimple
+                                    HaskellProjectTypeServer _ -> overridePrettySimple
                             )
                               <> [[nixbinding|# You can overide packages here if you need any dependencies not in this set by default|]]
                           )

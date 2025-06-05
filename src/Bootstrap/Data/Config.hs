@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -29,21 +30,21 @@ where
 
 import Bootstrap.Data.Config.Internal
   ( Config,
-    ConfigV9 (ConfigV9),
+    ConfigV10 (ConfigV10),
     LoadConfigResult
       ( LoadConfigResultError,
         LoadConfigResultFound,
         LoadConfigResultNotFound
       ),
     NonFlakeConfigException,
-    VersionedConfig (VersionedConfigV9),
-    VersionedProjectType (VPT9),
-    configV9ProjectName,
-    configV9ProjectType,
-    configV9SetUpContinuousIntegration,
-    configV9SetUpPreCommitHooks,
-    configV9SetUpVSCodeDevContainer,
-    configV9Target,
+    VersionedConfig (VersionedConfigV10),
+    VersionedProjectType (VPT10),
+    configV10ProjectName,
+    configV10ProjectType,
+    configV10SetUpContinuousIntegration,
+    configV10SetUpPreCommitHooks,
+    configV10SetUpVSCodeDevContainer,
+    configV10Target,
     loadConfig,
     _Current,
   )
@@ -57,7 +58,7 @@ import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType (ProjectType)
 import Bootstrap.Data.Target (Target)
 
-makeConfigLenses 'ConfigV9
+makeConfigLenses 'ConfigV10
 
 -- | Initialise a new `Config` from scratch
 configFor ::
@@ -69,5 +70,5 @@ configFor ::
   Target ->
   Config
 configFor a1 a2 a3 a4 a5 a6 =
-  VersionedConfigV9 $
-    ConfigV9 a1 (VPT9 a2) a3 a4 a5 a6
+  VersionedConfigV10 $
+    ConfigV10 a1 (VPT10 a2) a3 a4 a5 a6

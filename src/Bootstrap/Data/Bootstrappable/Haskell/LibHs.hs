@@ -15,17 +15,16 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly, HaskellProjectTypeServer),
     ProjectType (Haskell),
   )
 import Control.Lens ((?~))
+import Language.Haskell.TH (conT, varE)
 import Language.Haskell.TH.Syntax
   ( Body (NormalB),
     Clause (Clause),
     Dec (FunD, SigD),
-    Exp (AppE, VarE),
     ModName (ModName),
-    Type (AppT, ConT),
     mkName,
   )
 
@@ -36,14 +35,12 @@ instance Bootstrappable LibHs where
   bootstrapReason = const "The entrypoint of your haskell library"
   bootstrapContent LibHs = do
     let lib = mkName "lib"
-        errorFunc = mkName "error"
-        io = mkName "IO"
-    unitType <- [t|()|]
-    errorLine <- AppE (VarE errorFunc) <$> [|"todo: write the body of the lib function in src/Lib.hs"|]
+    ioUnit <- [t|$(conT $ mkName "IO") ()|]
+    errorLine <- [|$(varE $ mkName "error") "todo: write the body of the lib function in src/Lib.hs"|]
     pure . pure . bootstrapContentHaskell $
       haskellModule (ModName "Lib") (one "lib")
         & haskellModuleDecs
-        ?~ SigD lib (AppT (ConT io) unitType)
+        ?~ SigD lib ioUnit
           :| [FunD lib [Clause [] (NormalB errorLine) []]]
 
 libHsFor :: ProjectType -> Maybe LibHs
@@ -51,4 +48,5 @@ libHsFor = \case
   Haskell (HaskellOptions _ haskellProjectType) -> case haskellProjectType of
     HaskellProjectTypeReplOnly -> Nothing
     HaskellProjectTypeBasic _ -> Just LibHs
+    HaskellProjectTypeServer _ -> Nothing
   _ -> Nothing

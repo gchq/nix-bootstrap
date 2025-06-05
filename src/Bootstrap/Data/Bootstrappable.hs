@@ -89,7 +89,7 @@ data HaskellImport
   = -- | import ModName
     HaskellImportAll THS.ModName
   | -- | import ModName (name1, name2)
-    HaskellImport THS.ModName [TH.Name]
+    HaskellImport THS.ModName [Text]
 
 -- | Creates a `HaskellModule` with the minimum required information
 haskellModule ::
@@ -134,10 +134,8 @@ bootstrapContentHaskell HaskellModule {..} =
       "import "
         <> toText iModName
         <> " ("
-        <> formatNames names
+        <> T.intercalate ", " names
         <> ")"
-    formatNames :: [TH.Name] -> Text
-    formatNames = T.intercalate ", " . fmap (toText . TH.pprint . TH.VarE)
 
 -- | A helper function when the generated file should be nix code
 bootstrapContentNix :: (IsNixExpr a, MonadIO m) => a -> m (Either String Text)

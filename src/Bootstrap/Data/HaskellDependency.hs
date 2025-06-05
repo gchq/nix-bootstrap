@@ -10,7 +10,7 @@ module Bootstrap.Data.HaskellDependency
   ( HaskellDependency,
     VersionKnown (..),
     getHaskellDependencyVersions,
-    hdep,
+    hdeps,
   )
 where
 
@@ -32,7 +32,7 @@ import Bootstrap.Nix.Expr.Nixpkgs (nixpkgsBinding)
 import Control.Exception (IOException)
 import Data.Aeson (ToJSON (toJSON))
 import qualified Data.Aeson as Aeson
-import Language.Haskell.TH (ExpQ)
+import Language.Haskell.TH (ExpQ, listE)
 import qualified Relude.Extra.Map as M
 
 -- | Whether the version of a particular dependency is known
@@ -114,7 +114,10 @@ dependencies =
       hDepBoot "transformers",
       hDepBoot "unix",
       hDepBoot "xhtml",
-      hDepUnknown "relude"
+      hDepUnknown "aeson",
+      hDepUnknown "relude",
+      hDepUnknown "servant-server",
+      hDepUnknown "warp"
     ]
   where
     hDepBoot :: Text -> (Text, HaskellDependency 'VersionUnknown)
@@ -123,15 +126,18 @@ dependencies =
     hDepUnknown name = (name, HaskellDependencyVersioned name HaskellDependencyVersionUnknown)
 
 -- | Get a `HaskellDependency 'VersionUnknown` for the given dependency name
-hdep :: Text -> ExpQ
-hdep name = case M.lookup name dependencies of
-  Just dep -> case dep of
-    HaskellDependencyBase -> [|HaskellDependencyBase|]
-    HaskellDependencyBoot _ ->
-      [|HaskellDependencyBoot name|]
-    HaskellDependencyVersioned _ HaskellDependencyVersionUnknown ->
-      [|HaskellDependencyVersioned name HaskellDependencyVersionUnknown|]
-  Nothing -> error $ "Could not find " <> name <> " in dependency map in Bootstrap.Data.HaskellDependency"
+hdeps :: [Text] -> ExpQ
+hdeps =
+  listE
+    . fmap \name ->
+      case M.lookup name dependencies of
+        Just dep -> case dep of
+          HaskellDependencyBase -> [|HaskellDependencyBase|]
+          HaskellDependencyBoot _ ->
+            [|HaskellDependencyBoot name|]
+          HaskellDependencyVersioned _ HaskellDependencyVersionUnknown ->
+            [|HaskellDependencyVersioned name HaskellDependencyVersionUnknown|]
+        Nothing -> error $ "Could not find " <> name <> " in dependency map in Bootstrap.Data.HaskellDependency"
 
 getHaskellDependencyVersions ::
   (MonadIO m) =>

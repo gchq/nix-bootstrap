@@ -18,7 +18,7 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.ProjectType
   ( HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly),
+    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeReplOnly, HaskellProjectTypeServer),
     ProjectType
       ( Elm,
         Go,
@@ -124,6 +124,7 @@ nixPreCommitHookConfigFor projectType =
           Elm _ -> [elmFormat, elmReview, prettier]
           Haskell (HaskellOptions _ HaskellProjectTypeReplOnly) -> []
           Haskell (HaskellOptions _ (HaskellProjectTypeBasic _)) -> [hlint, hpack, ormolu]
+          Haskell (HaskellOptions _ (HaskellProjectTypeServer _)) -> [hlint, hpack, ormolu]
           Node _ -> [prettier]
           Go _ -> [goFmt, goTest]
           Java {} -> [googleJavaFormat]

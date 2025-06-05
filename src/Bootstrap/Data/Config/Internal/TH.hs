@@ -43,11 +43,11 @@ makeConfigLenses name = do
     makeConfigLens :: (Name, Language.Haskell.TH.Type) -> [Dec] -> DecsQ
     makeConfigLens (constructorName, constructorType) acc = do
       let baseFieldName = toText $ nameBase constructorName
+          digits = T.takeWhile C.isDigit $ T.dropWhile (not . C.isDigit) baseFieldName
       fieldPrefix <-
-        maybe
-          (fail "Field constructor should have config version digit in it")
-          (pure . ("_configV" <>) . one)
-          $ T.find C.isDigit baseFieldName
+        if T.null digits
+          then fail "Field constructor should have config version digit in it"
+          else pure $ "_configV" <> digits
       lensNameBody <-
         maybe
           (fail $ "Expected constructor to have prefix " <> toString fieldPrefix)
