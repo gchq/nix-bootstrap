@@ -17,6 +17,7 @@ module Bootstrap.Data.ProjectType
     ElmMode (..),
     HaskellOptions (..),
     HaskellProjectType (..),
+    haskellOptionsRequireBuild,
     promptHaskellProjectType,
     SetUpHaskellBuild (..),
     NodePackageManager (..),
@@ -174,6 +175,13 @@ data HaskellOptions = HaskellOptions
   }
   deriving stock (Eq, Generic, Show)
   deriving (FromDhall, ToDhall) via Codec (Field HaskellOptionsDhallFields) HaskellOptions
+
+-- | Returns true if the user has requested a production build
+haskellOptionsRequireBuild :: HaskellOptions -> Bool
+haskellOptionsRequireBuild HaskellOptions {..} = case haskellOptionsHaskellProjectType of
+  HaskellProjectTypeReplOnly -> False
+  HaskellProjectTypeBasic (SetUpHaskellBuild b) -> b
+  HaskellProjectTypeServer (SetUpHaskellBuild b) -> b
 
 data HaskellProjectTypeV4
   = HaskellProjectV4TypeReplOnly

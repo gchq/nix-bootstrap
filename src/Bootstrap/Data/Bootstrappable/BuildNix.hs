@@ -11,9 +11,7 @@ import Bootstrap.Data.Bootstrappable
   )
 import Bootstrap.Data.ProjectName (ProjectName)
 import Bootstrap.Data.ProjectType
-  ( HaskellOptions (HaskellOptions),
-    HaskellProjectType (HaskellProjectTypeBasic, HaskellProjectTypeServer),
-    JavaOptions (JavaOptions),
+  ( JavaOptions (JavaOptions),
     ProjectType
       ( Elm,
         Go,
@@ -25,8 +23,8 @@ import Bootstrap.Data.ProjectType
         Rust
       ),
     SetUpGoBuild (SetUpGoBuild),
-    SetUpHaskellBuild (SetUpHaskellBuild),
     SetUpJavaBuild (SetUpJavaBuild),
+    haskellOptionsRequireBuild,
   )
 import Bootstrap.Nix.Expr (Expr (EFunc), FunctionArgs (FASet), IsNixExpr (toNixExpr), nix)
 import Bootstrap.Nix.Expr.ReproducibleBuild
@@ -77,10 +75,9 @@ buildExprFor :: SrcDir -> ProjectName -> ProjectType -> Maybe ReproducibleBuildE
 buildExprFor srcDir projectName = \case
   Minimal -> Nothing
   Elm _ -> Nothing
-  Haskell (HaskellOptions _ (HaskellProjectTypeBasic (SetUpHaskellBuild True))) ->
-    Just . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
-  Haskell (HaskellOptions _ (HaskellProjectTypeServer (SetUpHaskellBuild True))) ->
-    Just . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
+  Haskell haskellOptions
+    | haskellOptionsRequireBuild haskellOptions ->
+        Just . reproducibleHaskellBuild projectName $ srcDirExpr srcDir
   Haskell _ -> Nothing
   Node _ -> Nothing
   Go (SetUpGoBuild True) -> Just $ reproducibleGoBuild projectName
