@@ -67,7 +67,6 @@
                   with nixpkgs; [
                     coreutils
                     dhall
-                    gawk
                     glab
                     gnused
                     gnutar

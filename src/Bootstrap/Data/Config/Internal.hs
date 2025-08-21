@@ -66,7 +66,7 @@ import Bootstrap.Data.ProjectType
     migrateProjectTypeFromV6,
     migrateProjectTypeFromV7To9,
   )
-import Bootstrap.Data.Target (Target (TargetDefault))
+import Bootstrap.Data.Target (Target (TargetDefault), TargetV1)
 import Bootstrap.Monad (MonadBootstrap)
 import Control.Lens (Iso', makeLenses)
 import Control.Monad.Catch (MonadCatch, MonadThrow (throwM), catchAll, handleAll)
@@ -211,6 +211,7 @@ data VersionedConfig version where
   VersionedConfigV8 :: ConfigV8 -> VersionedConfig 'V8
   VersionedConfigV9 :: ConfigV9 -> VersionedConfig 'V9
   VersionedConfigV10 :: ConfigV10 -> VersionedConfig 'V10
+  VersionedConfigV11 :: ConfigV11 -> VersionedConfig 'V11
 
 deriving stock instance (Eq (VersionedProjectType version)) => Eq (VersionedConfig version)
 
@@ -309,6 +310,7 @@ data VersionedProjectType (version :: ConfigVersion) where
   VPT8 :: ProjectTypeV7To9 -> VersionedProjectType 'V8
   VPT9 :: ProjectTypeV7To9 -> VersionedProjectType 'V9
   VPT10 :: ProjectType -> VersionedProjectType 'V10
+  VPT11 :: ProjectType -> VersionedProjectType 'V11
 
 instance FromDhall (VersionedProjectType 'V3) where
   autoWith = versionedProjectTypeFromDhall (Proxy @ProjectTypeV3) VPT3
@@ -334,6 +336,9 @@ instance FromDhall (VersionedProjectType 'V9) where
 instance FromDhall (VersionedProjectType 'V10) where
   autoWith = versionedProjectTypeFromDhall (Proxy @ProjectType) VPT10
 
+instance FromDhall (VersionedProjectType 'V11) where
+  autoWith = versionedProjectTypeFromDhall (Proxy @ProjectType) VPT11
+
 instance ToDhall (VersionedProjectType 'V3) where
   injectWith = versionedProjectTypeToDhall (Proxy @ProjectTypeV3) (\(VPT3 x) -> x)
 
@@ -357,6 +362,9 @@ instance ToDhall (VersionedProjectType 'V9) where
 
 instance ToDhall (VersionedProjectType 'V10) where
   injectWith = versionedProjectTypeToDhall (Proxy @ProjectType) (\(VPT10 x) -> x)
+
+instance ToDhall (VersionedProjectType 'V11) where
+  injectWith = versionedProjectTypeToDhall (Proxy @ProjectType) (\(VPT11 x) -> x)
 
 versionedProjectTypeFromDhall ::
   forall underlying version.
@@ -462,7 +470,7 @@ data ConfigV9 = ConfigV9
     _configV9SetUpPreCommitHooks :: PreCommitHooksConfig,
     _configV9SetUpContinuousIntegration :: ContinuousIntegrationConfig,
     _configV9SetUpVSCodeDevContainer :: DevContainerConfig,
-    _configV9Target :: Target
+    _configV9Target :: TargetV1
   }
   deriving stock (Generic)
   deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV9")) ConfigV9
@@ -478,7 +486,7 @@ data ConfigV10 = ConfigV10
     _configV10SetUpPreCommitHooks :: PreCommitHooksConfig,
     _configV10SetUpContinuousIntegration :: ContinuousIntegrationConfig,
     _configV10SetUpVSCodeDevContainer :: DevContainerConfig,
-    _configV10Target :: Target
+    _configV10Target :: TargetV1
   }
   deriving stock (Generic)
   deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV10")) ConfigV10
@@ -486,6 +494,22 @@ data ConfigV10 = ConfigV10
 deriving stock instance (Eq (VersionedProjectType 'V10)) => Eq ConfigV10
 
 deriving stock instance (Show (VersionedProjectType 'V10)) => Show ConfigV10
+
+-- | The tenth version of the config
+data ConfigV11 = ConfigV11
+  { _configV11ProjectName :: ProjectName,
+    _configV11ProjectType :: VersionedProjectType 'V11,
+    _configV11SetUpPreCommitHooks :: PreCommitHooksConfig,
+    _configV11SetUpContinuousIntegration :: ContinuousIntegrationConfig,
+    _configV11SetUpVSCodeDevContainer :: DevContainerConfig,
+    _configV11Target :: Target
+  }
+  deriving stock (Generic)
+  deriving (FromDhall, ToDhall) via Codec (Field (CamelCase <<< DropPrefix "_configV11")) ConfigV11
+
+deriving stock instance (Eq (VersionedProjectType 'V11)) => Eq ConfigV11
+
+deriving stock instance (Show (VersionedProjectType 'V11)) => Show ConfigV11
 
 -- | Used by parseVersionConfig to parse when the version is known statically
 parseVersionedConfigFor ::
@@ -638,26 +662,26 @@ upgradeConfig _ =
     upgradeConfig' = \case
       VersionedConfigV1 s ->
         ( stateUseFlakes s,
-          VersionedConfigV10
-            ConfigV10
-              { _configV10ProjectName = stateProjectName s,
-                _configV10ProjectType = VPT10 . migrateProjectTypeFromV2 $ stateProjectType s,
-                _configV10SetUpPreCommitHooks = statePreCommitHooksConfig s,
-                _configV10SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
-                _configV10SetUpVSCodeDevContainer = stateDevContainerConfig s,
-                _configV10Target = TargetDefault
+          VersionedConfigV11
+            ConfigV11
+              { _configV11ProjectName = stateProjectName s,
+                _configV11ProjectType = VPT11 . migrateProjectTypeFromV2 $ stateProjectType s,
+                _configV11SetUpPreCommitHooks = statePreCommitHooksConfig s,
+                _configV11SetUpContinuousIntegration = stateContinuousIntegrationConfig s,
+                _configV11SetUpVSCodeDevContainer = stateDevContainerConfig s,
+                _configV11Target = TargetDefault
               }
         )
       VersionedConfigV2 ConfigV2 {..} ->
         ( _configV2UseNixFlakes,
-          VersionedConfigV10
-            ConfigV10
-              { _configV10ProjectName = _configV2ProjectName,
-                _configV10ProjectType = VPT10 $ migrateProjectTypeFromV2 _configV2ProjectType,
-                _configV10SetUpPreCommitHooks = _configV2SetUpPreCommitHooks,
-                _configV10SetUpContinuousIntegration = _configV2SetUpContinuousIntegration,
-                _configV10SetUpVSCodeDevContainer = _configV2SetUpVSCodeDevContainer,
-                _configV10Target = TargetDefault
+          VersionedConfigV11
+            ConfigV11
+              { _configV11ProjectName = _configV2ProjectName,
+                _configV11ProjectType = VPT11 $ migrateProjectTypeFromV2 _configV2ProjectType,
+                _configV11SetUpPreCommitHooks = _configV2SetUpPreCommitHooks,
+                _configV11SetUpContinuousIntegration = _configV2SetUpContinuousIntegration,
+                _configV11SetUpVSCodeDevContainer = _configV2SetUpVSCodeDevContainer,
+                _configV11Target = TargetDefault
               }
         )
       (VersionedConfigV3 c) -> migrateFromV3Plus c (\(VPT3 x) -> x) migrateProjectTypeFromV3
@@ -667,46 +691,59 @@ upgradeConfig _ =
       (VersionedConfigV7 c) -> migrateFromV3Plus c (\(VPT7 x) -> x) migrateProjectTypeFromV7To9
       (VersionedConfigV8 ConfigV8 {..}) ->
         ( True,
-          VersionedConfigV10
-            ( ConfigV10
-                { _configV10ProjectName = _configV8ProjectName,
-                  _configV10ProjectType =
+          VersionedConfigV11
+            ( ConfigV11
+                { _configV11ProjectName = _configV8ProjectName,
+                  _configV11ProjectType =
                     let VPT8 pt = _configV8ProjectType
-                     in VPT10 $ migrateProjectTypeFromV7To9 pt,
-                  _configV10SetUpPreCommitHooks = _configV8SetUpPreCommitHooks,
-                  _configV10SetUpContinuousIntegration = _configV8SetUpContinuousIntegration,
-                  _configV10SetUpVSCodeDevContainer = _configV8SetUpVSCodeDevContainer,
-                  _configV10Target = TargetDefault
+                     in VPT11 $ migrateProjectTypeFromV7To9 pt,
+                  _configV11SetUpPreCommitHooks = _configV8SetUpPreCommitHooks,
+                  _configV11SetUpContinuousIntegration = _configV8SetUpContinuousIntegration,
+                  _configV11SetUpVSCodeDevContainer = _configV8SetUpVSCodeDevContainer,
+                  _configV11Target = TargetDefault
                 }
             )
         )
       (VersionedConfigV9 ConfigV9 {..}) ->
         ( True,
-          VersionedConfigV10
-            ( ConfigV10
-                { _configV10ProjectName = _configV9ProjectName,
-                  _configV10ProjectType =
+          VersionedConfigV11
+            ( ConfigV11
+                { _configV11ProjectName = _configV9ProjectName,
+                  _configV11ProjectType =
                     let VPT9 pt = _configV9ProjectType
-                     in VPT10 $ migrateProjectTypeFromV7To9 pt,
-                  _configV10SetUpPreCommitHooks = _configV9SetUpPreCommitHooks,
-                  _configV10SetUpContinuousIntegration = _configV9SetUpContinuousIntegration,
-                  _configV10SetUpVSCodeDevContainer = _configV9SetUpVSCodeDevContainer,
-                  _configV10Target = TargetDefault
+                     in VPT11 $ migrateProjectTypeFromV7To9 pt,
+                  _configV11SetUpPreCommitHooks = _configV9SetUpPreCommitHooks,
+                  _configV11SetUpContinuousIntegration = _configV9SetUpContinuousIntegration,
+                  _configV11SetUpVSCodeDevContainer = _configV9SetUpVSCodeDevContainer,
+                  _configV11Target = TargetDefault
                 }
             )
         )
-      c@(VersionedConfigV10 _) -> (True, c)
+      (VersionedConfigV10 ConfigV10 {..}) ->
+        ( True,
+          VersionedConfigV11
+            ( ConfigV11
+                { _configV11ProjectName = _configV10ProjectName,
+                  _configV11ProjectType = let VPT10 pt = _configV10ProjectType in VPT11 pt,
+                  _configV11SetUpPreCommitHooks = _configV10SetUpPreCommitHooks,
+                  _configV11SetUpContinuousIntegration = _configV10SetUpContinuousIntegration,
+                  _configV11SetUpVSCodeDevContainer = _configV10SetUpVSCodeDevContainer,
+                  _configV11Target = TargetDefault
+                }
+            )
+        )
+      c@(VersionedConfigV11 _) -> (True, c)
     migrateFromV3Plus ConfigV3Plus {..} deconstruct migrate =
       let oldProjectType = deconstruct _configV3ProjectType
        in ( _configV3UseNixFlakes,
-            VersionedConfigV10
-              ( ConfigV10
-                  { _configV10ProjectName = _configV3ProjectName,
-                    _configV10ProjectType = VPT10 $ migrate oldProjectType,
-                    _configV10SetUpPreCommitHooks = _configV3SetUpPreCommitHooks,
-                    _configV10SetUpContinuousIntegration = _configV3SetUpContinuousIntegration,
-                    _configV10SetUpVSCodeDevContainer = _configV3SetUpVSCodeDevContainer,
-                    _configV10Target = TargetDefault
+            VersionedConfigV11
+              ( ConfigV11
+                  { _configV11ProjectName = _configV3ProjectName,
+                    _configV11ProjectType = VPT11 $ migrate oldProjectType,
+                    _configV11SetUpPreCommitHooks = _configV3SetUpPreCommitHooks,
+                    _configV11SetUpContinuousIntegration = _configV3SetUpContinuousIntegration,
+                    _configV11SetUpVSCodeDevContainer = _configV3SetUpVSCodeDevContainer,
+                    _configV11Target = TargetDefault
                   }
               )
           )
