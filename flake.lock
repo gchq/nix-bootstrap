@@ -49,22 +49,6 @@
         "type": "indirect"
       }
     },
-    "nixpkgs-src-previous": {
-      "locked": {
-        "lastModified": 1729449015,
-        "narHash": "sha256-Gf04dXB0n4q0A9G5nTGH3zuMGr6jtJppqdeljxua1fo=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "89172919243df199fe237ba0f776c3e3e3d72367",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "89172919243df199fe237ba0f776c3e3e3d72367",
-        "type": "github"
-      }
-    },
     "pre-commit-hooks-lib": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -88,7 +72,6 @@
     "root": {
       "inputs": {
         "nixpkgs-src": "nixpkgs-src",
-        "nixpkgs-src-previous": "nixpkgs-src-previous",
         "pre-commit-hooks-lib": "pre-commit-hooks-lib"
       }
     }

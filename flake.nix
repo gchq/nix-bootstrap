@@ -15,7 +15,6 @@
   description = "Development infrastructure for nix-bootstrap";
   inputs = {
     nixpkgs-src.url = "nixpkgs/25.05";
-    nixpkgs-src-previous.url = "github:NixOS/nixpkgs?rev=89172919243df199fe237ba0f776c3e3e3d72367";
     pre-commit-hooks-lib = {
       inputs.nixpkgs.follows = "nixpkgs-src";
       url = "github:cachix/pre-commit-hooks.nix";
@@ -25,7 +24,6 @@
   outputs = {
     self,
     nixpkgs-src,
-    nixpkgs-src-previous,
     pre-commit-hooks-lib,
     ...
   }: let
