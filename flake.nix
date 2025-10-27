@@ -15,6 +15,7 @@
   description = "Development infrastructure for nix-bootstrap";
   inputs = {
     nixpkgs-src.url = "nixpkgs/25.05";
+    nixpkgs-src-vulnix.url = "nixpkgs/33d83ff29f05f9b2e30cd05b2f60b02a1fbe8a46";
     pre-commit-hooks-lib = {
       inputs.nixpkgs.follows = "nixpkgs-src";
       url = "github:cachix/pre-commit-hooks.nix";
@@ -24,6 +25,7 @@
   outputs = {
     self,
     nixpkgs-src,
+    nixpkgs-src-vulnix,
     pre-commit-hooks-lib,
     ...
   }: let
@@ -34,6 +36,7 @@
     systemsHelpers.forEachSystem supportedSystems (
       system: let
         nixpkgs = nixpkgs-src.legacyPackages.${system};
+        nixpkgs-vulnix = nixpkgs-src-vulnix.legacyPackages.${system};
         inherit
           (import nix/haskell-env.nix {inherit nixpkgs;})
           baseHaskellPackages
@@ -47,7 +50,8 @@
         '';
         pre-commit-hooks = import nix/pre-commit-hooks.nix {
           inherit nixpkgs pre-commit-hooks-lib system;
-          inherit (nixpkgs) alejandra vulnix;
+          inherit (nixpkgs) alejandra;
+          inherit (nixpkgs-vulnix) vulnix;
           src = ./.;
         };
         extraDevShellArgs = {
@@ -79,7 +83,7 @@
           inherit nix-bootstrap;
           # To be used as tools in CI
           ciPackages_buildBinaryCache = buildBinaryCache;
-          ciPackages_vulnix = nixpkgs.vulnix;
+          ciPackages_vulnix = nixpkgs-vulnix.vulnix;
         };
       }
     );
