@@ -15,4 +15,4 @@ import Bootstrap.Nix.Expr
 nixpkgsSrcInputBinding :: Target -> Binding
 nixpkgsSrcInputBinding target =
   [nixproperty|nixpkgs-src.url|] |= case target of
-    TargetDefault -> [nix|"nixpkgs/25.05"|]
+    TargetDefault -> [nix|"nixpkgs/25.11"|]

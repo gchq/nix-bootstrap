@@ -18,7 +18,10 @@
     },
     "gitignore": {
       "inputs": {
-        "nixpkgs": ["pre-commit-hooks-lib", "nixpkgs"]
+        "nixpkgs": [
+          "pre-commit-hooks-lib",
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1709087332,
@@ -68,7 +71,9 @@
       "inputs": {
         "flake-compat": "flake-compat",
         "gitignore": "gitignore",
-        "nixpkgs": ["nixpkgs-src"]
+        "nixpkgs": [
+          "nixpkgs-src"
+        ]
       },
       "locked": {
         "lastModified": 1763988335,

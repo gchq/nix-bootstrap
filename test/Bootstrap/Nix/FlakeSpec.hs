@@ -21,7 +21,7 @@ spec = describe "intermediateFlake" do
         [r|{
   description = "Development infrastructure for test-project";
   inputs = {
-    nixpkgs-src.url = "nixpkgs/25.05";
+    nixpkgs-src.url = "nixpkgs/25.11";
   };
   outputs = _: {};
 }
