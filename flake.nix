@@ -14,7 +14,7 @@
 {
   description = "Development infrastructure for nix-bootstrap";
   inputs = {
-    nixpkgs-src.url = "nixpkgs/25.05";
+    nixpkgs-src.url = "nixpkgs/25.11";
     nixpkgs-src-vulnix.url = "nixpkgs/33d83ff29f05f9b2e30cd05b2f60b02a1fbe8a46";
     pre-commit-hooks-lib = {
       inputs.nixpkgs.follows = "nixpkgs-src";
