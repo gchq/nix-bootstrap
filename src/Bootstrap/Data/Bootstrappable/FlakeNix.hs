@@ -225,7 +225,7 @@ instance IsNixExpr FlakeNix where
                 False
                 ( nixpkgsSrcInputBinding flakeNixTarget
                     : [ [nixbinding|pre-commit-hooks-lib.url = "github:cachix/pre-commit-hooks.nix";|]
-                        | usingHooks
+                      | usingHooks
                       ]
                       <> [machNixFlakeInput | isPython]
                 ),
@@ -255,7 +255,7 @@ instance IsNixExpr FlakeNix where
                                            { passNixpkgsThrough = flakeNixHooksRequireNixpkgs,
                                              passSystemThrough = True
                                            }
-                                     | usingHooks
+                                   | usingHooks
                                    ]
                                 <> flakeNixExtraBindings
                             )
