@@ -124,7 +124,6 @@ This section is for people who want to contribute to the nix-bootstrap tool.
 
 2. [Enable Nix Flakes](https://nixos.wiki/wiki/flakes#Enable_flakes).
 3. Install direnv **>=2.23.0**, by first [installing the direnv package for your system](https://direnv.net/docs/installation.html).
-
    - You can check your current version by running `direnv version`
    - On the latest Ubuntu, this is available using `apt-get`
    - If you can't install it through your OS's package manager, download a release from the [GitHub releases page](https://github.com/direnv/direnv/releases) and put it somewhere on your `$PATH`.
@@ -186,7 +185,6 @@ src/
 
 1. Add a new module for the file under [`Bootstrap.Data.Bootstrappable`](./src/Bootstrap/Data/Bootstrappable)
 2. In the new module:
-
    1. Create a datatype for the file
    2. Make that datatype an instance of `Bootstrap.Data.Bootstrappable.Bootstrappable`
    3. Add a function which will return `Maybe a` where `a` is your datatype, depending on whether

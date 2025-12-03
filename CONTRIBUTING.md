@@ -43,7 +43,6 @@ For the purpose of this point, a logical order is one of the following:
 - Something universally recognisable, like alphabetical
 - Something recognisable in context, such as CSS properties being grouped into width and height,
   flex options, colour options etc.
-
   - In this case, the groups should each be logically ordered
 
 Based on those definitions:

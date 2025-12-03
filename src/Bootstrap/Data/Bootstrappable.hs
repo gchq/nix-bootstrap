@@ -156,8 +156,7 @@ bootstrapContentNix a = do
                            else
                              "identifiers "
                                <> toString
-                                 ( foldr (\i acc -> unIdentifier i <> ", " <> acc) ("and " <> unIdentifier i1) iRest
-                                 )
+                                 (foldr (\i acc -> unIdentifier i <> ", " <> acc) ("and " <> unIdentifier i1) iRest)
                        )
                     <> ". This is a bug in nix-bootstrap; please "
                     <> "contact the nix-bootstrap team to report it.\nBad expr was: "
