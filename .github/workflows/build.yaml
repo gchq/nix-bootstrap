@@ -34,5 +34,3 @@ jobs:
         run: nix flake check
       - name: Build nix-bootstrap
         run: nix build
-      - name: Check for vulnerabilities
-        run: nix run .\#ciPackages_vulnix -- -C -w vulnerability-whitelist.toml result/

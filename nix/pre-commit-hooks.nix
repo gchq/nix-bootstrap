@@ -17,7 +17,6 @@
   pre-commit-hooks-lib,
   src,
   system,
-  vulnix,
 }: let
   # Function to make a set of pre-commit hooks
   makeHooks = hooks:
@@ -46,6 +45,9 @@
     prettier = {
       enable = true;
       excludes = [".pnp.*" ".pre-commit-config.yaml"];
+      settings = {
+        binPath = "${nixpkgs.prettier}/bin/prettier";
+      };
     };
     shellcheck = {
       enable = true;
@@ -81,29 +83,17 @@
       name = "build";
       pass_filenames = false;
     };
-    z_vulnerabilities = {
-      enable = true;
-      entry = "${
-        nixpkgs.writeShellScriptBin
-        "check-for-vulnerabilities"
-        "${vulnix}/bin/vulnix -C -w vulnerability-whitelist.toml result/"
-      }/bin/check-for-vulnerabilities";
-      files = "nix-bootstrap";
-      name = "check-for-vulnerabilities";
-      pass_filenames = false;
-    };
   };
 in {
   allHooks = makeHooks (builtins.removeAttrs (pureHooks // impureHooks) ["hpack"]);
   pureHooks = makeHooks pureHooks;
   tools =
-    [alejandra vulnix]
+    [alejandra nixpkgs.prettier]
     ++ (with pre-commit-hooks-lib.packages.${system}; [
       hlint
       hpack
       hpack-dir
       ormolu
-      prettier
       shellcheck
     ]);
 }

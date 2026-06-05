@@ -39,31 +39,16 @@
     },
     "nixpkgs-src": {
       "locked": {
-        "lastModified": 1764521362,
-        "narHash": "sha256-M101xMtWdF1eSD0xhiR8nG8CXRlHmv6V+VoY65Smwf4=",
+        "lastModified": 1780145889,
+        "narHash": "sha256-md0zn0RnwNvPyASas1yG5YUuwQ4ALA6ucL50l0DvqCo=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "871b9fd269ff6246794583ce4ee1031e1da71895",
+        "rev": "8c50a710ddca43d7a530fb805ad55bde8d0141c5",
         "type": "github"
       },
       "original": {
         "id": "nixpkgs",
-        "ref": "25.11",
-        "type": "indirect"
-      }
-    },
-    "nixpkgs-src-vulnix": {
-      "locked": {
-        "lastModified": 1756150737,
-        "narHash": "sha256-7FdMmyjNM8mQSf3yvyKitw40sdKDL60KLU+l6sAYw7E=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "33d83ff29f05f9b2e30cd05b2f60b02a1fbe8a46",
-        "type": "github"
-      },
-      "original": {
-        "id": "nixpkgs",
-        "rev": "33d83ff29f05f9b2e30cd05b2f60b02a1fbe8a46",
+        "ref": "26.05",
         "type": "indirect"
       }
     },
@@ -92,7 +77,6 @@
     "root": {
       "inputs": {
         "nixpkgs-src": "nixpkgs-src",
-        "nixpkgs-src-vulnix": "nixpkgs-src-vulnix",
         "pre-commit-hooks-lib": "pre-commit-hooks-lib"
       }
     }
